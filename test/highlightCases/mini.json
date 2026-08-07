@@ -1,0 +1,1577 @@
+{
+  "file": "mini.g",
+  "assertions": [
+    {
+      "line": 1,
+      "col": 1,
+      "text": "f",
+      "expected": "function"
+    },
+    {
+      "line": 1,
+      "col": 3,
+      "text": ":=",
+      "expected": "operator"
+    },
+    {
+      "line": 1,
+      "col": 6,
+      "text": "function",
+      "expected": "keyword.function"
+    },
+    {
+      "line": 1,
+      "col": 14,
+      "text": "(",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 1,
+      "col": 15,
+      "text": "x",
+      "expected": "variable.parameter"
+    },
+    {
+      "line": 1,
+      "col": 16,
+      "text": ",",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 1,
+      "col": 17,
+      "text": "y",
+      "expected": "variable.parameter"
+    },
+    {
+      "line": 1,
+      "col": 18,
+      "text": ")",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 10,
+      "col": 5,
+      "text": "local",
+      "expected": "keyword.function"
+    },
+    {
+      "line": 10,
+      "col": 11,
+      "text": "z",
+      "expected": "variable.parameter"
+    },
+    {
+      "line": 10,
+      "col": 14,
+      "text": "helper",
+      "expected": "variable.parameter"
+    },
+    {
+      "line": 10,
+      "col": 20,
+      "text": ";",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 15,
+      "col": 5,
+      "text": "z",
+      "expected": "variable"
+    },
+    {
+      "line": 15,
+      "col": 7,
+      "text": ":=",
+      "expected": "operator"
+    },
+    {
+      "line": 15,
+      "col": 10,
+      "text": "1",
+      "expected": "number"
+    },
+    {
+      "line": 15,
+      "col": 12,
+      "text": "-",
+      "expected": "operator"
+    },
+    {
+      "line": 15,
+      "col": 14,
+      "text": "y",
+      "expected": "variable.parameter"
+    },
+    {
+      "line": 15,
+      "col": 15,
+      "text": ";",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 22,
+      "col": 5,
+      "text": "helper",
+      "expected": "function"
+    },
+    {
+      "line": 22,
+      "col": 12,
+      "text": ":=",
+      "expected": "operator"
+    },
+    {
+      "line": 22,
+      "col": 15,
+      "text": "function",
+      "expected": "keyword.function"
+    },
+    {
+      "line": 22,
+      "col": 23,
+      "text": "(",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 22,
+      "col": 24,
+      "text": "bla",
+      "expected": "variable.parameter"
+    },
+    {
+      "line": 22,
+      "col": 27,
+      "text": ")",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 29,
+      "col": 9,
+      "text": "return",
+      "expected": "keyword.return"
+    },
+    {
+      "line": 29,
+      "col": 16,
+      "text": "x",
+      "expected": "variable.parameter"
+    },
+    {
+      "line": 29,
+      "col": 18,
+      "text": "+",
+      "expected": "operator"
+    },
+    {
+      "line": 29,
+      "col": 20,
+      "text": "y",
+      "expected": "variable.parameter"
+    },
+    {
+      "line": 29,
+      "col": 22,
+      "text": "z",
+      "expected": "variable"
+    },
+    {
+      "line": 29,
+      "col": 24,
+      "text": "-",
+      "expected": "operator"
+    },
+    {
+      "line": 29,
+      "col": 26,
+      "text": "bla",
+      "expected": "variable.parameter"
+    },
+    {
+      "line": 29,
+      "col": 29,
+      "text": ";",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 38,
+      "col": 5,
+      "text": "end",
+      "expected": "keyword.function"
+    },
+    {
+      "line": 38,
+      "col": 8,
+      "text": ";",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 41,
+      "col": 5,
+      "text": "return",
+      "expected": "keyword.return"
+    },
+    {
+      "line": 41,
+      "col": 12,
+      "text": "helper",
+      "expected": "function"
+    },
+    {
+      "line": 41,
+      "col": 18,
+      "text": ";",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 45,
+      "col": 1,
+      "text": "end",
+      "expected": "keyword.function"
+    },
+    {
+      "line": 45,
+      "col": 4,
+      "text": ";",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 49,
+      "col": 1,
+      "text": "f",
+      "expected": "function"
+    },
+    {
+      "line": 49,
+      "col": 2,
+      "text": "(",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 49,
+      "col": 3,
+      "text": "\"abc\"",
+      "expected": "string"
+    },
+    {
+      "line": 49,
+      "col": 8,
+      "text": ",",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 49,
+      "col": 10,
+      "text": "1.100e-20",
+      "expected": "number.float"
+    },
+    {
+      "line": 49,
+      "col": 20,
+      "text": ":",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 49,
+      "col": 22,
+      "text": "a",
+      "expected": "property"
+    },
+    {
+      "line": 49,
+      "col": 23,
+      "text": ":=",
+      "expected": "operator"
+    },
+    {
+      "line": 49,
+      "col": 26,
+      "text": "2",
+      "expected": "number"
+    },
+    {
+      "line": 49,
+      "col": 27,
+      "text": ",",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 49,
+      "col": 29,
+      "text": "beta",
+      "expected": "property"
+    },
+    {
+      "line": 49,
+      "col": 33,
+      "text": ",",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 49,
+      "col": 35,
+      "text": "1",
+      "expected": "property"
+    },
+    {
+      "line": 49,
+      "col": 36,
+      "text": ":=",
+      "expected": "operator"
+    },
+    {
+      "line": 49,
+      "col": 38,
+      "text": "10",
+      "expected": "number"
+    },
+    {
+      "line": 49,
+      "col": 40,
+      "text": ")",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 49,
+      "col": 41,
+      "text": ";",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 68,
+      "col": 1,
+      "text": "x",
+      "expected": "variable.parameter"
+    },
+    {
+      "line": 68,
+      "col": 3,
+      "text": "->",
+      "expected": "operator"
+    },
+    {
+      "line": 68,
+      "col": 6,
+      "text": "x",
+      "expected": "variable.parameter"
+    },
+    {
+      "line": 68,
+      "col": 8,
+      "text": "+",
+      "expected": "operator"
+    },
+    {
+      "line": 68,
+      "col": 10,
+      "text": "1",
+      "expected": "number"
+    },
+    {
+      "line": 68,
+      "col": 11,
+      "text": ";",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 75,
+      "col": 1,
+      "text": "{",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 75,
+      "col": 2,
+      "text": "x",
+      "expected": "variable.parameter"
+    },
+    {
+      "line": 75,
+      "col": 3,
+      "text": ",",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 75,
+      "col": 4,
+      "text": "y",
+      "expected": "variable.parameter"
+    },
+    {
+      "line": 75,
+      "col": 5,
+      "text": "}",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 75,
+      "col": 7,
+      "text": "->",
+      "expected": "operator"
+    },
+    {
+      "line": 75,
+      "col": 10,
+      "text": "x",
+      "expected": "variable.parameter"
+    },
+    {
+      "line": 75,
+      "col": 12,
+      "text": "+",
+      "expected": "operator"
+    },
+    {
+      "line": 75,
+      "col": 14,
+      "text": "y",
+      "expected": "variable.parameter"
+    },
+    {
+      "line": 75,
+      "col": 16,
+      "text": "+",
+      "expected": "operator"
+    },
+    {
+      "line": 75,
+      "col": 18,
+      "text": "1",
+      "expected": "number"
+    },
+    {
+      "line": 75,
+      "col": 19,
+      "text": ";",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 89,
+      "col": 1,
+      "text": "Print",
+      "expected": "function.call"
+    },
+    {
+      "line": 89,
+      "col": 6,
+      "text": "(",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 89,
+      "col": 7,
+      "text": "\"This is a string",
+      "expected": "string"
+    },
+    {
+      "line": 89,
+      "col": 24,
+      "text": "\\n",
+      "expected": "string.escape"
+    },
+    {
+      "line": 89,
+      "col": 27,
+      "text": ")",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 89,
+      "col": 28,
+      "text": ";",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 97,
+      "col": 1,
+      "text": "'",
+      "expected": "character"
+    },
+    {
+      "line": 97,
+      "col": 2,
+      "text": "\\142",
+      "expected": "string.escape"
+    },
+    {
+      "line": 97,
+      "col": 7,
+      "text": ";",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 102,
+      "col": 1,
+      "text": "for",
+      "expected": "keyword.repeat"
+    },
+    {
+      "line": 102,
+      "col": 5,
+      "text": "n",
+      "expected": "variable"
+    },
+    {
+      "line": 102,
+      "col": 7,
+      "text": "in",
+      "expected": "keyword.operator"
+    },
+    {
+      "line": 102,
+      "col": 10,
+      "text": "[",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 102,
+      "col": 11,
+      "text": "1",
+      "expected": "number"
+    },
+    {
+      "line": 102,
+      "col": 12,
+      "text": "..",
+      "expected": "operator"
+    },
+    {
+      "line": 102,
+      "col": 14,
+      "text": "100",
+      "expected": "number"
+    },
+    {
+      "line": 102,
+      "col": 17,
+      "text": "]",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 102,
+      "col": 19,
+      "text": "do",
+      "expected": "keyword.repeat"
+    },
+    {
+      "line": 112,
+      "col": 3,
+      "text": "for",
+      "expected": "keyword.repeat"
+    },
+    {
+      "line": 112,
+      "col": 7,
+      "text": "i",
+      "expected": "variable"
+    },
+    {
+      "line": 112,
+      "col": 9,
+      "text": "in",
+      "expected": "keyword.operator"
+    },
+    {
+      "line": 112,
+      "col": 12,
+      "text": "[",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 112,
+      "col": 13,
+      "text": "1",
+      "expected": "number"
+    },
+    {
+      "line": 112,
+      "col": 14,
+      "text": "..",
+      "expected": "operator"
+    },
+    {
+      "line": 112,
+      "col": 16,
+      "text": "NrSmallGroups",
+      "expected": "function.call"
+    },
+    {
+      "line": 112,
+      "col": 29,
+      "text": "(",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 112,
+      "col": 30,
+      "text": "n",
+      "expected": "variable"
+    },
+    {
+      "line": 112,
+      "col": 31,
+      "text": ")",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 112,
+      "col": 32,
+      "text": "]",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 112,
+      "col": 34,
+      "text": "do",
+      "expected": "keyword.repeat"
+    },
+    {
+      "line": 125,
+      "col": 5,
+      "text": "G",
+      "expected": "variable"
+    },
+    {
+      "line": 125,
+      "col": 7,
+      "text": ":=",
+      "expected": "operator"
+    },
+    {
+      "line": 125,
+      "col": 10,
+      "text": "SmallGroup",
+      "expected": "function.call"
+    },
+    {
+      "line": 125,
+      "col": 20,
+      "text": "(",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 125,
+      "col": 21,
+      "text": "n",
+      "expected": "variable"
+    },
+    {
+      "line": 125,
+      "col": 22,
+      "text": ",",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 125,
+      "col": 23,
+      "text": "i",
+      "expected": "variable"
+    },
+    {
+      "line": 125,
+      "col": 24,
+      "text": ")",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 125,
+      "col": 25,
+      "text": ";",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 135,
+      "col": 5,
+      "text": "Print",
+      "expected": "function.call"
+    },
+    {
+      "line": 135,
+      "col": 10,
+      "text": "(",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 135,
+      "col": 11,
+      "text": "\"SmallGroup(\"",
+      "expected": "string"
+    },
+    {
+      "line": 135,
+      "col": 24,
+      "text": ",",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 135,
+      "col": 26,
+      "text": "n",
+      "expected": "variable"
+    },
+    {
+      "line": 135,
+      "col": 27,
+      "text": ",",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 135,
+      "col": 29,
+      "text": "\",\"",
+      "expected": "string"
+    },
+    {
+      "line": 135,
+      "col": 32,
+      "text": ",",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 135,
+      "col": 34,
+      "text": "i",
+      "expected": "variable"
+    },
+    {
+      "line": 135,
+      "col": 35,
+      "text": ",",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 135,
+      "col": 37,
+      "text": "\") is abelian? \"",
+      "expected": "string"
+    },
+    {
+      "line": 135,
+      "col": 53,
+      "text": ",",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 135,
+      "col": 55,
+      "text": "IsAbelian",
+      "expected": "function.call"
+    },
+    {
+      "line": 135,
+      "col": 64,
+      "text": "(",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 135,
+      "col": 65,
+      "text": "G",
+      "expected": "variable"
+    },
+    {
+      "line": 135,
+      "col": 66,
+      "text": ")",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 135,
+      "col": 67,
+      "text": ",",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 135,
+      "col": 69,
+      "text": "\"",
+      "expected": "string"
+    },
+    {
+      "line": 135,
+      "col": 70,
+      "text": "\\n",
+      "expected": "string.escape"
+    },
+    {
+      "line": 135,
+      "col": 73,
+      "text": ")",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 135,
+      "col": 74,
+      "text": ";",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 157,
+      "col": 5,
+      "text": "if",
+      "expected": "keyword.conditional"
+    },
+    {
+      "line": 157,
+      "col": 8,
+      "text": "IsPerfectGroup",
+      "expected": "function.call"
+    },
+    {
+      "line": 157,
+      "col": 22,
+      "text": "(",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 157,
+      "col": 23,
+      "text": "G",
+      "expected": "variable"
+    },
+    {
+      "line": 157,
+      "col": 24,
+      "text": ")",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 157,
+      "col": 26,
+      "text": "=",
+      "expected": "operator"
+    },
+    {
+      "line": 157,
+      "col": 28,
+      "text": "true",
+      "expected": "constant.builtin"
+    },
+    {
+      "line": 157,
+      "col": 33,
+      "text": "then",
+      "expected": "keyword.conditional"
+    },
+    {
+      "line": 166,
+      "col": 7,
+      "text": "break",
+      "expected": "keyword"
+    },
+    {
+      "line": 166,
+      "col": 12,
+      "text": ";",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 169,
+      "col": 5,
+      "text": "fi",
+      "expected": "keyword.conditional"
+    },
+    {
+      "line": 169,
+      "col": 7,
+      "text": ";",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 172,
+      "col": 3,
+      "text": "od",
+      "expected": "keyword.repeat"
+    },
+    {
+      "line": 172,
+      "col": 5,
+      "text": ";",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 175,
+      "col": 1,
+      "text": "od",
+      "expected": "keyword.repeat"
+    },
+    {
+      "line": 175,
+      "col": 3,
+      "text": ";",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 179,
+      "col": 17,
+      "text": "x",
+      "expected": "variable.parameter"
+    },
+    {
+      "line": 179,
+      "col": 20,
+      "text": "y",
+      "expected": "variable.parameter"
+    },
+    {
+      "line": 179,
+      "col": 21,
+      "text": "...",
+      "expected": "operator"
+    },
+    {
+      "line": 186,
+      "col": 17,
+      "text": "arg",
+      "expected": "variable.parameter.builtin"
+    },
+    {
+      "line": 191,
+      "col": 17,
+      "text": "x",
+      "expected": "variable.parameter"
+    },
+    {
+      "line": 191,
+      "col": 20,
+      "text": "arg",
+      "expected": "variable.parameter"
+    },
+    {
+      "line": 197,
+      "col": 36,
+      "text": "arg",
+      "expected": "variable.parameter.builtin"
+    },
+    {
+      "line": 202,
+      "col": 12,
+      "text": "arg",
+      "expected": "variable.parameter.builtin"
+    },
+    {
+      "line": 205,
+      "col": 1,
+      "text": "BindGlobal",
+      "expected": "function.call"
+    },
+    {
+      "line": 205,
+      "col": 11,
+      "text": "(",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 205,
+      "col": 12,
+      "text": "\"foo\"",
+      "expected": "string"
+    },
+    {
+      "line": 205,
+      "col": 17,
+      "text": ",",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 205,
+      "col": 19,
+      "text": "1",
+      "expected": "number"
+    },
+    {
+      "line": 205,
+      "col": 20,
+      "text": ")",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 205,
+      "col": 21,
+      "text": ";",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 213,
+      "col": 1,
+      "text": "BIND_GLOBAL",
+      "expected": "function.call"
+    },
+    {
+      "line": 213,
+      "col": 12,
+      "text": "(",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 213,
+      "col": 13,
+      "text": "\"bar\"",
+      "expected": "string"
+    },
+    {
+      "line": 213,
+      "col": 18,
+      "text": ",",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 213,
+      "col": 20,
+      "text": "2",
+      "expected": "number"
+    },
+    {
+      "line": 213,
+      "col": 21,
+      "text": ")",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 213,
+      "col": 22,
+      "text": ";",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 222,
+      "col": 1,
+      "text": "r",
+      "expected": "variable"
+    },
+    {
+      "line": 222,
+      "col": 3,
+      "text": ":=",
+      "expected": "operator"
+    },
+    {
+      "line": 222,
+      "col": 6,
+      "text": "rec",
+      "expected": "keyword.type"
+    },
+    {
+      "line": 222,
+      "col": 9,
+      "text": "(",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 227,
+      "col": 5,
+      "text": "a",
+      "expected": "variable.member"
+    },
+    {
+      "line": 227,
+      "col": 7,
+      "text": ":=",
+      "expected": "operator"
+    },
+    {
+      "line": 227,
+      "col": 10,
+      "text": "[",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 227,
+      "col": 11,
+      "text": "1.0",
+      "expected": "number.float"
+    },
+    {
+      "line": 227,
+      "col": 14,
+      "text": ",",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 227,
+      "col": 15,
+      "text": "2.3e10",
+      "expected": "number.float"
+    },
+    {
+      "line": 227,
+      "col": 21,
+      "text": ",",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 227,
+      "col": 22,
+      "text": "3",
+      "expected": "number"
+    },
+    {
+      "line": 227,
+      "col": 23,
+      "text": "]",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 227,
+      "col": 24,
+      "text": ",",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 238,
+      "col": 5,
+      "text": "b",
+      "expected": "variable.member"
+    },
+    {
+      "line": 238,
+      "col": 7,
+      "text": ":=",
+      "expected": "operator"
+    },
+    {
+      "line": 238,
+      "col": 10,
+      "text": "true",
+      "expected": "constant.builtin"
+    },
+    {
+      "line": 238,
+      "col": 14,
+      "text": ",",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 243,
+      "col": 5,
+      "text": "c",
+      "expected": "variable.member"
+    },
+    {
+      "line": 243,
+      "col": 7,
+      "text": ":=",
+      "expected": "operator"
+    },
+    {
+      "line": 243,
+      "col": 10,
+      "text": "fail",
+      "expected": "constant.builtin"
+    },
+    {
+      "line": 243,
+      "col": 14,
+      "text": ",",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 248,
+      "col": 4,
+      "text": ")",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 248,
+      "col": 5,
+      "text": ";",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 251,
+      "col": 1,
+      "text": "r",
+      "expected": "variable"
+    },
+    {
+      "line": 251,
+      "col": 2,
+      "text": ".",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 251,
+      "col": 3,
+      "text": "a",
+      "expected": "variable.member"
+    },
+    {
+      "line": 251,
+      "col": 4,
+      "text": ";",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 257,
+      "col": 1,
+      "text": "p",
+      "expected": "variable"
+    },
+    {
+      "line": 257,
+      "col": 3,
+      "text": ":=",
+      "expected": "operator"
+    },
+    {
+      "line": 257,
+      "col": 6,
+      "text": "rec",
+      "expected": "keyword.type"
+    },
+    {
+      "line": 257,
+      "col": 9,
+      "text": "(",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 257,
+      "col": 10,
+      "text": "a",
+      "expected": "variable.member"
+    },
+    {
+      "line": 257,
+      "col": 11,
+      "text": ":=",
+      "expected": "operator"
+    },
+    {
+      "line": 257,
+      "col": 13,
+      "text": "r",
+      "expected": "variable"
+    },
+    {
+      "line": 257,
+      "col": 14,
+      "text": ",",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 257,
+      "col": 16,
+      "text": "b",
+      "expected": "variable.member"
+    },
+    {
+      "line": 257,
+      "col": 17,
+      "text": ":=",
+      "expected": "operator"
+    },
+    {
+      "line": 257,
+      "col": 19,
+      "text": "~",
+      "expected": "variable.builtin"
+    },
+    {
+      "line": 257,
+      "col": 20,
+      "text": ".",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 257,
+      "col": 21,
+      "text": "a",
+      "expected": "variable.member"
+    },
+    {
+      "line": 257,
+      "col": 22,
+      "text": ",",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 257,
+      "col": 24,
+      "text": "1",
+      "expected": "variable.member"
+    },
+    {
+      "line": 257,
+      "col": 26,
+      "text": ":=",
+      "expected": "operator"
+    },
+    {
+      "line": 257,
+      "col": 29,
+      "text": "~",
+      "expected": "variable.builtin"
+    },
+    {
+      "line": 257,
+      "col": 30,
+      "text": ")",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 257,
+      "col": 31,
+      "text": ";",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 278,
+      "col": 1,
+      "text": "p",
+      "expected": "variable"
+    },
+    {
+      "line": 278,
+      "col": 2,
+      "text": ".",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 278,
+      "col": 3,
+      "text": "1",
+      "expected": "variable.member"
+    },
+    {
+      "line": 278,
+      "col": 4,
+      "text": ".",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 278,
+      "col": 5,
+      "text": "a",
+      "expected": "variable.member"
+    },
+    {
+      "line": 278,
+      "col": 6,
+      "text": ".",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 278,
+      "col": 7,
+      "text": "c",
+      "expected": "variable.member"
+    },
+    {
+      "line": 278,
+      "col": 8,
+      "text": ";",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 288,
+      "col": 1,
+      "text": "InstallImmediateMethod",
+      "expected": "function.call"
+    },
+    {
+      "line": 288,
+      "col": 23,
+      "text": "(",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 288,
+      "col": 25,
+      "text": "IsFinitelyGeneratedGroup",
+      "expected": "variable"
+    },
+    {
+      "line": 288,
+      "col": 49,
+      "text": ",",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 293,
+      "col": 5,
+      "text": "IsGroup",
+      "expected": "variable"
+    },
+    {
+      "line": 293,
+      "col": 13,
+      "text": "and",
+      "expected": "keyword.operator"
+    },
+    {
+      "line": 293,
+      "col": 17,
+      "text": "HasGeneratorsOfGroup",
+      "expected": "variable"
+    },
+    {
+      "line": 297,
+      "col": 5,
+      "text": "function",
+      "expected": "keyword.function"
+    },
+    {
+      "line": 297,
+      "col": 13,
+      "text": "(",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 297,
+      "col": 15,
+      "text": "G",
+      "expected": "variable.parameter"
+    },
+    {
+      "line": 297,
+      "col": 17,
+      "text": ")",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 302,
+      "col": 5,
+      "text": "if",
+      "expected": "keyword.conditional"
+    },
+    {
+      "line": 302,
+      "col": 8,
+      "text": "IsFinite",
+      "expected": "function.call"
+    },
+    {
+      "line": 302,
+      "col": 16,
+      "text": "(",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 302,
+      "col": 18,
+      "text": "GeneratorsOfGroup",
+      "expected": "function.call"
+    },
+    {
+      "line": 302,
+      "col": 35,
+      "text": "(",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 302,
+      "col": 37,
+      "text": "G",
+      "expected": "variable.parameter"
+    },
+    {
+      "line": 302,
+      "col": 39,
+      "text": ")",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 302,
+      "col": 41,
+      "text": ")",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 302,
+      "col": 43,
+      "text": "then",
+      "expected": "keyword.conditional"
+    },
+    {
+      "line": 312,
+      "col": 7,
+      "text": "return",
+      "expected": "keyword.return"
+    },
+    {
+      "line": 312,
+      "col": 14,
+      "text": "true",
+      "expected": "constant.builtin"
+    },
+    {
+      "line": 312,
+      "col": 18,
+      "text": ";",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 316,
+      "col": 5,
+      "text": "fi",
+      "expected": "keyword.conditional"
+    },
+    {
+      "line": 316,
+      "col": 7,
+      "text": ";",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 319,
+      "col": 5,
+      "text": "TryNextMethod",
+      "expected": "function.builtin"
+    },
+    {
+      "line": 319,
+      "col": 18,
+      "text": "(",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 319,
+      "col": 19,
+      "text": ")",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 319,
+      "col": 20,
+      "text": ";",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 324,
+      "col": 5,
+      "text": "end",
+      "expected": "keyword.function"
+    },
+    {
+      "line": 324,
+      "col": 9,
+      "text": ")",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 324,
+      "col": 10,
+      "text": ";",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 329,
+      "col": 1,
+      "text": "quit",
+      "expected": "keyword"
+    },
+    {
+      "line": 332,
+      "col": 1,
+      "text": "QUIT",
+      "expected": "keyword"
+    },
+    {
+      "line": 335,
+      "col": 1,
+      "text": "#% pragma",
+      "expected": "keyword.directive"
+    }
+  ]
+}

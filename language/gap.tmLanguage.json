@@ -1,0 +1,59 @@
+{
+  "scopeName": "source.gap",
+  "patterns": [
+    {
+      "name": "keyword.control.gap",
+      "match": "#%.*$"
+    },
+    {
+      "name": "string.quoted.gap",
+      "begin": "\"\"\"",
+      "end": "\"\"\"",
+      "patterns": [
+        { "include": "#escape-sequence" }
+      ]
+    },
+    {
+      "name": "string.quoted.gap",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        { "include": "#escape-sequence" }
+      ]
+    },
+    {
+      "name": "comment.line.number-sign.gap",
+      "match": "#.*$"
+    },
+    {
+      "name": "constant.numeric.gap",
+      "match": "\\b\\d+\\b"
+    },
+    {
+      "name": "keyword.control.gap",
+      "match": "\\b(function|local|end|if|then|elif|else|fi|for|while|do|od|repeat|until|return|break|continue|atomic|rec|readonly|readwrite|and|in|mod|not|or|quit|QUIT)\\b"
+    },
+    {
+      "name": "variable.other.constant.gap",
+      "match": "\\b(true|false|fail)\\b"
+    },
+    {
+      "name": "keyword.operator.gap",
+      "match": "->|:=|<=|>=|<>|\\.\\.\\.|\\.\\.|\\+|-|\\*|/|\\^|<|>|="
+    },
+    {
+      "name": "punctuation.delimiter.gap",
+      "match": "[,;.:]"
+    },
+    {
+      "name": "punctuation.bracket.gap",
+      "match": "[()\\[\\]{}]"
+    }
+  ],
+  "repository": {
+    "escape-sequence": {
+      "name": "constant.character.escape.gap",
+      "match": "\\\\([^0-7\\r\\n]|0x[0-9a-fA-F]{2}|[0-7]{3})"
+    }
+  }
+}

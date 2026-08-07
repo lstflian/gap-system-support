@@ -1,0 +1,154 @@
+{
+  "name": "gap-system-support",
+  "displayName": "GAP System Support",
+  "description": "GAP language support for VS Code with syntax highlighting, completion and run, powered by tree-sitter-gap",
+  "version": "0.0.1",
+  "publisher": "flianlee",
+  "license": "SEE LICENSE IN LICENSE",
+  "icon": "icon/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lstflian/gap-system-support.git"
+  },
+  "engines": {
+    "vscode": "^1.125.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "gap",
+    "algebra",
+    "group theory",
+    "syntax highlighting",
+    "tree-sitter",
+    "completion",
+    "run",
+    "terminal",
+    "math",
+    "computer algebra"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "gap",
+        "aliases": [
+          "GAP",
+          "gap"
+        ],
+        "extensions": [
+          ".g",
+          ".gi",
+          ".gd"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "gap",
+        "scopeName": "source.gap",
+        "path": "./language/gap.tmLanguage.json"
+      }
+    ],
+    "semanticTokenTypes": [
+      {
+        "id": "escapeSequence",
+        "superType": "string",
+        "description": "Escape sequences inside GAP string and character literals"
+      }
+    ],
+    "semanticTokenScopes": [
+      {
+        "language": "gap",
+        "scopes": {
+          "keyword": ["keyword.control.gap"],
+          "string": ["string.quoted.gap"],
+          "number": ["constant.numeric.gap"],
+          "comment": ["comment.line.number-sign.gap"],
+          "operator": ["keyword.operator.gap"],
+          "variable.readonly": ["variable.other.constant.gap"],
+          "escapeSequence": ["constant.character.escape.gap"]
+        }
+      }
+    ],
+    "commands": [
+      {
+        "command": "gap.generateCompletionData",
+        "title": "GAP: Generate Completion Data"
+      },
+      {
+        "command": "gap.resetCompletionData",
+        "title": "GAP: Reset Completion Data"
+      },
+      {
+        "command": "gap.runFile",
+        "title": "Run GAP File",
+        "category": "GAP",
+        "icon": "$(play)",
+        "enablement": "resourceLangId == gap && resourceScheme != untitled"
+      },
+      {
+        "command": "gap.configureFlags",
+        "title": "Configure GAP Command Line Options",
+        "category": "GAP",
+        "enablement": "resourceLangId == gap && resourceScheme != untitled"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "gap.runFile",
+          "when": "resourceLangId == gap && resourceScheme != untitled",
+          "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "gap.configureFlags",
+          "when": "resourceLangId == gap && resourceScheme != untitled",
+          "group": "gap"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "GAP System Support",
+      "properties": {
+        "gap.runMode": {
+          "type": "string",
+          "enum": [
+            "reuse",
+            "new"
+          ],
+          "default": "reuse",
+          "enumDescriptions": [
+            "Reuse the same GAP terminal.",
+            "Open a new terminal for each run."
+          ],
+          "description": "Terminal behavior when running a GAP file."
+        },
+        "gap.terminalRoot": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Unix root for Windows drive letters. Example: `/` turns `C:\\project\\file.g` into `/c/project/file.g`. Leave empty to use WSL default `/mnt/`.",
+          "scope": "application"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "query": "node test/lib/highlight/query.js",
+    "test": "node test/run-all.js"
+  },
+  "dependencies": {
+    "web-tree-sitter": "^0.24.6"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "1.125.0",
+    "typescript": "^5.4.0"
+  }
+}

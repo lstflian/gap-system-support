@@ -1,0 +1,221 @@
+{
+  "file": "keywords.g",
+  "assertions": [
+    {
+      "line": 1,
+      "col": 1,
+      "text": "if",
+      "expected": "keyword.conditional"
+    },
+    {
+      "line": 1,
+      "col": 10,
+      "text": "then",
+      "expected": "keyword.conditional"
+    },
+    {
+      "line": 4,
+      "col": 1,
+      "text": "elif",
+      "expected": "keyword.conditional"
+    },
+    {
+      "line": 4,
+      "col": 14,
+      "text": "then",
+      "expected": "keyword.conditional"
+    },
+    {
+      "line": 8,
+      "col": 1,
+      "text": "else",
+      "expected": "keyword.conditional"
+    },
+    {
+      "line": 11,
+      "col": 1,
+      "text": "fi",
+      "expected": "keyword.conditional"
+    },
+    {
+      "line": 14,
+      "col": 1,
+      "text": "atomic",
+      "expected": "keyword"
+    },
+    {
+      "line": 14,
+      "col": 8,
+      "text": "readonly",
+      "expected": "keyword.modifier"
+    },
+    {
+      "line": 14,
+      "col": 23,
+      "text": "readwrite",
+      "expected": "keyword.modifier"
+    },
+    {
+      "line": 14,
+      "col": 35,
+      "text": "do",
+      "expected": "keyword.repeat"
+    },
+    {
+      "line": 20,
+      "col": 1,
+      "text": "od",
+      "expected": "keyword.repeat"
+    },
+    {
+      "line": 23,
+      "col": 1,
+      "text": "atomic",
+      "expected": "keyword.modifier"
+    },
+    {
+      "line": 23,
+      "col": 8,
+      "text": "function",
+      "expected": "keyword.function"
+    },
+    {
+      "line": 23,
+      "col": 16,
+      "text": "(",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 23,
+      "col": 17,
+      "text": "x",
+      "expected": "variable.parameter"
+    },
+    {
+      "line": 23,
+      "col": 18,
+      "text": ")",
+      "expected": "punctuation.bracket"
+    },
+    {
+      "line": 29,
+      "col": 3,
+      "text": "return",
+      "expected": "keyword.return"
+    },
+    {
+      "line": 29,
+      "col": 10,
+      "text": "x",
+      "expected": "variable.parameter"
+    },
+    {
+      "line": 29,
+      "col": 11,
+      "text": ";",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 33,
+      "col": 1,
+      "text": "end",
+      "expected": "keyword.function"
+    },
+    {
+      "line": 33,
+      "col": 4,
+      "text": ";",
+      "expected": "punctuation.delimiter"
+    },
+    {
+      "line": 37,
+      "col": 1,
+      "text": "for",
+      "expected": "keyword.repeat"
+    },
+    {
+      "line": 37,
+      "col": 18,
+      "text": "do",
+      "expected": "keyword.repeat"
+    },
+    {
+      "line": 41,
+      "col": 3,
+      "text": "continue",
+      "expected": "keyword"
+    },
+    {
+      "line": 43,
+      "col": 1,
+      "text": "od",
+      "expected": "keyword.repeat"
+    },
+    {
+      "line": 46,
+      "col": 1,
+      "text": "while",
+      "expected": "keyword.repeat"
+    },
+    {
+      "line": 46,
+      "col": 13,
+      "text": "do",
+      "expected": "keyword.repeat"
+    },
+    {
+      "line": 50,
+      "col": 3,
+      "text": "break",
+      "expected": "keyword"
+    },
+    {
+      "line": 52,
+      "col": 1,
+      "text": "od",
+      "expected": "keyword.repeat"
+    },
+    {
+      "line": 55,
+      "col": 1,
+      "text": "repeat",
+      "expected": "keyword.repeat"
+    },
+    {
+      "line": 58,
+      "col": 1,
+      "text": "until",
+      "expected": "keyword.repeat"
+    },
+    {
+      "line": 61,
+      "col": 6,
+      "text": "rec",
+      "expected": "keyword.type"
+    },
+    {
+      "line": 64,
+      "col": 8,
+      "text": "function",
+      "expected": "keyword.function"
+    },
+    {
+      "line": 66,
+      "col": 3,
+      "text": "local",
+      "expected": "keyword.function"
+    },
+    {
+      "line": 68,
+      "col": 3,
+      "text": "return",
+      "expected": "keyword.return"
+    },
+    {
+      "line": 70,
+      "col": 1,
+      "text": "end",
+      "expected": "keyword.function"
+    }
+  ]
+}

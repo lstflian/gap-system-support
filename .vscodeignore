@@ -1,0 +1,10 @@
+.vscode/**
+src/**
+tsconfig.json
+.git/**
+*.vsix
+package-lock.json
+test/**
+images/**
+icon/logo.svg
+data/completionData/*.txt
