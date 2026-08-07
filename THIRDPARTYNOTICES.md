@@ -1,6 +1,15 @@
-MIT License
+# Third Party Notices
 
-Copyright (c) 2026 Songtai Li
+This project incorporates components from the projects listed below. The original copyright notices and the licenses under which these components are received are set forth below.
+
+## tree-sitter-gap
+
+The query files and parser are from tree-sitter-gap. See https://github.com/gap-system/tree-sitter-gap.
+tree-sitter-gap is licensed under the MIT License:
+
+The MIT License (MIT)
+
+Copyright (c) 2019 Max Horn
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +28,10 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+## GAP Logo
+
+The GAP logo used in this extension is (c) Max Horn and a trademark of the
+GAP project. It is licensed under the Creative Commons Attribution-ShareAlike
+4.0 International License. See https://github.com/gap-system/gap-logo for the
+source. License: https://creativecommons.org/licenses/by-sa/4.0/

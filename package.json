@@ -4,6 +4,7 @@
   "description": "GAP language support for VS Code with syntax highlighting, completion and run, powered by tree-sitter-gap",
   "version": "0.0.1",
   "publisher": "flianlee",
+  "author": "Songtai Li",
   "license": "SEE LICENSE IN LICENSE",
   "icon": "icon/icon.png",
   "repository": {
