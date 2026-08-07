@@ -2,7 +2,7 @@
   "name": "gap-system-support",
   "displayName": "GAP System Support",
   "description": "GAP language support for VS Code with syntax highlighting, completion and run, powered by tree-sitter-gap",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "flianlee",
   "author": "Songtai Li",
   "license": "SEE LICENSE IN LICENSE",
@@ -64,13 +64,27 @@
       {
         "language": "gap",
         "scopes": {
-          "keyword": ["keyword.control.gap"],
-          "string": ["string.quoted.gap"],
-          "number": ["constant.numeric.gap"],
-          "comment": ["comment.line.number-sign.gap"],
-          "operator": ["keyword.operator.gap"],
-          "variable.readonly": ["variable.other.constant.gap"],
-          "escapeSequence": ["constant.character.escape.gap"]
+          "keyword": [
+            "keyword.control.gap"
+          ],
+          "string": [
+            "string.quoted.gap"
+          ],
+          "number": [
+            "constant.numeric.gap"
+          ],
+          "comment": [
+            "comment.line.number-sign.gap"
+          ],
+          "operator": [
+            "keyword.operator.gap"
+          ],
+          "variable.readonly": [
+            "variable.other.constant.gap"
+          ],
+          "escapeSequence": [
+            "constant.character.escape.gap"
+          ]
         }
       }
     ],
