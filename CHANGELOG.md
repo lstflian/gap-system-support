@@ -1,3 +1,8 @@
+## 0.0.2
+
+1. Split third-party notices out of LICENSE into THIRDPARTYNOTICES.md
+2. Add author to package.json
+
 ## 0.0.1
 
 1. Initial release
