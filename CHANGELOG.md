@@ -1,3 +1,7 @@
+## 0.1.0
+
+1. Refine semantic highlighting
+
 ## 0.0.2
 
 1. Split third-party notices out of LICENSE into THIRDPARTYNOTICES.md

@@ -22,6 +22,14 @@
       ]
     },
     {
+      "name": "constant.character.gap",
+      "begin": "'",
+      "end": "'",
+      "patterns": [
+        { "include": "#escape-sequence" }
+      ]
+    },
+    {
       "name": "comment.line.number-sign.gap",
       "match": "#.*$"
     },
@@ -31,7 +39,11 @@
     },
     {
       "name": "keyword.control.gap",
-      "match": "\\b(function|local|end|if|then|elif|else|fi|for|while|do|od|repeat|until|return|break|continue|atomic|rec|readonly|readwrite|and|in|mod|not|or|quit|QUIT)\\b"
+      "match": "\\b(function|local|end|if|then|elif|else|fi|for|while|do|od|repeat|until|return|break|continue|atomic|rec|readonly|readwrite|quit|QUIT)\\b"
+    },
+    {
+      "name": "keyword.operator.gap",
+      "match": "\\b(and|in|mod|not|or)\\b"
     },
     {
       "name": "variable.other.constant.gap",

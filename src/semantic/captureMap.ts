@@ -13,6 +13,7 @@ const TOKEN_TYPES = [
     'property',
     'comment',
     'string',
+    'character',
     'number',
     'operator',
     'escapeSequence',
@@ -29,28 +30,39 @@ export const legend = new vscode.SemanticTokensLegend(TOKEN_TYPES, TOKEN_MODIFIE
 export type TokenMapping = { type: string; modifiers: string[] };
 
 export const CAPTURE_MAP: Record<string, TokenMapping | null> = {
-    'variable':                     { type: 'variable',  modifiers: [] },
-    'constant':                     { type: 'variable',  modifiers: ['readonly'] },
-    'function':                     { type: 'function',  modifiers: ['declaration'] },
-    'function.call':                { type: 'function',  modifiers: [] },
-    'function.builtin':             { type: 'function',  modifiers: ['defaultLibrary'] },
-    'variable.parameter':           { type: 'parameter', modifiers: ['declaration'] },
-    'variable.parameter.builtin':   { type: 'parameter', modifiers: ['defaultLibrary'] },
-    'variable.member':              { type: 'property',  modifiers: [] },
-    'property':                     { type: 'property',  modifiers: [] },
-    'constant.builtin':             { type: 'variable',  modifiers: ['readonly'] },
-    'variable.builtin':             { type: 'variable',  modifiers: ['defaultLibrary'] },
+    'character':                    { type: 'character', modifiers: [] },
+
+    'comment':                      { type: 'comment',   modifiers: [] },
+
+    'string.escape':                { type: 'escapeSequence', modifiers: [] },
 
     'number':                       { type: 'number',    modifiers: [] },
     'number.float':                 { type: 'number',    modifiers: [] },
+
+    'keyword.operator':             { type: 'operator',   modifiers: [] },
+    'operator':                     { type: 'operator',   modifiers: [] },
+
+    'variable.parameter':           { type: 'parameter', modifiers: ['declaration'] },
+    'variable.parameter.builtin':   { type: 'parameter', modifiers: ['defaultLibrary'] },
+
+    'variable.member':              { type: 'property',  modifiers: [] },
+    'property':                     { type: 'property',  modifiers: [] },
+
     'string':                       { type: 'string',    modifiers: [] },
-    'character':                    { type: 'string',    modifiers: [] },
-    'string.escape':                { type: 'escapeSequence', modifiers: [] },
     'string.special':               { type: 'string',    modifiers: [] },
+
+    'function':                     { type: 'function',  modifiers: ['declaration'] },
+    'function.call':                { type: 'function',  modifiers: [] },
+    'function.builtin':             { type: 'function',  modifiers: ['defaultLibrary'] },
+
+    'variable':                     { type: 'variable',  modifiers: [] },
+    'constant':                     { type: 'variable',  modifiers: ['readonly'] },
+    'constant.builtin':             { type: 'variable',  modifiers: ['readonly'] },
+    'variable.builtin':             { type: 'variable',  modifiers: ['defaultLibrary'] },
+
 
     'keyword':                      { type: 'keyword',   modifiers: [] },
     'keyword.function':             { type: 'keyword',   modifiers: [] },
-    'keyword.operator':             { type: 'keyword',   modifiers: [] },
     'keyword.type':                 { type: 'keyword',   modifiers: [] },
     'keyword.modifier':             { type: 'keyword',   modifiers: [] },
     'keyword.repeat':               { type: 'keyword',   modifiers: [] },
@@ -58,12 +70,8 @@ export const CAPTURE_MAP: Record<string, TokenMapping | null> = {
     'keyword.return':               { type: 'keyword',   modifiers: [] },
     'keyword.directive':            { type: 'keyword',   modifiers: [] },
 
-    'operator':                     { type: 'operator',  modifiers: [] },
-    'comment':                      { type: 'comment',   modifiers: [] },
-
     'punctuation.delimiter':        null,
     'punctuation.bracket':          null,
     'punctuation.special':          null,
-
     'spell':                        null,
 };
