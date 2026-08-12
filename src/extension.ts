@@ -76,12 +76,14 @@ export async function activate(context: vscode.ExtensionContext) {
         ),
     );
 
-    // Handle document close events.
+    // Register the completion provider: static data scope aware completions.
+    const completionPath = vscode.Uri.joinPath(context.extensionUri, 'queries', 'completion.scm').fsPath;
+    const completionProvider = new GapCompletionProvider(completionPath);
     context.subscriptions.push(
-        vscode.workspace.onDidCloseTextDocument(doc => {
-            onDocumentClosed(doc.uri);
-            semanticProvider.onDocumentClosed(doc.uri);
-        }),
+        vscode.languages.registerCompletionItemProvider(
+            { language: 'gap' },
+            completionProvider,
+        ),
     );
 
     // Register the folding range provider, driven by folds.scm.
@@ -93,12 +95,13 @@ export async function activate(context: vscode.ExtensionContext) {
         ),
     );
 
-    // Register the completion provider, static data only.
+    // Handle document close events.
     context.subscriptions.push(
-        vscode.languages.registerCompletionItemProvider(
-            { language: 'gap' },
-            new GapCompletionProvider(),
-        ),
+        vscode.workspace.onDidCloseTextDocument(doc => {
+            onDocumentClosed(doc.uri);
+            semanticProvider.onDocumentClosed(doc.uri);
+            completionProvider.onDocumentClosed(doc.uri);
+        }),
     );
 
     // Register the completion data commands.

@@ -1,6 +1,7 @@
 /**
  * GAP completion provider.
- * Provides 4 static categories: builtin constants, keywords, statement snippets, GAP functions.
+ * Static categories: builtin constants, keywords, statement snippets, GAP functions.
+ * Scope-aware items: variables, parameters and functions visible at the cursor.
  * Filtering and sorting are handled by VS Code.
  */
 
@@ -9,7 +10,9 @@ import { GAP_KEYWORDS } from './keywords';
 import { STATEMENT_SNIPPETS, type StatementSnippet } from './snippets';
 import { GAP_CONSTANTS } from './constants';
 import { getFunctionNames } from './dataManager';
+import { GapScopedCompletions, type ScopedItem } from './scoped';
 
+const SORT_SCOPED = '00-';
 const SORT_CONSTANT = '01-';
 const SORT_KEYWORD = '02-';
 const SORT_SNIPPET = '03-';
@@ -19,6 +22,7 @@ const DETAIL_CONSTANT = 'constant';
 const DETAIL_KEYWORD = 'keyword';
 const DETAIL_SNIPPET = 'statement';
 const DETAIL_FUNCTION = 'GAP function';
+const DETAIL_USER_FUNCTION = 'user defined function';
 
 /** Build the completion item for one builtin constant. */
 function constantItem(name: string): vscode.CompletionItem {
@@ -46,7 +50,7 @@ function snippetItem(s: StatementSnippet): vscode.CompletionItem {
     return item;
 }
 
-/** Build the completion item for one function. */
+/** Build the completion item for one GAP function. */
 function functionItem(name: string): vscode.CompletionItem {
     const item = new vscode.CompletionItem(name, vscode.CompletionItemKind.Function);
     item.detail = DETAIL_FUNCTION;
@@ -54,10 +58,44 @@ function functionItem(name: string): vscode.CompletionItem {
     return item;
 }
 
+/** Build the completion item for one scoped variable, parameter or function. */
+function scopedItem(item: ScopedItem): vscode.CompletionItem {
+    const kind = item.kind === 'function'
+        ? vscode.CompletionItemKind.Function
+        : vscode.CompletionItemKind.Variable;
+    const ci = new vscode.CompletionItem(item.name, kind);
+    ci.detail = item.kind === 'function'
+        ? DETAIL_USER_FUNCTION
+        : item.kind === 'variable' && item.isGlobal ? 'global variable' : item.kind;
+    ci.sortText = SORT_SCOPED + item.name;
+    return ci;
+}
+
 export class GapCompletionProvider implements vscode.CompletionItemProvider {
 
-    provideCompletionItems(): vscode.CompletionItem[] {
+    private scoped: GapScopedCompletions | null;
+
+    constructor(completionQueryPath?: string) {
+        this.scoped = completionQueryPath ? new GapScopedCompletions(completionQueryPath) : null;
+    }
+
+    onDocumentClosed(uri: vscode.Uri): void {
+        this.scoped?.onDocumentClosed(uri);
+    }
+
+    provideCompletionItems(
+        document: vscode.TextDocument,
+        position: vscode.Position,
+        token: vscode.CancellationToken,
+    ): vscode.CompletionItem[] {
         const items: vscode.CompletionItem[] = [];
+
+        // 0. Scoped variables, parameters and functions visible at the cursor.
+        if (this.scoped && !token.isCancellationRequested) {
+            for (const item of this.scoped.getItems(document, position)) {
+                items.push(scopedItem(item));
+            }
+        }
 
         // 1. Builtin constants.
         for (const name of GAP_CONSTANTS) {
