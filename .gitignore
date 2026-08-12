@@ -2,3 +2,4 @@ node_modules/
 out/
 *.vsix
 test/highlightCases/query-*.txt
+.vscode/settings.json
