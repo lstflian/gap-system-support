@@ -2,7 +2,7 @@
   "name": "gap-system-support",
   "displayName": "GAP System Support",
   "description": "GAP language support for VS Code with syntax highlighting, completion and run, powered by tree-sitter-gap",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "flianlee",
   "author": "Songtai Li",
   "license": "SEE LICENSE IN LICENSE",
