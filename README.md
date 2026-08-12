@@ -18,7 +18,7 @@ Semantic highlighting based on `tree-sitter-gap`.
 
 ### Code Completion
 
-Completion for GAP constants, keywords, statement structures and GAP functions while typing.
+Completion for GAP constants, keywords, statement structures and GAP functions while typing, as well as the variables and user defined functions actually available at the cursor (including user defined functions in other GAP files loaded via `Read`).
 
 <img src="images/Completion.gif" alt="Code completion demo" width="800" />
 

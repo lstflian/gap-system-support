@@ -18,7 +18,7 @@
 
 ### 代码补全
 
-输入时补全 GAP 常量、关键字、语句结构和 GAP 函数。
+输入时补全 GAP 常量、关键字、语句结构和 GAP 函数，以及光标处可用的变量与自定义函数（含通过 `Read` 加载的其他 GAP 文件中的自定义函数）。
 
 <img src="images/Completion.gif" alt="代码补全演示" width="800" />
 
@@ -41,7 +41,7 @@
 运行 GAP 文件时，需要注意以下两点：
 
 1. 运行 GAP 文件需要在终端中能执行 `gap` 命令。
-2. 运行 GAP 文件时，终端的 cwd 通过 `vscode.workspace.getWorkspaceFolder(doc.uri)` 获取。该函数返回包含该文件的工作区文件夹；若文件不在任何工作区文件夹内（例如以单文件方式打开），则返回 undefined，此时终端不传 cwd，默认在用户主目录启动。详情见 [VS Code API](https://code.visualstudio.com/api/references/vscode-api#workspace.getWorkspaceFolder)。
+2. 运行 GAP 文件时，终端的 cwd 通过 `vscode.workspace.getWorkspaceFolder(doc.uri)` 获取。该函数返回包含该文件的工作区文件夹；若文件不在任何工作区文件夹内（例如以单文件方式打开），则返回 `undefined`，此时终端不传 cwd，默认在用户主目录启动。详情见 [VS Code API](https://code.visualstudio.com/api/references/vscode-api#workspace.getWorkspaceFolder)。
 
 下面以 Windows 为例，演示如何将 GAP（通过 `.exe` 安装器安装）添加到系统 PATH 中。在 PowerShell 中执行（请将路径替换为实际安装路径）：
 
