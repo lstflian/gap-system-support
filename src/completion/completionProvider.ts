@@ -11,6 +11,7 @@ import { STATEMENT_SNIPPETS, type StatementSnippet } from './snippets';
 import { GAP_CONSTANTS } from './constants';
 import { getFunctionNames } from './dataManager';
 import { GapScopedCompletions, type ScopedItem } from './scoped';
+import { GapReadCompletions } from './readCompletions';
 
 const SORT_SCOPED = '00-';
 const SORT_CONSTANT = '01-';
@@ -74,13 +75,16 @@ function scopedItem(item: ScopedItem): vscode.CompletionItem {
 export class GapCompletionProvider implements vscode.CompletionItemProvider {
 
     private scoped: GapScopedCompletions | null;
+    private read: GapReadCompletions | null;
 
     constructor(completionQueryPath?: string) {
         this.scoped = completionQueryPath ? new GapScopedCompletions(completionQueryPath) : null;
+        this.read = completionQueryPath ? new GapReadCompletions(completionQueryPath) : null;
     }
 
     onDocumentClosed(uri: vscode.Uri): void {
         this.scoped?.onDocumentClosed(uri);
+        this.read?.onDocumentClosed(uri);
     }
 
     provideCompletionItems(
@@ -89,11 +93,28 @@ export class GapCompletionProvider implements vscode.CompletionItemProvider {
         token: vscode.CancellationToken,
     ): vscode.CompletionItem[] {
         const items: vscode.CompletionItem[] = [];
+        const scopedNames = new Set<string>();
 
-        // 0. Scoped variables, parameters and functions visible at the cursor.
+        // 0a. Scoped variables, parameters and functions visible at the cursor.
         if (this.scoped && !token.isCancellationRequested) {
             for (const item of this.scoped.getItems(document, position)) {
                 items.push(scopedItem(item));
+                scopedNames.add(item.name);
+            }
+        }
+
+        // 0b. User defined functions loaded by Read calls before the cursor.
+        if (this.scoped && this.read && !token.isCancellationRequested) {
+            const readCalls = this.scoped.getReadCalls(document, position);
+            if (readCalls.length > 0) {
+                const names = this.read.getFunctionNames(document, readCalls);
+                for (const name of names) {
+                    if (scopedNames.has(name)) continue;
+                    const ci = new vscode.CompletionItem(name, vscode.CompletionItemKind.Function);
+                    ci.detail = DETAIL_USER_FUNCTION;
+                    ci.sortText = SORT_SCOPED + name;
+                    items.push(ci);
+                }
             }
         }
 

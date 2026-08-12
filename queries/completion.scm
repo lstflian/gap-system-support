@@ -36,3 +36,9 @@
     (function)
     (atomic_function)
   ])
+
+(call
+  function: (identifier) @completion.read-fn
+  arguments: (argument_list
+    (string
+      (string_content) @completion.read-path))) @completion.read-call

@@ -19,6 +19,11 @@ export interface ScopedItem {
     isGlobal: boolean;
 }
 
+export interface ReadCall {
+    end: number;
+    path: string;
+}
+
 /** One definition node and its resolved kind. */
 interface DefNode {
     node: SyntaxNode;
@@ -42,6 +47,7 @@ interface ScopeModel {
 interface DocumentModel {
     scopes: ScopeModel[];
     scopeByStart: Map<number, ScopeModel>;
+    readCalls: ReadCall[];
 }
 
 const CAPTURE_KIND: Record<string, ScopedKind> = {
@@ -107,8 +113,11 @@ export class GapScopedCompletions {
     private buildModel(matches: QueryMatch[]): DocumentModel {
         const scopeNodes: SyntaxNode[] = [];
         const defs = new Map<number, DefNode>();
+        const readCalls: ReadCall[] = [];
 
         for (const match of matches) {
+            let readCall: ReadCall | null = null;
+            let readFn = '';
             for (const capture of match.captures) {
                 const node = capture.node;
                 const name = capture.name;
@@ -116,6 +125,22 @@ export class GapScopedCompletions {
                 if (name === 'completion.scope') {
                     if (hasErrorAncestor(node)) continue;
                     scopeNodes.push(node);
+                    continue;
+                }
+
+                if (name === 'completion.read-call') {
+                    if (hasErrorAncestor(node)) continue;
+                    readCall = { end: node.endIndex, path: '' };
+                    continue;
+                }
+                if (name === 'completion.read-fn') {
+                    if (!hasErrorAncestor(node)) readFn = node.text;
+                    continue;
+                }
+                if (name === 'completion.read-path') {
+                    if (readCall && !hasErrorAncestor(node)) {
+                        readCall.path = node.text;
+                    }
                     continue;
                 }
 
@@ -129,6 +154,9 @@ export class GapScopedCompletions {
                 if (!existing || KIND_PRIORITY[kind] > KIND_PRIORITY[existing.kind]) {
                     defs.set(bkey, { node, kind });
                 }
+            }
+            if (readCall && readFn === 'Read' && readCall.path) {
+                readCalls.push(readCall);
             }
         }
 
@@ -184,18 +212,14 @@ export class GapScopedCompletions {
             }
         }
 
-        return { scopes, scopeByStart };
+        return { scopes, scopeByStart, readCalls };
     }
 
-    /**
-     * Return the items visible at the position, inner scopes first.
-     * A definition is visible only when its end index is strictly before the cursor offset, so a name being typed is never offered.
-     */
+    /** Return the items visible at the position, inner scopes first. */
     getItems(document: vscode.TextDocument, position: vscode.Position): ScopedItem[] {
         if (!isParserReady()) return [];
 
         const code = document.getText();
-        // Very large documents skip scoped completions.
         if (code.length > GapScopedCompletions.CONTENT_LENGTH_LIMIT) return [];
 
         const tree = getDocumentTree(document, code);
@@ -204,7 +228,7 @@ export class GapScopedCompletions {
         const offset = document.offsetAt(position);
         const clamped = Math.max(0, Math.min(offset, tree.rootNode.endIndex));
 
-        // Locate the innermost node at the cursor, then walk the ancestors to collect the enclosing scopes, inner first.
+        // Walk the ancestors from the cursor node, collecting enclosing scopes inner first.
         const chain: ScopeModel[] = [];
         let current: SyntaxNode | null =
             clamped >= tree.rootNode.endIndex ? tree.rootNode : tree.rootNode.descendantForIndex(clamped);
@@ -242,5 +266,18 @@ export class GapScopedCompletions {
         }
 
         return result;
+    }
+
+    getReadCalls(document: vscode.TextDocument, position: vscode.Position): ReadCall[] {
+        if (!isParserReady()) return [];
+
+        const code = document.getText();
+        if (code.length > GapScopedCompletions.CONTENT_LENGTH_LIMIT) return [];
+
+        const tree = getDocumentTree(document, code);
+        const model = this.getModel(document, tree);
+
+        const offset = document.offsetAt(position);
+        return model.readCalls.filter(call => call.end <= offset);
     }
 }
