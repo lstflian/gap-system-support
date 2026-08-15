@@ -471,7 +471,12 @@ export function validateGlobalCaptureIndex(
 
     const scopes = [...index.scopes].sort((left, right) =>
         left.startIndex - right.startIndex || right.endIndex - left.endIndex);
-    const scopeKeys = new Set(scopes.map(scope => scopeKey(scope.startIndex, scope.endIndex)));
+    const scopeKeys = new Set<string>();
+    for (const scope of scopes) {
+        const key = scopeKey(scope.startIndex, scope.endIndex);
+        if (scopeKeys.has(key)) return 'scope range is duplicated';
+        scopeKeys.add(key);
+    }
     // Check scope nesting with a stack, crossing scopes are invalid.
     const stack: OffsetRange[] = [];
     for (const scope of scopes) {
@@ -836,6 +841,11 @@ function updateGlobalCaptureIndex(
             if (rangeTouchesEdit(current, edit)) dirtyOld.add(oldIndex);
             current = { ...current, ...mapRange(current, [edit]) };
         }
+        // A fully replaced top level maps to an inverted range.
+        // Collapse it to zero length, the level is already dirty.
+        if (current.startIndex > current.endIndex) {
+            current = { ...current, startIndex: current.endIndex };
+        }
         mappedOldTopLevels.push(current);
 
         const newIndex = newByKey.get(topLevelKey(current));
@@ -1047,6 +1057,15 @@ export function updateGlobalTopologyIndex(
         return {
             status: 'fallback',
             reason: 'too-many-edits',
+            dirtyRatio: 1,
+            materializedPreviousIndex: false,
+        };
+    }
+    // The incremental path assumes ERROR-free trees on both sides.
+    if (change.oldHasError || change.newHasError) {
+        return {
+            status: 'fallback',
+            reason: 'invalid-transition',
             dirtyRatio: 1,
             materializedPreviousIndex: false,
         };

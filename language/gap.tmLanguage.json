@@ -2,10 +2,6 @@
   "scopeName": "source.gap",
   "patterns": [
     {
-      "name": "keyword.control.gap",
-      "match": "#%.*$"
-    },
-    {
       "name": "string.quoted.gap",
       "begin": "\"\"\"",
       "end": "\"\"\"",
