@@ -1,6 +1,4 @@
-; NOTE: (reiniscirpons) in case multiple queries match, last query wins. So
-; queries should go from least specific to most specific. (This is the default
-; behaviour since tree-sitter 0.22.2)
+; Last matching query wins, so list rules from least to most specific.
 (identifier) @variable
 
 ; Constants

@@ -164,7 +164,7 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "query": "node test/lib/highlight/query.js",
-    "generate:highlight-queries": "node scripts/generate-highlight-queries.js",
+    "generate:highlight-queries": "node scripts/query-generator/generate-highlight-queries.js",
     "test": "node test/run-all.js"
   },
   "dependencies": {

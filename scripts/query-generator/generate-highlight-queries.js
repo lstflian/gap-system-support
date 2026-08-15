@@ -7,8 +7,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const root = path.join(__dirname, '..');
-const sourcePath = path.join(__dirname, 'query-source', 'highlights.scm');
+const root = path.join(__dirname, '..', '..');
+const sourcePath = path.join(root, 'queries', 'highlights.source.scm');
 const targets = {
     viewport: path.join(root, 'queries', 'highlights.scm'),
     global: path.join(root, 'queries', 'highlights.global.scm'),
@@ -78,7 +78,7 @@ if (require.main === module) {
     const writeMode = args.length === 0;
     const checkMode = args.length === 1 && args[0] === '--check';
     if (!writeMode && !checkMode) {
-        console.error('Usage: node scripts/generate-highlight-queries.js [--check]');
+        console.error('Usage: node scripts/query-generator/generate-highlight-queries.js [--check]');
         process.exitCode = 2;
     } else if (writeMode) {
         const generated = loadGeneratedQueries();

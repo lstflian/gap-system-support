@@ -19,9 +19,11 @@
   left: (identifier) @function
   right: (lambda))
 
+; @gap-query viewport-only begin
 (call
   function: (identifier) @function.call)
 
+; @gap-query viewport-only end
 ((call
   function: (identifier) @function.builtin)
   (#any-of? @function.builtin "Assert" "Info" "IsBound" "Unbind" "TryNextMethod"))
@@ -67,6 +69,7 @@
 ; Literals
 (bool) @constant.builtin
 
+; @gap-query viewport-only begin
 (integer) @number
 
 (float) @number.float
@@ -82,6 +85,7 @@
   (help_book)
 ] @string.special
 
+; @gap-query viewport-only end
 (tilde) @variable.builtin
 
 ; Record selectors
@@ -115,6 +119,7 @@
 
 (help_statement
   (help_selector) @property)
+; @gap-query viewport-only begin
 
 ; Operators
 [
@@ -215,3 +220,4 @@
 
 ;Comments
 (comment) @comment @spell
+; @gap-query viewport-only end
