@@ -17,6 +17,7 @@ const TOKEN_TYPES = [
     'number',
     'operator',
     'escapeSequence',
+    'enumMember',
 ];
 
 const TOKEN_MODIFIERS = [
@@ -52,7 +53,7 @@ export const CAPTURE_MAP: Record<string, TokenMapping | null> = {
     'variable.parameter':           { type: 'parameter', modifiers: ['declaration'] },
     'variable.parameter.builtin':   { type: 'parameter', modifiers: ['defaultLibrary'] },
 
-    'variable.member':              { type: 'property',  modifiers: [] },
+    'variable.member':              { type: 'enumMember',  modifiers: [] },
     'property':                     { type: 'property',  modifiers: [] },
 
     'string':                       { type: 'string',    modifiers: [] },
