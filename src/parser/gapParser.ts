@@ -3,7 +3,7 @@
  */
 
 import * as vscode from 'vscode';
-import Parser, { type Language, type Tree, type Edit, type Point } from 'web-tree-sitter';
+import Parser, { type Language, type Tree, type Edit, type Point, type Range as TreeRange } from 'web-tree-sitter';
 
 let gapParser: Parser | null = null;
 let gapLanguage: Language | null = null;
@@ -11,6 +11,8 @@ let gapLanguage: Language | null = null;
 /** One cached document state. */
 interface DocState {
     tree: Tree | null;
+    generation: number;
+    change: DocumentTreeChange | null;
     text: string;
     edits: Edit[];
     editEvents: number;
@@ -20,12 +22,97 @@ interface DocState {
 
 /** Document states, keyed by uri.toString(). */
 const docs = new Map<string, DocState>();
+let nextTreeGeneration = 1;
 
 /** Cache limits for the document map. */
 const MAX_DOCS = 20;
 const MAX_TOTAL_TEXT = 50 * 1024 * 1024;
 const MAX_IDLE_MS = 3 * 60 * 1000;
 const MAX_PENDING_EDITS = 1000;
+
+export interface ParserDiagnostics {
+    initialFullParses: number;
+    incrementalParses: number;
+    fallbackFullParses: number;
+    versionFallbacks: number;
+    missingEditFallbacks: number;
+    cacheReuses: number;
+    droppedEditBatches: number;
+}
+
+const parserDiagnostics: ParserDiagnostics = {
+    initialFullParses: 0,
+    incrementalParses: 0,
+    fallbackFullParses: 0,
+    versionFallbacks: 0,
+    missingEditFallbacks: 0,
+    cacheReuses: 0,
+    droppedEditBatches: 0,
+};
+
+export function getParserDiagnostics(): ParserDiagnostics {
+    return { ...parserDiagnostics };
+}
+
+export function resetParserDiagnostics(): void {
+    for (const key of Object.keys(parserDiagnostics) as (keyof ParserDiagnostics)[]) {
+        parserDiagnostics[key] = 0;
+    }
+}
+
+export interface DocumentTreeSnapshot {
+    tree: Tree;
+    generation: number;
+    change: DocumentTreeChange | null;
+}
+
+export interface TreeRangeSnapshot {
+    startIndex: number;
+    endIndex: number;
+    startPosition: Point;
+    endPosition: Point;
+}
+
+export interface DocumentTreeChange {
+    fromGeneration: number;
+    toGeneration: number;
+    fromVersion: number;
+    toVersion: number;
+    oldTextLength: number;
+    newTextLength: number;
+    edits: readonly Edit[];
+    changedRanges: readonly TreeRangeSnapshot[];
+    oldHasError: boolean;
+    newHasError: boolean;
+}
+
+function nextGeneration(): number {
+    return nextTreeGeneration++;
+}
+
+function clonePoint(point: Point): Point {
+    return { row: point.row, column: point.column };
+}
+
+function cloneEdit(edit: Edit): Edit {
+    return {
+        startIndex: edit.startIndex,
+        oldEndIndex: edit.oldEndIndex,
+        newEndIndex: edit.newEndIndex,
+        startPosition: clonePoint(edit.startPosition),
+        oldEndPosition: clonePoint(edit.oldEndPosition),
+        newEndPosition: clonePoint(edit.newEndPosition),
+    };
+}
+
+function cloneRange(range: TreeRange): TreeRangeSnapshot {
+    return {
+        startIndex: range.startIndex,
+        endIndex: range.endIndex,
+        startPosition: clonePoint(range.startPosition),
+        endPosition: clonePoint(range.endPosition),
+    };
+}
 
 /** Initialize the GAP language WASM parser. */
 export async function initGapParser(context: vscode.ExtensionContext): Promise<void> {
@@ -112,6 +199,7 @@ export function onDocumentChanged(uri: vscode.Uri, changes: readonly vscode.Text
     if (state.edits.length > MAX_PENDING_EDITS) {
         state.edits = [];
         state.editEvents = -1;
+        parserDiagnostics.droppedEditBatches++;
     }
 }
 
@@ -170,7 +258,7 @@ function evictIfNeeded(now: number, keepKey?: string): void {
  * The tree is only valid for the current synchronous call, the caller must not delete it.
  * The code parameter is the document text when the caller already read it.
  */
-export function getDocumentTree(document: vscode.TextDocument, code?: string): Tree {
+export function getDocumentTreeSnapshot(document: vscode.TextDocument, code?: string): DocumentTreeSnapshot {
     const key = document.uri.toString();
     const newText = code ?? document.getText();
 
@@ -182,6 +270,8 @@ export function getDocumentTree(document: vscode.TextDocument, code?: string): T
     if (!state) {
         state = {
             tree: null,
+            generation: 0,
+            change: null,
             text: newText,
             edits: [],
             editEvents: 0,
@@ -193,17 +283,20 @@ export function getDocumentTree(document: vscode.TextDocument, code?: string): T
         evictIfNeeded(Date.now(), key);
         try {
             state.tree = parseGapCode(newText);
+            state.generation = nextGeneration();
+            parserDiagnostics.initialFullParses++;
         } catch (err) {
             // Delete the state, the next request reparses from scratch.
             state.tree?.delete();
             docs.delete(key);
             throw err;
         }
-        return state.tree;
+        return { tree: state.tree, generation: state.generation, change: state.change };
     }
 
     // Text unchanged, reuse the cached tree.
     if (newText === state.text) {
+        const hadPendingEdits = state.edits.length > 0 || state.editEvents !== 0;
         state.edits = [];
         state.editEvents = 0;
         state.version = document.version;
@@ -211,13 +304,19 @@ export function getDocumentTree(document: vscode.TextDocument, code?: string): T
         if (!state.tree) {
             try {
                 state.tree = parseGapCode(newText);
+                state.generation = nextGeneration();
+                parserDiagnostics.fallbackFullParses++;
+                parserDiagnostics.missingEditFallbacks++;
             } catch (err) {
                 state.tree?.delete();
                 docs.delete(key);
                 throw err;
             }
+        } else {
+            parserDiagnostics.cacheReuses++;
         }
-        return state.tree;
+        if (hadPendingEdits) state.change = null;
+        return { tree: state.tree, generation: state.generation, change: state.change };
     }
 
     // Partial event loss detection, the version difference must equal the event count.
@@ -226,17 +325,43 @@ export function getDocumentTree(document: vscode.TextDocument, code?: string): T
         document.version - state.version !== state.editEvents;
     if (state.edits.length > 0 && !versionJumped && state.tree) {
         // Incremental path.
+        const oldTree = state.tree;
+        const fromGeneration = state.generation;
+        const fromVersion = state.version;
+        const oldTextLength = state.text.length;
+        const pendingEdits = state.edits.map(cloneEdit);
+        const oldHasError = oldTree.rootNode.hasError;
+        let newTree: Tree | null = null;
         try {
             if (!gapParser) {
                 throw new Error('GAP parser is not initialized. Call initGapParser() first.');
             }
-            for (const e of state.edits) state.tree.edit(e);
-            const oldTree = state.tree;
-            state.tree = gapParser.parse(newText, oldTree);
+            for (const edit of pendingEdits) oldTree.edit(edit);
+            newTree = gapParser.parse(newText, oldTree);
+            const changedRanges = oldTree.getChangedRanges(newTree).map(cloneRange);
+            const generation = nextGeneration();
+            const change: DocumentTreeChange = {
+                fromGeneration,
+                toGeneration: generation,
+                fromVersion,
+                toVersion: document.version,
+                oldTextLength,
+                newTextLength: newText.length,
+                edits: pendingEdits,
+                changedRanges,
+                oldHasError,
+                newHasError: newTree.rootNode.hasError,
+            };
             oldTree.delete();
+            state.tree = newTree;
+            state.generation = generation;
+            state.change = change;
+            newTree = null;
             state.edits = [];
+            parserDiagnostics.incrementalParses++;
         } catch (err) {
-            state.tree?.delete();
+            newTree?.delete();
+            if (state.tree === oldTree) oldTree.delete();
             docs.delete(key);
             throw err;
         }
@@ -247,7 +372,12 @@ export function getDocumentTree(document: vscode.TextDocument, code?: string): T
         oldTree?.delete();
         try {
             state.tree = parseGapCode(newText);
+            state.generation = nextGeneration();
+            state.change = null;
             state.edits = [];
+            parserDiagnostics.fallbackFullParses++;
+            if (versionJumped) parserDiagnostics.versionFallbacks++;
+            else parserDiagnostics.missingEditFallbacks++;
         } catch (err) {
             state.tree?.delete();
             docs.delete(key);
@@ -258,7 +388,11 @@ export function getDocumentTree(document: vscode.TextDocument, code?: string): T
     state.text = newText;
     state.version = document.version;
     state.lastUsed = Date.now();
-    return state.tree;
+    return { tree: state.tree, generation: state.generation, change: state.change };
+}
+
+export function getDocumentTree(document: vscode.TextDocument, code?: string): Tree {
+    return getDocumentTreeSnapshot(document, code).tree;
 }
 
 /** Release all cached trees and the parser on deactivation. */

@@ -4,20 +4,12 @@
 
 import type { QueryMatch, SyntaxNode } from 'web-tree-sitter';
 import { posOuter, byteKey } from './keys';
-import { CAPTURE_MAP } from './captureMap';
+import { CAPTURE_MAP, isDefinitionLikeCapture } from './captureMap';
 import type { TokenMapping } from './captureMap';
 import { buildScopes, findDefinition, hasErrorAncestor, CAPTURE_KIND } from './locals';
 import type { ScopeEntry } from './locals';
 import { splitOverlapping, filterNullTokens } from './tokens';
 import type { InternalToken, DeferredToken, TokenEntry, CombinedData } from './tokens';
-
-/** Definition captures need the global final mapping index. */
-function isDefinitionLike(name: string): boolean {
-    return name === 'variable.parameter' || name === 'variable.parameter.builtin' ||
-        name === 'function' || name === 'function.builtin' ||
-        name === 'variable' || name === 'constant' || name === 'constant.builtin' ||
-        name === 'variable.builtin' || name === 'variable.member' || name === 'property';
-}
 
 /**
  * One pass over the matches, locals feed scopes and highlights feed tokens.
@@ -46,8 +38,12 @@ function singlePassCollect(
                 continue;
             }
             if (CAPTURE_KIND[name]) {
-                definitionNodes.add(byteKey(node.startIndex, node.endIndex));
-                definitions.push(node);
+                // Record fields are not variables in GAP.
+                // Keep them out of the scope table, or a same-name reference resolves to the field.
+                if (CAPTURE_KIND[name] !== 'field') {
+                    definitionNodes.add(byteKey(node.startIndex, node.endIndex));
+                    definitions.push(node);
+                }
                 continue;
             }
             if (name === 'local.reference') {
@@ -61,7 +57,7 @@ function singlePassCollect(
                 if (hasErrorAncestor(node)) continue;
             }
 
-            if (rawMapping && isDefinitionLike(name)) {
+            if (rawMapping && isDefinitionLikeCapture(name)) {
                 const bkey = byteKey(node.startIndex, node.endIndex);
                 const existingIdx = finalIndex.get(bkey);
                 if (!existingIdx || match.pattern > existingIdx.pattern) {
@@ -101,8 +97,8 @@ function singlePassCollect(
         }
     }
 
-    // Strip the pattern index, buildScopes reads the plain mapping.
-    // The pattern stays in finalIndex for conflict resolution, the final map serves buildScopes.
+    // Strip the pattern index; buildScopes reads the plain mapping.
+    // The pattern stays in finalIndex for conflict resolution.
     const finalMappingIndex = new Map<number, { mapping: TokenMapping; captureName: string }>();
     for (const [k, v] of finalIndex) finalMappingIndex.set(k, { mapping: v.mapping, captureName: v.captureName });
 
@@ -140,8 +136,12 @@ export function singlePassCollectGlobal(
                 continue;
             }
             if (CAPTURE_KIND[name]) {
-                definitionNodes.add(byteKey(node.startIndex, node.endIndex));
-                definitions.push(node);
+                // Record fields are not variables in GAP.
+                // Keep them out of the scope table, or a same-name reference resolves to the field.
+                if (CAPTURE_KIND[name] !== 'field') {
+                    definitionNodes.add(byteKey(node.startIndex, node.endIndex));
+                    definitions.push(node);
+                }
                 continue;
             }
             if (name === 'local.reference') {
@@ -155,7 +155,7 @@ export function singlePassCollectGlobal(
                 if (hasErrorAncestor(node)) continue;
             }
 
-            if (!rawMapping || !isDefinitionLike(name)) continue;
+            if (!rawMapping || !isDefinitionLikeCapture(name)) continue;
             const bkey = byteKey(node.startIndex, node.endIndex);
             const existingIdx = finalIndex.get(bkey);
             if (!existingIdx || match.pattern > existingIdx.pattern) {
@@ -221,11 +221,37 @@ export function collectTokenEntriesInRangeCached(
     startLine: number,
     endLine: number,
     global: CollectGlobal,
+    includeNullTokens = true,
 ): TokenEntry[] {
-    const data = collectViewportTokens(matches, startLine, endLine, global);
+    const data = collectViewportTokens(matches, startLine, endLine, global, includeNullTokens);
     const entries = finishEntries(code, data, global.scopes, global.rawLines, global.lineLens);
     // Keep only segments on the requested lines.
     return entries.filter(e => e.line >= startLine && e.line <= endLine);
+}
+
+/**
+ * Keep complete single-line tokens that intersect a VS Code range.
+ * LSP allows a boundary token to extend beyond the requested range.
+ */
+export function filterTokenEntriesInRange(
+    entries: TokenEntry[],
+    range: { start: { line: number; character: number }; end: { line: number; character: number } },
+): TokenEntry[] {
+    const startLine = range.start.line;
+    const startCharacter = range.start.character;
+    const endLine = range.end.line;
+    const endCharacter = range.end.character;
+    if (startLine > endLine || (startLine === endLine && startCharacter >= endCharacter)) {
+        return [];
+    }
+
+    return entries.filter(entry => {
+        if (entry.line < startLine || entry.line > endLine) return false;
+        const tokenEnd = entry.col + entry.text.length;
+        if (entry.line === startLine && tokenEnd <= startCharacter) return false;
+        if (entry.line === endLine && entry.col >= endCharacter) return false;
+        return true;
+    });
 }
 
 /**
@@ -237,6 +263,7 @@ function collectViewportTokens(
     startLine: number,
     endLine: number,
     global: CollectGlobal,
+    includeNullTokens: boolean,
 ): CombinedData {
     const tokenMap = new Map<number, InternalToken>();
     const nullMap = new Map<number, InternalToken>();
@@ -271,6 +298,7 @@ function collectViewportTokens(
             const ok = posOuter(sl, sc);
 
             if (!rawMapping) {
+                if (!includeNullTokens) continue;
                 const existingNull = nullMap.get(ok);
                 if (!existingNull || match.pattern > existingNull.pattern) {
                     nullMap.set(ok, { pattern: match.pattern, sl, sc, el, ec, startIndex: node.startIndex, endIndex: node.endIndex, type: null, modifiers: [], captureName: name });
@@ -340,7 +368,12 @@ function finishEntries(
         let captureName = d.captureName;
         const def = findDefinition(d.text, d.startIndex, scopes);
         if (def) {
-            finalMapping = def.mapping;
+            // Inherit the definition's type but not its declaration modifier.
+            // A reference is not a declaration.
+            finalMapping = {
+                type: def.mapping.type,
+                modifiers: def.mapping.modifiers.filter(modifier => modifier !== 'declaration'),
+            };
             captureName = def.captureName;
         }
         tokenMap.set(ok, {
@@ -362,12 +395,9 @@ function finishEntries(
     const merged = [...allTokens, ...keptNulls];
     merged.sort((a, b) => (a.sl - b.sl) || (a.sc - b.sc) || (a.el - b.el) || (a.ec - b.ec));
 
-    // Clamp the end column to MAX_COL.
-    const MAX_COL = 100_000;
     const entries: TokenEntry[] = [];
     for (const tok of merged) {
-        const ec = Math.min(tok.ec, MAX_COL);
-        pushSegments(entries, rawLines, lineLens, tok.sl, tok.sc, tok.el, ec, tok.type, tok.modifiers, tok.captureName);
+        pushSegments(entries, rawLines, lineLens, tok.sl, tok.sc, tok.el, tok.ec, tok.type, tok.modifiers, tok.captureName);
     }
     return entries;
 }

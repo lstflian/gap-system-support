@@ -37,7 +37,7 @@ export interface ScopeInput {
  * A global scope covers the whole file.
  */
 export function buildScopes(data: ScopeInput): ScopeEntry[] {
-    // The global scope, the initial scope.
+    // The global scope is the first entry.
     const entries: ScopeEntry[] = [{
         start: 0,
         end: Number.MAX_SAFE_INTEGER,
