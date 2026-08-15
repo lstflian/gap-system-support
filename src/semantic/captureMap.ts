@@ -29,6 +29,13 @@ export const legend = new vscode.SemanticTokensLegend(TOKEN_TYPES, TOKEN_MODIFIE
 
 export type TokenMapping = { type: string; modifiers: string[] };
 
+export function isDefinitionLikeCapture(name: string): boolean {
+    return name === 'variable.parameter' || name === 'variable.parameter.builtin' ||
+        name === 'function' || name === 'function.builtin' ||
+        name === 'variable' || name === 'constant' || name === 'constant.builtin' ||
+        name === 'variable.builtin' || name === 'variable.member' || name === 'property';
+}
+
 export const CAPTURE_MAP: Record<string, TokenMapping | null> = {
     'character':                    { type: 'character', modifiers: [] },
 
