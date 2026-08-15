@@ -1,3 +1,9 @@
+## 0.2.1
+
+1. Incremental semantic highlighting for large files, with full fallback for safety
+2. Semantic token type `enumMember` for record entries and selectors
+3. Fix TextMate grammar for `'''` character literals
+
 ## 0.2.0
 
 1. Scoped completion for variables, parameters and user defined functions visible at the cursor
