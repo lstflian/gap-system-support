@@ -23,6 +23,10 @@
     },
     {
       "name": "constant.character.gap",
+      "match": "'''"
+    },
+    {
+      "name": "constant.character.gap",
       "begin": "'",
       "end": "'",
       "patterns": [
