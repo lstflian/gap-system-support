@@ -67,7 +67,17 @@ export async function activate(context: vscode.ExtensionContext) {
     const highlightsGlobalPath = vscode.Uri.joinPath(context.extensionUri, 'queries', 'highlights.global.scm').fsPath;
     const localsPath = vscode.Uri.joinPath(context.extensionUri, 'queries', 'locals.scm').fsPath;
 
-    const semanticProvider = new GAPSemanticTokensProvider(highlightsPath, localsPath, highlightsGlobalPath);
+    const semanticProvider = new GAPSemanticTokensProvider(
+        highlightsPath,
+        localsPath,
+        highlightsGlobalPath,
+        {
+            globalIndexMode: 'enabled',
+            contentLengthLimit: 2 * 1024 * 1024,
+            maxGlobalCacheBytes: 256 * 1024 * 1024,
+        },
+    );
+    context.subscriptions.push({ dispose: () => semanticProvider.dispose() });
     context.subscriptions.push(
         vscode.languages.registerDocumentRangeSemanticTokensProvider(
             { language: 'gap' },
