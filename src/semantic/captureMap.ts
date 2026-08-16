@@ -54,7 +54,7 @@ export const CAPTURE_MAP: Record<string, TokenMapping | null> = {
     'variable.parameter.builtin':   { type: 'parameter', modifiers: ['defaultLibrary'] },
 
     'variable.member':              { type: 'enumMember',  modifiers: [] },
-    'property':                     { type: 'enumMember',  modifiers: [] },
+    'property':                     { type: 'property',  modifiers: [] },
 
     'string':                       { type: 'string',    modifiers: [] },
     'string.special':               { type: 'string',    modifiers: [] },
