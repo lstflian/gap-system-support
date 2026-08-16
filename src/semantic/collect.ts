@@ -349,6 +349,7 @@ function finishEntries(
     // Move reference tokens into deferredMap, resolved later.
     const deferredMap = new Map<number, DeferredToken>();
     for (const [ok, tok] of tokenMap) {
+        if (tok.captureName === 'variable.member' || tok.captureName === 'property') continue;
         if (data.referenceNodes.has(byteKey(tok.startIndex, tok.endIndex))
             && !data.definitionNodes.has(byteKey(tok.startIndex, tok.endIndex))) {
             const mapping = CAPTURE_MAP[tok.captureName];
