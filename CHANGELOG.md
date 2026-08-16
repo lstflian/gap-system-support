@@ -1,3 +1,8 @@
+## 0.2.2
+
+1. Fix record members and call option names being recolored as variables
+2. Map the `property` capture to `enumMember`
+
 ## 0.2.1
 
 1. Incremental semantic highlighting for large files, with full fallback for safety
