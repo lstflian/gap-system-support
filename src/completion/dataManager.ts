@@ -162,44 +162,39 @@ export async function generateData(context: vscode.ExtensionContext): Promise<bo
         terminal.sendText(`gap --nointeract ${toShellPath(scriptUri.fsPath, scriptUri)}`);
         terminal.sendText('exit');
 
+        const done = vscode.window.setStatusBarMessage('$(sync~spin) GAP: generating completion data…');
         let outcome: 'ok' | 'timeout' | 'convert-failed' | 'gap-exited';
         try {
-            outcome = await vscode.window.withProgress(
-                {
-                    location: vscode.ProgressLocation.Notification,
-                    title: 'GAP: generating completion data',
-                    cancellable: false,
-                },
-                async (): Promise<'ok' | 'timeout' | 'convert-failed' | 'gap-exited'> => {
-                    // The terminal closes when the gap process exits.
-                    // Wait, then check the txt file.
-                    try {
-                        await closed;
-                    } catch {
-                        // The terminal never closed, the gap process hung.
-                        return 'timeout';
+            outcome = await (async (): Promise<'ok' | 'timeout' | 'convert-failed' | 'gap-exited'> => {
+                // The terminal closes when the gap process exits.
+                // Wait, then check the txt file.
+                try {
+                    await closed;
+                } catch {
+                    // The terminal never closed, the gap process hung.
+                    return 'timeout';
+                }
+                await new Promise((r) => setTimeout(r, 1000));
+                const state = checkTxt(txtPath);
+                if (state === 'missing' || state === 'incomplete') {
+                    return 'gap-exited';
+                }
+                try {
+                    convertTxtToJson(txtPath, jsonPath);
+                    loadJsonIntoMemory(jsonPath);
+                    return 'ok';
+                } catch (err) {
+                    // Remove the leftover txt.
+                    if (fs.existsSync(txtPath)) {
+                        try {
+                            fs.unlinkSync(txtPath);
+                        } catch {}
                     }
-                    await new Promise((r) => setTimeout(r, 1000));
-                    const state = checkTxt(txtPath);
-                    if (state === 'missing' || state === 'incomplete') {
-                        return 'gap-exited';
-                    }
-                    try {
-                        convertTxtToJson(txtPath, jsonPath);
-                        loadJsonIntoMemory(jsonPath);
-                        return 'ok';
-                    } catch (err) {
-                        // Remove the leftover txt.
-                        if (fs.existsSync(txtPath)) {
-                            try {
-                                fs.unlinkSync(txtPath);
-                            } catch {}
-                        }
-                        return 'convert-failed';
-                    }
-                },
-            );
+                    return 'convert-failed';
+                }
+            })();
         } finally {
+            done.dispose();
             terminal.dispose();
         }
 

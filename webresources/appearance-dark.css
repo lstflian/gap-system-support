@@ -1,0 +1,61 @@
+/* Fallback dark appearance for package manuals without their own dark.css.
+   Follows the VS Code editor palette and the markdown preview settings.
+   Colors derived from GAP doc/ref/dark.css. */
+
+body {
+  background: #1e1e1e;
+  color: var(--vscode-editor-foreground);
+  font-size: var(--markdown-font-size, 14px);
+  line-height: 1.6;
+}
+
+p {
+  margin-bottom: 0.75em;
+}
+
+a:link, a:visited, a:active {
+  color: #6ea8fe;
+}
+
+a:hover {
+  color: #8cb6ff;
+  text-decoration: underline;
+}
+
+pre {
+  background: #252526;
+  color: #d4d4d4;
+  border-color: #3c3c3c;
+}
+
+code, tt {
+  color: #d4d4d4;
+  background: transparent !important;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+}
+
+table.example, div.example {
+  background: #252526;
+  color: #d4d4d4;
+}
+
+div.chlinktop, div.chlinkbot,
+div.chlinkprevnexttop, div.chlinkprevnextbot {
+  background: #2d2d30;
+  border-color: #3c3c3c;
+  color: #d7dde5;
+}
+
+div.func {
+  background: #2d2d30;
+  color: #d4d4d4;
+  border: 1px solid #3c3c3c;
+  border-radius: 4px;
+  padding: 4px 8px;
+}
+
+h1, h2, h3, h4, h5, .Heading {
+  color: #e8e8e8;
+}

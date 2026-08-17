@@ -3,12 +3,31 @@
  */
 
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
 import { initGapParser, onDocumentChanged, onDocumentClosed, disposeAll } from './parser/gapParser';
 import { GAPSemanticTokensProvider, legend } from './semantic/semanticTokensProvider';
 import { GAPFoldsProvider } from './folds/foldsProvider';
 import { ensureData, generateData, resetData } from './completion/dataManager';
 import { GapCompletionProvider } from './completion/completionProvider';
-import { toShellPath } from './path';
+import { toShellPath, resolveHelpPath } from './path';
+import { searchHelp } from './help/searchEngine';
+import { HelpEntry } from './help/indexData';
+import { showLiveSearchPicker } from './help/searchPicker';
+import { showHelpPanel, refreshCurrentPage } from './help/helpPanel';
+import { initStyleState } from './help/styleState';
+import {
+    ensureHelpIndex,
+    getHelpState,
+    reloadHelpIndex,
+    backupHelpIndexData,
+    restoreHelpIndexData,
+    commitHelpIndexData,
+    getHelpDataDir,
+    waitTerminalClose,
+    EXPORT_GAPDOC_TIMEOUT_MS,
+    EXPORT_TEXT_TIMEOUT_MS,
+} from './help/helpData';
 
 interface GapFlag {
     flag: string;
@@ -34,6 +53,135 @@ function getSelectedFlags(context: vscode.ExtensionContext): string[] {
 let runTerminal: vscode.Terminal | null = null;
 // The root of the last run, compared against the current root.
 let lastRunRoot: string | undefined;
+// Guard against concurrent help index rebuilds.
+let rebuildHelpRunning = false;
+
+/** Get selected text under cursor. */
+function getSelectedWord(): string | undefined {
+    const ed = vscode.window.activeTextEditor;
+    if (!ed) return;
+    const sel = ed.selection;
+    const range = sel.isEmpty ? ed.document.getWordRangeAtPosition(sel.start) : sel;
+    return range ? ed.document.getText(range) : undefined;
+}
+
+/**
+ * Read the doc and pkg paths from the configuration.
+ * Warn and open the settings for a path that is unset, not absolute, or missing.
+ * Return null when either path is not usable.
+ */
+function getHelpPaths(): { docPath: string; pkgPath: string } | null {
+    const cfg = vscode.workspace.getConfiguration('gap');
+    const docPath = (cfg.get<string>('docPath') || '').trim();
+    if (!docPath || !path.isAbsolute(docPath) || !fs.existsSync(docPath)) {
+        vscode.window.showWarningMessage(
+            'GAP: Please set "gap.docPath" to the doc/ folder of your GAP installation.',
+            'Open Settings'
+        ).then(action => {
+            if (action === 'Open Settings') {
+                vscode.commands.executeCommand('workbench.action.openSettings', 'gap.docPath');
+            }
+        });
+        return null;
+    }
+    const pkgPath = (cfg.get<string>('pkgPath') || '').trim();
+    if (!pkgPath || !path.isAbsolute(pkgPath) || !fs.existsSync(pkgPath)) {
+        vscode.window.showWarningMessage(
+            'GAP: Please set "gap.pkgPath" to the pkg/ folder of your GAP installation.',
+            'Open Settings'
+        ).then(action => {
+            if (action === 'Open Settings') {
+                vscode.commands.executeCommand('workbench.action.openSettings', 'gap.pkgPath');
+            }
+        });
+        return null;
+    }
+    return { docPath, pkgPath };
+}
+
+/** Run convert_export.js */
+function runConvertScript(scriptPath: string, cwd: string): void {
+    const prev = process.cwd();
+    process.chdir(cwd);
+    try {
+        const p = require.resolve(scriptPath);
+        if (p in require.cache) delete require.cache[p];
+        require(p);
+    } finally {
+        process.chdir(prev);
+    }
+}
+
+/**
+ * Run an export script in a hidden terminal.
+ * Exit the shell after the script.
+ * Resolve once the terminal closes.
+ */
+async function runExportScript(scriptUri: vscode.Uri, dataDir: string, timeoutMs: number): Promise<void> {
+    const terminal = vscode.window.createTerminal({
+        name: 'GAP Help Index',
+        cwd: dataDir,
+        hideFromUser: true,
+    });
+    try {
+        // Register the close listener, then send the command.
+        const closed = waitTerminalClose(terminal, timeoutMs);
+        terminal.sendText(`gap -q --nointeract ${toShellPath(scriptUri.fsPath, scriptUri)}`);
+        terminal.sendText('exit');
+        await closed;
+    } catch (e: any) {
+        throw new Error(`${path.basename(scriptUri.fsPath)} timed out`);
+    } finally {
+        terminal.dispose();
+    }
+}
+
+/**
+ * Rebuild the help index.
+ * Run export.g, convert_export.js, then export_text.g.
+ * Back up the current export files first.
+ * Commit the backups on success, restore them on failure.
+ */
+async function doRebuildHelpIndex(context: vscode.ExtensionContext): Promise<void> {
+    const dataDir = getHelpDataDir(context);
+    fs.mkdirSync(dataDir, { recursive: true });
+
+    const exportG = vscode.Uri.joinPath(context.extensionUri, 'scripts', 'helpIndex', 'export.g');
+    const exportText = vscode.Uri.joinPath(context.extensionUri, 'scripts', 'helpIndex', 'export_text.g');
+    const convert = vscode.Uri.joinPath(context.extensionUri, 'scripts', 'helpIndex', 'convert_export.js');
+    const products = ['export_gapdoc.txt', 'export_default.txt', 'export_text.txt'];
+
+    // Show the rebuild progress on the status bar.
+    const done = vscode.window.setStatusBarMessage('$(sync~spin) GAP: rebuilding help index…');
+    try {
+        // Back up the current export files first.
+        backupHelpIndexData();
+        await runExportScript(exportG, dataDir, EXPORT_GAPDOC_TIMEOUT_MS);
+        runConvertScript(convert.fsPath, dataDir);
+        await runExportScript(exportText, dataDir, EXPORT_TEXT_TIMEOUT_MS);
+
+        // Verify the three export files.
+        // Load the new help index.
+        // Reject an empty index.
+        // Drop the backups after the load succeeds.
+        const missing = products.filter(name => !fs.existsSync(path.join(dataDir, name)));
+        if (missing.length) {
+            throw new Error(`missing index files: ${missing.join(', ')}`);
+        }
+        const state = reloadHelpIndex();
+        if (!state.entries.length) {
+            throw new Error('parsed help index is empty');
+        }
+        commitHelpIndexData();
+        vscode.window.showInformationMessage('GAP: help index rebuilt');
+    } catch (err) {
+        // Remove partial export files and restore the backups.
+        restoreHelpIndexData();
+        throw err;
+    } finally {
+        done.dispose();
+    }
+}
 
 export async function activate(context: vscode.ExtensionContext) {
     console.log('[GAP] extension activate start');
@@ -52,6 +200,23 @@ export async function activate(context: vscode.ExtensionContext) {
     } catch (err) {
         console.error('[GAP] completion data load failed: ', err);
     }
+
+    try {
+        ensureHelpIndex(context);
+    } catch (err) {
+        console.error('[GAP] help index ensure failed: ', err);
+    }
+
+    initStyleState(context);
+
+    // Re-render the open help page when the MathJax setting changes.
+    context.subscriptions.push(
+        vscode.workspace.onDidChangeConfiguration(e => {
+            if (e.affectsConfiguration('gap.mathJax')) {
+                refreshCurrentPage();
+            }
+        })
+    );
 
     // Record content changes.
     context.subscriptions.push(
@@ -120,6 +285,81 @@ export async function activate(context: vscode.ExtensionContext) {
     );
     context.subscriptions.push(
         vscode.commands.registerCommand('gap.resetCompletionData', () => resetData(context)),
+    );
+
+    // Live search through the GAP help index.
+    context.subscriptions.push(
+        vscode.commands.registerCommand('gap.searchHelp', async () => {
+            const paths = getHelpPaths();
+            if (!paths) return;
+            let helpEntries: HelpEntry[];
+            let books: Map<string, string>;
+            try {
+                const state = getHelpState();
+                helpEntries = state.entries;
+                books = state.bookDescriptions;
+            } catch (e: any) {
+                vscode.window.showErrorMessage(`GAP: failed to load help index: ${e.message}`);
+                return;
+            }
+            if (!helpEntries.length) {
+                vscode.window.showWarningMessage('GAP: Help index not loaded. Try running "GAP: Rebuild Help Index".');
+                return;
+            }
+            const seed = getSelectedWord() || '';
+
+            const picked = await showLiveSearchPicker(seed,
+                (topic, fb) => searchHelp(helpEntries, topic, fb),
+                true, books);
+            if (!picked) return;
+
+            showHelpPanel(picked, paths.docPath, paths.pkgPath);
+        }),
+    );
+
+    // Open the GAP Reference Manual in the help panel.
+    context.subscriptions.push(
+        vscode.commands.registerCommand('gap.openReference', () => {
+            const paths = getHelpPaths();
+            if (!paths) return;
+            const file = resolveHelpPath('/doc/ref/chap0.html', paths.docPath, paths.pkgPath);
+            if (!file || !fs.existsSync(file)) {
+                vscode.window.showWarningMessage('GAP: Reference manual not found in this installation.');
+                return;
+            }
+            showHelpPanel({
+                filePath: '/doc/ref/chap0.html',
+                anchor: '',
+                display: 'Reference Manual',
+                key: '',
+                book: 'Reference',
+                isTextOnly: false,
+                chapter: 0,
+                section: 0,
+                type: '',
+            }, paths.docPath, paths.pkgPath);
+        }),
+    );
+
+    // Rebuild the help index with the local GAP.
+    context.subscriptions.push(
+        vscode.commands.registerCommand('gap.rebuildHelpIndex', async () => {
+            if (rebuildHelpRunning) {
+                vscode.window.showInformationMessage('GAP: help index rebuild is already running');
+                return;
+            }
+            const yes = await vscode.window.showInformationMessage(
+                'GAP: Clear cached help index and rebuild?', 'Rebuild');
+            if (yes !== 'Rebuild') return;
+            rebuildHelpRunning = true;
+            try {
+                await doRebuildHelpIndex(context);
+            } catch (e: any) {
+                vscode.window.showErrorMessage(`GAP: rebuild help index failed: ${e.message}`);
+            } finally {
+                rebuildHelpRunning = false;
+            }
+        }),
     );
 
     context.subscriptions.push(

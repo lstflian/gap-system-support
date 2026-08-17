@@ -1,0 +1,96 @@
+/* Dark mode polish for code blocks and function blocks.
+   This file follows the VS Code Markdown preview style.
+   It is injected after gap-dark.css or appearance-dark.css. */
+
+/* Example code blocks use a soft dark background and light text. */
+pre,
+pre.normal {
+  background: #252526;
+  color: #d4d4d4;
+  border: 1px solid #3c3c3c;
+  border-radius: 3px;
+  padding: 16px;
+  overflow: auto;
+  font-family: var(--vscode-editor-font-family, "Courier New", Courier, monospace);
+  font-size: var(--vscode-editor-font-size, 100%);
+  line-height: 1.5;
+}
+
+/* Code inside pre keeps no extra background or border. */
+pre code,
+pre tt,
+pre.normal code,
+pre.normal tt {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+}
+
+/* Old style example blocks, both div and table forms. */
+div.example,
+div.example pre,
+div.example pre.normal,
+table.example,
+table.example td,
+table.example th {
+  background: #252526;
+  color: #d4d4d4;
+}
+
+/* Function and variable definition blocks use a dark card look. */
+div.func {
+  background: #2d2d30;
+  color: #d4d4d4;
+  border: 1px solid #3c3c3c;
+  border-radius: 4px;
+  padding: 4px 8px;
+}
+
+div.func table.func {
+  background: transparent;
+}
+
+div.func code.func {
+  color: #dcdcaa;
+}
+
+div.func var.Arg {
+  color: #7ee787;
+}
+
+div.func code.keyw {
+  color: #ff7b72;
+}
+
+/* GAP session prompts and inputs stay readable on the dark background. */
+span.GAPprompt,
+span.GAPbrkprompt {
+  color: #79c0ff;
+}
+
+span.GAPinput {
+  color: #ffa198;
+}
+
+/* Inline code and semantic elements use the dark palette. */
+code,
+tt {
+  color: #d4d4d4;
+}
+
+code.func {
+  color: #dcdcaa;
+}
+
+code.keyw {
+  color: #ff7b72;
+}
+
+code.file {
+  color: #ffa657;
+}
+
+var.Arg {
+  color: #7ee787;
+}

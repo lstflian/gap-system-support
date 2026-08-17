@@ -1,5 +1,5 @@
 /**
- * Run the test flow: compile and highlight correctness only.
+ * Run the test flow: compile, help, and highlight correctness.
  */
 
 'use strict';
@@ -42,6 +42,15 @@ for (let i = 0; i < gapFiles.length; i++) {
             `node test/lib/highlight/compare-output.js ${jsonFile} ${txtFile}`,
             { stdio: 'inherit', cwd: root },
         );
+    } catch {
+        allPass = false;
+    }
+}
+
+// 4. Run the help tests.
+for (const file of ['search.test.js', 'chooser.test.js']) {
+    try {
+        execSync(`node test/lib/help/${file}`, { stdio: 'inherit', cwd: root });
     } catch {
         allPass = false;
     }

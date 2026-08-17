@@ -2,7 +2,7 @@
   "name": "gap-system-support",
   "displayName": "GAP System Support",
   "description": "GAP language support for VS Code with syntax highlighting, completion and run, powered by tree-sitter-gap",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "publisher": "flianlee",
   "author": "Songtai Li",
   "license": "SEE LICENSE IN LICENSE",
@@ -99,11 +99,13 @@
     "commands": [
       {
         "command": "gap.generateCompletionData",
-        "title": "GAP: Generate Completion Data"
+        "title": "Generate Completion Data",
+        "category": "GAP"
       },
       {
         "command": "gap.resetCompletionData",
-        "title": "GAP: Reset Completion Data"
+        "title": "Reset Completion Data",
+        "category": "GAP"
       },
       {
         "command": "gap.runFile",
@@ -117,6 +119,27 @@
         "title": "Configure GAP Command Line Options",
         "category": "GAP",
         "enablement": "resourceLangId == gap && resourceScheme != untitled"
+      },
+      {
+        "command": "gap.searchHelp",
+        "title": "Search GAP Help",
+        "category": "GAP"
+      },
+      {
+        "command": "gap.rebuildHelpIndex",
+        "title": "Rebuild Help Index",
+        "category": "GAP"
+      },
+      {
+        "command": "gap.openReference",
+        "title": "Open GAP Reference Manual",
+        "category": "GAP"
+      }
+    ],
+    "submenus": [
+      {
+        "id": "gap.contextMenu",
+        "label": "More GAP Commands"
       }
     ],
     "menus": {
@@ -129,17 +152,116 @@
       ],
       "editor/context": [
         {
+          "command": "gap.searchHelp",
+          "when": "resourceLangId == gap",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gap.runFile",
+          "when": "resourceLangId == gap",
+          "group": "navigation@2"
+        },
+        {
+          "submenu": "gap.contextMenu",
+          "when": "resourceLangId == gap",
+          "group": "navigation@3"
+        }
+      ],
+      "gap.contextMenu": [
+        {
           "command": "gap.configureFlags",
-          "when": "resourceLangId == gap && resourceScheme != untitled",
-          "group": "gap"
+          "group": "1_run@1"
+        },
+        {
+          "command": "gap.openReference",
+          "group": "2_help@1"
+        },
+        {
+          "command": "gap.rebuildHelpIndex",
+          "group": "2_help@2"
+        },
+        {
+          "command": "gap.generateCompletionData",
+          "group": "3_data@1"
+        },
+        {
+          "command": "gap.resetCompletionData",
+          "group": "3_data@2"
         }
       ]
     },
+    "walkthroughs": [
+      {
+        "id": "gap-support.gettingStarted",
+        "title": "Start with GAP System Support",
+        "description": "Syntax highlighting, code completion, running GAP code, and a help system for GAP. To get started, we need to make sure GAP is ready to use. Follow the steps below.",
+        "steps": [
+          {
+            "id": "addGapToPath",
+            "title": "Add GAP to the PATH",
+            "description": "First, check that GAP is in your system PATH so the gap command works in the terminal. This walkthrough shows one way to set it up. Skip if already configured.",
+            "media": {
+              "markdown": "media/add-gap-to-path.md"
+            }
+          },
+          {
+            "id": "setDocPath",
+            "title": "Set the doc Path",
+            "description": "Set this to the absolute path of the doc folder itself.\n[Open Doc Path Setting](command:workbench.action.openSettings?%22@id:gap.docPath%22)",
+            "media": {
+              "image": "icon/logo.svg",
+              "altText": "gap-logo"
+            },
+            "completionEvents": [
+              "onSettingChanged:gap.docPath"
+            ]
+          },
+          {
+            "id": "setPkgPath",
+            "title": "Set the pkg Path",
+            "description": "Set this to the absolute path of the pkg folder itself.\n[Open Pkg Path Setting](command:workbench.action.openSettings?%22@id:gap.pkgPath%22)",
+            "media": {
+              "image": "icon/logo.svg",
+              "altText": "gap-logo"
+            },
+            "completionEvents": [
+              "onSettingChanged:gap.pkgPath"
+            ]
+          },
+          {
+            "id": "searchHelp",
+            "title": "Search the Help and Browse Manuals",
+            "description": "Click the button below, then enter a term to search GAP help.\n[Search GAP Help](command:gap.searchHelp)",
+            "when": "config.gap.docPath != '' && config.gap.pkgPath != ''",
+            "media": {
+              "image": "icon/logo.svg",
+              "altText": "gap-logo"
+            },
+            "completionEvents": [
+              "onCommand:gap.searchHelp"
+            ]
+          }
+        ]
+      }
+    ],
     "configuration": {
       "title": "GAP System Support",
       "properties": {
+        "gap.docPath": {
+          "type": "string",
+          "default": "",
+          "order": 1,
+          "markdownDescription": "Path to the `doc/` directory, e.g. `C:\\Program Files\\GAP-4.16.0\\runtime\\opt\\gap-4.16.0\\doc` or `/opt/gap-4.16.0/doc`."
+        },
+        "gap.pkgPath": {
+          "type": "string",
+          "default": "",
+          "order": 2,
+          "markdownDescription": "Path to the `pkg/` directory, e.g. `C:\\Program Files\\GAP-4.16.0\\runtime\\opt\\gap-4.16.0\\pkg` or `/opt/gap-4.16.0/pkg`."
+        },
         "gap.runMode": {
           "type": "string",
+          "order": 5,
           "enum": [
             "reuse",
             "new"
@@ -154,8 +276,26 @@
         "gap.terminalRoot": {
           "type": "string",
           "default": "",
+          "order": 6,
           "markdownDescription": "Unix root for Windows drive letters. Example: `/` turns `C:\\project\\file.g` into `/c/project/file.g`. Leave empty to use WSL default `/mnt/`.",
           "scope": "application"
+        },
+        "gap.docAppearance": {
+          "type": "string",
+          "order": 3,
+          "enum": [
+            "system",
+            "dark",
+            "light"
+          ],
+          "default": "system",
+          "description": "Appearance of GAP documentation pages: 'system' follows the VS Code theme, 'dark'/'light' force a mode for all manuals."
+        },
+        "gap.mathJax": {
+          "type": "boolean",
+          "default": true,
+          "order": 4,
+          "description": "Render math in GAP documentation pages with MathJax."
         }
       }
     }

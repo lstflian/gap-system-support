@@ -8,5 +8,4 @@ test/**
 scripts/query-generator/**
 queries/highlights.source.scm
 images/**
-icon/logo.svg
 data/completionData/*.txt

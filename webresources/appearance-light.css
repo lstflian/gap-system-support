@@ -1,0 +1,46 @@
+/* Fallback light appearance for package manuals without their own manual.css.
+   Hard-coded colors (not --vscode-* vars) so the forced light appearance actually wins even when the VS Code theme is dark. */
+
+body {
+  background: #ffffff;
+  color: #000000;
+}
+
+a:link, a:visited, a:active {
+  color: #0000ee;
+}
+
+pre {
+  background: #f5f5f5;
+  color: #000000;
+  border-color: #dddddd;
+}
+
+code, tt {
+  color: #000000;
+  background: transparent !important;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+}
+
+table.example, div.example {
+  background: #f5f5f5;
+  color: #000000;
+}
+
+div.chlinktop, div.chlinkbot,
+div.chlinkprevnexttop, div.chlinkprevnextbot {
+  background: #f0f0f0;
+  border-color: #dddddd;
+  color: #000000;
+}
+
+div.func {
+  background: #e0e0e0;
+  color: #000000;
+}
+
+h1, h2, h3, h4, h5, .Heading {
+  color: #000000;
+}

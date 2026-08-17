@@ -1,0 +1,193 @@
+/* gap-dark.css: GAP's doc/ref/dark.css restyled for the VS Code look.
+   Body text follows the markdown preview colors and settings.
+   Backgrounds use hard-coded VS Code dark palette colors. */
+/* dark.css                                             Frank Luebeck */
+/* Initial dark theme contributed by kiryph in issue #75.            */
+/* Derived from GAP doc/ref/dark.css. */
+
+/* colors */
+body {
+  background: #1e1e1e;
+  color: var(--vscode-editor-foreground);
+  font-size: var(--markdown-font-size, 14px);
+  line-height: 1.6;
+}
+
+p {
+  margin-bottom: 0.75em;
+}
+
+a:link {
+  color: #6ea8fe;
+}
+
+a:visited {
+  color: #6ea8fe;
+}
+
+a:active {
+  color: #8cb6ff;
+}
+
+a:hover {
+  color: #8cb6ff;
+  text-decoration: underline;
+}
+
+pre {
+  color: #d4d4d4;
+}
+
+tt, code {
+  color: #d4d4d4;
+}
+
+/* layout for the definitions of functions, variables, ... */
+div.func {
+  background: #2d2d30;
+  border: 1px solid #3c3c3c;
+  border-radius: 4px;
+  padding: 4px 8px;
+}
+
+/* Example elements (for old converted manuals, now in div+pre */
+table.example {
+  background: #252526;
+  color: #d4d4d4;
+}
+
+/* becomes ... */
+div.example {
+  background: #252526;
+  color: #d4d4d4;
+}
+
+/* Links to chapters in all files at top and bottom. */
+div.chlinktop {
+  background: #2d2d30;
+  border-color: #3c3c3c;
+  color: #d7dde5;
+}
+
+div.chlinktop a:hover {
+  background: #37373d;
+}
+
+div.chlinkbot {
+  background: #2d2d30;
+  border-color: #3c3c3c;
+  color: #d7dde5;
+}
+
+/* and this is for the "Top", "Prev", "Next" links */
+div.chlinkprevnexttop {
+  background: #2d2d30;
+  border-color: #3c3c3c;
+  color: #d7dde5;
+}
+
+div.chlinkprevnexttop a:hover {
+  background: #37373d;
+}
+
+div.chlinkprevnextbot {
+  background: #2d2d30;
+  border-color: #3c3c3c;
+  color: #d7dde5;
+}
+
+div.chlinkprevnextbot a:hover {
+  background: #37373d;
+}
+
+div.ContChap div.ContSect:hover div.ContSSBlock {
+  background: #37373d;
+  border-color: #3c3c3c;
+  color: #d4d4d4;
+}
+
+div.ContSSBlock a:hover {
+  background: #37373d;
+}
+
+/* and here for the side menu of contents in the chapter files */
+div.ChapSects a:hover {
+  background: #37373d;
+  color: #d4d4d4;
+}
+
+div.ChapSects div.ContSect:hover div.ContSSBlock {
+  background: #2d2d30;
+  border-color: #3c3c3c;
+  color: #d4d4d4;
+}
+
+div.ChapSects div.ContSect:hover div.ContSSBlock a:hover {
+  background: #37373d;
+}
+
+/* Table elements */
+table.GAPDocTable {
+  border-color: black;
+}
+
+table.GAPDocTable td, table.GAPDocTable th {
+  border-color: #555;
+}
+
+table.GAPDocTablenoborder td, table.GAPDocTable th {
+  border-color: #555;
+}
+
+/* Colors and fonts can be overwritten for some types of elements. */
+/* Verb elements */
+pre.normal {
+  color: #d4d4d4;
+}
+
+/* Func-like elements and Ref to Func-like */
+code.func {
+  color: #dcdcaa;
+}
+
+/* K elements */
+code.keyw {
+  color: #ff7b72;
+}
+
+/* F elements */
+code.file {
+  color: #ffa657;
+}
+
+/* Arg elements */
+var.Arg {
+  color: #7ee787;
+}
+
+/* colors for ColorPrompt like examples */
+span.GAPprompt {
+  color: #79c0ff;
+}
+
+span.GAPbrkprompt {
+  color: #ffa198;
+}
+
+span.GAPinput {
+  color: #ffa198;
+}
+
+/* Bib entries */
+span.BibKey {
+  color: #a5d6ff;
+}
+
+/* for light and dark mode pictures */
+.only-on-dark {
+  display: block;
+}
+
+.only-on-light {
+  display: none;
+}
