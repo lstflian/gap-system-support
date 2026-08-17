@@ -27,7 +27,10 @@
     "run",
     "terminal",
     "math",
-    "computer algebra"
+    "computer algebra",
+    "gap help",
+    "help system",
+    "documentation"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -296,6 +299,16 @@
           "default": true,
           "order": 4,
           "description": "Render math in GAP documentation pages with MathJax."
+        },
+        "gap.searchMode": {
+          "type": "string",
+          "order": 7,
+          "enum": [
+            "prefix",
+            "substring"
+          ],
+          "default": "prefix",
+          "description": "Search mode: prefix (?topic) matches from the start of a word, substring (??topic) matches anywhere"
         }
       }
     }

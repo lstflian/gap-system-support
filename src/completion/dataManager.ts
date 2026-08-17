@@ -162,7 +162,10 @@ export async function generateData(context: vscode.ExtensionContext): Promise<bo
         terminal.sendText(`gap --nointeract ${toShellPath(scriptUri.fsPath, scriptUri)}`);
         terminal.sendText('exit');
 
-        const done = vscode.window.setStatusBarMessage('$(sync~spin) GAP: generating completion data…');
+        const item = vscode.window.createStatusBarItem(
+            'gap.generateCompletionData', vscode.StatusBarAlignment.Left, 90);
+        item.text = '$(sync~spin) GAP: generating completion data…';
+        item.show();
         let outcome: 'ok' | 'timeout' | 'convert-failed' | 'gap-exited';
         try {
             outcome = await (async (): Promise<'ok' | 'timeout' | 'convert-failed' | 'gap-exited'> => {
@@ -194,7 +197,7 @@ export async function generateData(context: vscode.ExtensionContext): Promise<bo
                 }
             })();
         } finally {
-            done.dispose();
+            item.dispose();
             terminal.dispose();
         }
 

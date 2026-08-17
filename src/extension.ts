@@ -152,7 +152,10 @@ async function doRebuildHelpIndex(context: vscode.ExtensionContext): Promise<voi
     const products = ['export_gapdoc.txt', 'export_default.txt', 'export_text.txt'];
 
     // Show the rebuild progress on the status bar.
-    const done = vscode.window.setStatusBarMessage('$(sync~spin) GAP: rebuilding help index…');
+    const item = vscode.window.createStatusBarItem(
+        'gap.rebuildHelpIndex', vscode.StatusBarAlignment.Left, 100);
+    item.text = '$(sync~spin) GAP: rebuilding help index…';
+    item.show();
     try {
         // Back up the current export files first.
         backupHelpIndexData();
@@ -179,7 +182,7 @@ async function doRebuildHelpIndex(context: vscode.ExtensionContext): Promise<voi
         restoreHelpIndexData();
         throw err;
     } finally {
-        done.dispose();
+        item.dispose();
     }
 }
 
@@ -308,9 +311,12 @@ export async function activate(context: vscode.ExtensionContext) {
             }
             const seed = getSelectedWord() || '';
 
+            const cfg = vscode.workspace.getConfiguration('gap');
+            const fromBegin = cfg.get<string>('searchMode') === 'prefix';
+
             const picked = await showLiveSearchPicker(seed,
                 (topic, fb) => searchHelp(helpEntries, topic, fb),
-                true, books);
+                fromBegin, books);
             if (!picked) return;
 
             showHelpPanel(picked, paths.docPath, paths.pkgPath);
