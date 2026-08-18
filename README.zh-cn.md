@@ -93,7 +93,7 @@ source ~/.bashrc
 
 | 命令 | 说明 |
 |---|---|
-| `GAP: Run GAP File` | 在终端中运行当前 GAP 文件 |
+| `GAP: Run GAP File` | 当打开 GAP 文件时可用，在终端中运行当前 GAP 文件 |
 | `GAP: Configure GAP Command Line Options` | 通过 Quick Pick 配置 GAP 命令行选项 |
 | `GAP: Search GAP Help` | 搜索 GAP 帮助文档 |
 | `GAP: Rebuild Help Index` | 重新生成帮助索引 |

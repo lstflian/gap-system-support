@@ -120,8 +120,7 @@
       {
         "command": "gap.configureFlags",
         "title": "Configure GAP Command Line Options",
-        "category": "GAP",
-        "enablement": "resourceLangId == gap && resourceScheme != untitled"
+        "category": "GAP"
       },
       {
         "command": "gap.searchHelp",

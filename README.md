@@ -93,7 +93,7 @@ Press `Ctrl+Shift+P` or `F1` to open the Command Palette and use the following c
 
 | Command | Description |
 |---|---|
-| `GAP: Run GAP File` | Run the current GAP file in a terminal |
+| `GAP: Run GAP File` | Available when a GAP file is open; run the current GAP file in a terminal |
 | `GAP: Configure GAP Command Line Options` | Configure GAP command line options through Quick Pick |
 | `GAP: Search GAP Help` | Search GAP help documentation |
 | `GAP: Rebuild Help Index` | Rebuild the help index |
