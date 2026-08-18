@@ -3,3 +3,4 @@ out/
 *.vsix
 test/highlightCases/query-*.txt
 .vscode/settings.json
+data/completionData/*.txt
