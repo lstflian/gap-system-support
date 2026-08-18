@@ -1,3 +1,7 @@
+## 0.3.0
+
+1. Integrate the [GAP Help extension](https://github.com/lstflian/gap-help), including search and documentation viewer.
+
 ## 0.2.2
 
 1. Fix record members and call option names being recolored as variables
