@@ -4,7 +4,7 @@
 
 English | [简体中文](README.zh-cn.md)
 
-Provides semantic highlighting, code completion, running GAP files, and a help system for GAP in VS Code, powered by [tree-sitter-gap](https://github.com/gap-system/tree-sitter-gap), so that GAP users can write, read, and run GAP code and look up GAP documentation at any time in VS Code.
+This extension provides semantic highlighting, code completion, running GAP files, and a help system for GAP in VS Code, powered by [tree-sitter-gap](https://github.com/gap-system/tree-sitter-gap), so that GAP users can write, read, and run GAP code and look up GAP documentation at any time.
 
 > GAP is a system for computational discrete algebra, with particular emphasis on Computational Group Theory. GAP provides a programming language, a library of thousands of functions implementing algebraic algorithms written in the GAP language as well as large data libraries of algebraic objects. For more information, see the [GAP official website](https://www.gap-system.org/).
 
@@ -30,7 +30,7 @@ echo 'export PATH="/opt/gap-4.16.0:$PATH"' >> ~/.bashrc
 source ~/.bashrc
 ```
 
-Finally, run `gap --version` to verify.
+Finally, run `gap --version` to verify that it is configured correctly.
 
 **Note**: If your installation path differs from the examples, replace it with your actual installation path.
 
@@ -50,7 +50,7 @@ Set the following settings in the walkthroughs on the Welcome page or in the VS 
 - **Semantic highlighting**: based on `tree-sitter-gap`.
 - **Code completion**: completion for GAP constants, keywords, statement structures and GAP functions while typing, as well as the variables and user defined functions actually available at the cursor (including user defined functions in other GAP files loaded via `Read`).
 - **Running GAP code**: run the current GAP file in the VS Code integrated terminal without leaving the editor.
-- **Help system**: built-in GAP help search with two search modes, switchable at any time in the settings or in the Quick Pick search box.
+- **Help system**: built-in GAP help search with two search modes, switchable at any time in the settings or the Quick Pick search box.
   - **prefix**: corresponds to `?help` in GAP
   - **substring**: corresponds to `??help` in GAP
 - **Documentation viewer**: search results are displayed in a webview panel, with support for in-page link navigation and MathJax math rendering.
@@ -79,8 +79,8 @@ Set the following settings in the walkthroughs on the Welcome page or in the VS 
 
 | Setting | Default | Description |
 |---|---|---|
-| `gap.docPath` | `""` | The absolute path of the `doc/` directory |
-| `gap.pkgPath` | `""` | The absolute path of the `pkg/` directory |
+| `gap.docPath` | `""` | Manually enter the absolute path of the `doc/` directory |
+| `gap.pkgPath` | `""` | Manually enter the absolute path of the `pkg/` directory |
 | `gap.docAppearance` | `system` | Documentation appearance: `system` follows the VS Code theme, `dark` / `light` use a dark or light theme |
 | `gap.mathJax` | `true` | Whether to render MathJax math in GAP documentation pages |
 | `gap.runMode` | `reuse` | When running GAP: `reuse` keeps the same terminal, `new` opens a new terminal for each run |
@@ -118,7 +118,7 @@ Run the tests:
 npm test
 ```
 
-Then press `F5` to launch debugging.
+Then press `F5` to start debugging.
 
 ## Acknowledgements
 

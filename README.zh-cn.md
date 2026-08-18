@@ -51,8 +51,8 @@ source ~/.bashrc
 - **代码补全**：支持 GAP 常量、关键字、语句结构和 GAP 函数；同时根据光标位置，补全当前上下文可用的变量与自定义函数（包括通过 `Read` 加载的其他 GAP 文件中的自定义函数）。
 - **运行 GAP 代码**：在 VS Code 集成终端中运行当前 GAP 文件，无需离开编辑器。
 - **帮助系统**：内置 GAP 帮助搜索，支持两种搜索模式，可在设置或 QuickPick 搜索框中随时切换。
-  - **prefix**：对应 GAP 中的 `?help`，按前缀匹配
-  - **substring**：对应 GAP 中的 `??help`，按子串匹配
+  - **prefix**：对应 GAP 中的 `?help`
+  - **substring**：对应 GAP 中的 `??help`
 - **帮助文档浏览**：搜索结果在 Webview 面板中展示，支持页内链接跳转与 MathJax 数学公式渲染。
 
 ## 功能演示
