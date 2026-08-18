@@ -142,6 +142,16 @@
         "command": "gap.openReadme",
         "title": "Open README",
         "category": "GAP"
+      },
+      {
+        "command": "gap.openDocPathSetting",
+        "title": "Open Doc Path Setting",
+        "category": "GAP"
+      },
+      {
+        "command": "gap.openPkgPathSetting",
+        "title": "Open Pkg Path Setting",
+        "category": "GAP"
       }
     ],
     "submenus": [
@@ -154,6 +164,14 @@
       "commandPalette": [
         {
           "command": "gap.openReadme",
+          "when": "false"
+        },
+        {
+          "command": "gap.openDocPathSetting",
+          "when": "false"
+        },
+        {
+          "command": "gap.openPkgPathSetting",
           "when": "false"
         }
       ],
@@ -221,23 +239,23 @@
           {
             "id": "setDocPath",
             "title": "Set the doc Path",
-            "description": "Set this to the absolute path of the doc folder itself.\n[Open Doc Path Setting](command:workbench.action.openSettings?%22@id:gap.docPath%22)",
+            "description": "Set this to the absolute path of the doc folder itself.\n[Open Doc Path Setting](command:gap.openDocPathSetting)",
             "media": {
               "markdown": "media/gap-log.md"
             },
             "completionEvents": [
-              "onSettingChanged:gap.docPath"
+              "onCommand:gap.openDocPathSetting"
             ]
           },
           {
             "id": "setPkgPath",
             "title": "Set the pkg Path",
-            "description": "Set this to the absolute path of the pkg folder itself.\n[Open Pkg Path Setting](command:workbench.action.openSettings?%22@id:gap.pkgPath%22)",
+            "description": "Set this to the absolute path of the pkg folder itself.\n[Open Pkg Path Setting](command:gap.openPkgPathSetting)",
             "media": {
               "markdown": "media/gap-log.md"
             },
             "completionEvents": [
-              "onSettingChanged:gap.pkgPath"
+              "onCommand:gap.openPkgPathSetting"
             ]
           },
           {

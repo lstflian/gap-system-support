@@ -355,6 +355,16 @@ export async function activate(context: vscode.ExtensionContext) {
         }),
     );
 
+    // Open the doc/pkg path settings (used by the walkthrough buttons).
+    context.subscriptions.push(
+        vscode.commands.registerCommand('gap.openDocPathSetting', () => {
+            vscode.commands.executeCommand('workbench.action.openSettings', 'gap.docPath');
+        }),
+        vscode.commands.registerCommand('gap.openPkgPathSetting', () => {
+            vscode.commands.executeCommand('workbench.action.openSettings', 'gap.pkgPath');
+        }),
+    );
+
     // Rebuild the help index with the local GAP.
     context.subscriptions.push(
         vscode.commands.registerCommand('gap.rebuildHelpIndex', async () => {
@@ -477,6 +487,15 @@ export async function activate(context: vscode.ExtensionContext) {
     );
 
     console.log('[GAP] extension activated, semantic highlighting and folding ready');
+
+    // Open the walkthrough once after the first install.
+    if (!context.globalState.get<boolean>('gap.welcomeShown')) {
+        context.globalState.update('gap.welcomeShown', true);
+        vscode.commands.executeCommand(
+            'workbench.action.openWalkthrough',
+            'flianlee.gap-system-support#gap-support.gettingStarted',
+        );
+    }
 }
 
 export function deactivate(): void {
