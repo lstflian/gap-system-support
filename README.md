@@ -4,75 +4,108 @@
 
 English | [简体中文](README.zh-cn.md)
 
-Syntax highlighting, code completion and running for GAP code in VS Code, powered by [tree-sitter-gap](https://github.com/gap-system/tree-sitter-gap), so that GAP users can write, read and run GAP code more conveniently in VS Code.
+Provides semantic highlighting, code completion, running GAP files, and a help system for GAP in VS Code, powered by [tree-sitter-gap](https://github.com/gap-system/tree-sitter-gap), so that GAP users can write, read, and run GAP code and look up GAP documentation at any time in VS Code.
 
 > GAP is a system for computational discrete algebra, with particular emphasis on Computational Group Theory. GAP provides a programming language, a library of thousands of functions implementing algebraic algorithms written in the GAP language as well as large data libraries of algebraic objects. For more information, see the [GAP official website](https://www.gap-system.org/).
 
-## Feature Demos
+## Getting Started
 
-### Syntax Highlighting
+### 1. Install GAP and Configure the PATH
 
-Semantic highlighting based on `tree-sitter-gap`.
+First, make sure GAP is installed and added to the system `PATH`. If it is not on the `PATH`, you can follow the steps below to configure it.
 
-<img src="images/highlight.png" alt="Syntax highlighting demo" width="800" />
-
-### Code Completion
-
-Completion for GAP constants, keywords, statement structures and GAP functions while typing, as well as the variables and user defined functions actually available at the cursor (including user defined functions in other GAP files loaded via `Read`).
-
-<img src="images/Completion.gif" alt="Code completion demo" width="800" />
-
-### Running GAP
-
-#### Run a File
-
-Run the current GAP file in a VS Code terminal with the run button at the top right of the editor.
-
-<img src="images/RunGAP.gif" alt="Run GAP demo" width="800" />
-
-#### Configure Command Line Options
-
-Configure GAP command line options through Quick Pick.
-
-<img src="images/CommandLineOptions.gif" alt="Configure command line options demo" width="800" />
-
-#### Notes
-
-There are two things to note when running a GAP file:
-
-1. The `gap` command must be executable in the terminal.
-2. When running a GAP file, the terminal cwd comes from `vscode.workspace.getWorkspaceFolder(doc.uri)`. This function returns the workspace folder that contains the given uri, or `undefined` when the uri doesn't match any workspace folder. In that case the terminal is created without a cwd and starts in the user home directory. See the [VS Code API](https://code.visualstudio.com/api/references/vscode-api#workspace.getWorkspaceFolder) for details.
-
-The following shows how to add GAP (installed via the `.exe` installer) to the system PATH on Windows. Run in PowerShell (replace the paths with your actual installation paths):
+**Windows**: If GAP was installed via the `.exe` installer, run the following in PowerShell:
 
 ```powershell
 $userPath = [Environment]::GetEnvironmentVariable('PATH', 'User')
 [Environment]::SetEnvironmentVariable('PATH', $userPath + ';C:\Program Files\GAP-4.16.0\runtime\opt\gap-4.16.0;C:\Program Files\GAP-4.16.0\runtime\bin', 'User')
 ```
 
-Restart PowerShell and run `gap --version` to confirm it works.
+After running the commands above, open a new PowerShell terminal and run `gap --version`. If it prints the GAP version, your environment is configured successfully.
+
+**Linux / macOS**: Run the following in a terminal (on macOS, replace `~/.bashrc` with `~/.zshrc`):
+
+```bash
+echo 'export PATH="/opt/gap-4.16.0:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+Finally, run `gap --version` to verify.
+
+**Note**: If your installation path differs from the examples, replace it with your actual installation path.
+
+### 2. Set the GAP Documentation Paths in the Extension Settings
+
+Set the following settings in the walkthroughs on the Welcome page or in the VS Code extension settings:
+
+- `gap.docPath`: the absolute path of the `doc/` folder, for example:
+  - Windows: `C:\Program Files\GAP-4.16.0\runtime\opt\gap-4.16.0\doc`
+  - Linux/macOS: `/opt/gap-4.16.0/doc`
+- `gap.pkgPath`: the absolute path of the `pkg/` folder, for example:
+  - Windows: `C:\Program Files\GAP-4.16.0\runtime\opt\gap-4.16.0\pkg`
+  - Linux/macOS: `/opt/gap-4.16.0/pkg`
+
+## Features
+
+- **Semantic highlighting**: based on `tree-sitter-gap`.
+- **Code completion**: completion for GAP constants, keywords, statement structures and GAP functions while typing, as well as the variables and user defined functions actually available at the cursor (including user defined functions in other GAP files loaded via `Read`).
+- **Running GAP code**: run the current GAP file in the VS Code integrated terminal without leaving the editor.
+- **Help system**: built-in GAP help search with two search modes, switchable at any time in the settings or in the Quick Pick search box.
+  - **prefix**: corresponds to `?help` in GAP
+  - **substring**: corresponds to `??help` in GAP
+- **Documentation viewer**: search results are displayed in a webview panel, with support for in-page link navigation and MathJax math rendering.
+
+## Feature Demos
+
+### 1. Syntax Highlighting and Code Completion
+
+<img src="" alt="Syntax highlighting and code completion demo" width="700" />
+
+### 2. Help Search System
+
+<img src="" alt="Help search system demo" width="700" />
+
+### 3. Running GAP and Configuring Command Line Options
+
+<img src="" alt="Running GAP and configuring command line options demo" width="700" />
+
+> Note: `vscode.workspace.getWorkspaceFolder(doc.uri)` determines the terminal cwd when running a GAP file.
+> For a single-root workspace, cwd is set to the workspace root folder;
+> for a multi-root workspace, cwd is set to the workspace root folder that contains the GAP file (for nested roots, the innermost root folder is returned);
+> if the GAP file is not in any workspace, no cwd is specified and the terminal uses the VS Code default directory.
+> See the [VS Code API](https://code.visualstudio.com/api/references/vscode-api#workspace.getWorkspaceFolder) for more information.
 
 ## Settings
 
 | Setting | Default | Description |
 |---|---|---|
-| `gap.runMode` | `reuse` | Terminal mode: `new` opens a new terminal for each run, `reuse` reuses the same GAP terminal |
-| `gap.terminalRoot` | (empty) | Unix root for Windows drive letters. Example: `/` turns `C:\project\file.g` into `/c/project/file.g`. Leave empty to use WSL default `/mnt/` |
+| `gap.docPath` | `""` | The absolute path of the `doc/` directory |
+| `gap.pkgPath` | `""` | The absolute path of the `pkg/` directory |
+| `gap.docAppearance` | `system` | Documentation appearance: `system` follows the VS Code theme, `dark` / `light` use a dark or light theme |
+| `gap.mathJax` | `true` | Whether to render MathJax math in GAP documentation pages |
+| `gap.runMode` | `reuse` | When running GAP: `reuse` keeps the same terminal, `new` opens a new terminal for each run |
+| `gap.terminalRoot` | `""` | Unix root for Windows drive letters. Example: `/` turns `C:\project\file.g` into `/c/project/file.g`; leave empty to use the WSL default `/mnt/` |
+| `gap.searchMode` | `prefix` | Search mode: `prefix` corresponds to `?help`, `substring` corresponds to `??help` |
 
 ## Commands
 
-Press `Ctrl+Shift+P` to open the command palette and use the following commands:
+Press `Ctrl+Shift+P` or `F1` to open the Command Palette and use the following commands:
 
 | Command | Description |
 |---|---|
 | `GAP: Run GAP File` | Run the current GAP file in a terminal |
 | `GAP: Configure GAP Command Line Options` | Configure GAP command line options through Quick Pick |
-| `GAP: Generate Completion Data` | Generate completion data with a local GAP |
+| `GAP: Search GAP Help` | Search GAP help documentation |
+| `GAP: Rebuild Help Index` | Rebuild the help index |
+| `GAP: Open GAP Reference Manual` | Open the GAP Reference Manual |
+| `GAP: Generate Completion Data` | Regenerate the completion data |
 | `GAP: Reset Completion Data` | Restore the default completion data |
+
+These commands are also available in the editor context menu (right-click menu) of GAP files for quick access.
 
 ## Development
 
-First install dependencies and compile the TypeScript sources:
+First, install the dependencies and compile the TypeScript sources:
 
 ```bash
 npm install

@@ -347,6 +347,14 @@ export async function activate(context: vscode.ExtensionContext) {
         }),
     );
 
+    // Open the README in the browser.
+    context.subscriptions.push(
+        vscode.commands.registerCommand('gap.openReadme', () => {
+            vscode.env.openExternal(vscode.Uri.parse(
+                'https://github.com/lstflian/gap-system-support/blob/main/README.md'));
+        }),
+    );
+
     // Rebuild the help index with the local GAP.
     context.subscriptions.push(
         vscode.commands.registerCommand('gap.rebuildHelpIndex', async () => {

@@ -137,6 +137,11 @@
         "command": "gap.openReference",
         "title": "Open GAP Reference Manual",
         "category": "GAP"
+      },
+      {
+        "command": "gap.openReadme",
+        "title": "Open README",
+        "category": "GAP"
       }
     ],
     "submenus": [
@@ -146,6 +151,12 @@
       }
     ],
     "menus": {
+      "commandPalette": [
+        {
+          "command": "gap.openReadme",
+          "when": "false"
+        }
+      ],
       "editor/title": [
         {
           "command": "gap.runFile",
@@ -202,9 +213,9 @@
           {
             "id": "addGapToPath",
             "title": "Add GAP to the PATH",
-            "description": "First, check that GAP is in your system PATH so the gap command works in the terminal. This walkthrough shows one way to set it up. Skip if already configured.",
+            "description": "First, check that GAP is in your system PATH so the gap command works in the terminal. Skip this step if GAP is already configured. For configuration details, click the button below.\n[Open README](command:gap.openReadme)",
             "media": {
-              "markdown": "media/add-gap-to-path.md"
+              "markdown": "media/gap-log.md"
             }
           },
           {
@@ -212,8 +223,7 @@
             "title": "Set the doc Path",
             "description": "Set this to the absolute path of the doc folder itself.\n[Open Doc Path Setting](command:workbench.action.openSettings?%22@id:gap.docPath%22)",
             "media": {
-              "image": "icon/logo.svg",
-              "altText": "gap-logo"
+              "markdown": "media/gap-log.md"
             },
             "completionEvents": [
               "onSettingChanged:gap.docPath"
@@ -224,8 +234,7 @@
             "title": "Set the pkg Path",
             "description": "Set this to the absolute path of the pkg folder itself.\n[Open Pkg Path Setting](command:workbench.action.openSettings?%22@id:gap.pkgPath%22)",
             "media": {
-              "image": "icon/logo.svg",
-              "altText": "gap-logo"
+              "markdown": "media/gap-log.md"
             },
             "completionEvents": [
               "onSettingChanged:gap.pkgPath"
@@ -237,8 +246,7 @@
             "description": "Click the button below, then enter a term to search GAP help.\n[Search GAP Help](command:gap.searchHelp)",
             "when": "config.gap.docPath != '' && config.gap.pkgPath != ''",
             "media": {
-              "image": "icon/logo.svg",
-              "altText": "gap-logo"
+              "markdown": "media/gap-log.md"
             },
             "completionEvents": [
               "onCommand:gap.searchHelp"
