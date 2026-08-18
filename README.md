@@ -59,15 +59,15 @@ Set the following settings in the walkthroughs on the Welcome page or in the VS 
 
 ### 1. Syntax Highlighting and Code Completion
 
-<img src="" alt="Syntax highlighting and code completion demo" width="700" />
+<img src="./images/highlight-comp.png" alt="Syntax highlighting and code completion demo" />
 
 ### 2. Help Search System
 
-<img src="" alt="Help search system demo" width="700" />
+<img src="./images/help-search.webp" alt="Help search system demo" />
 
 ### 3. Running GAP and Configuring Command Line Options
 
-<img src="" alt="Running GAP and configuring command line options demo" width="700" />
+<img src="./images/run-gap.webp" alt="Running GAP and configuring command line options demo" />
 
 > Note: `vscode.workspace.getWorkspaceFolder(doc.uri)` determines the terminal cwd when running a GAP file.
 > For a single-root workspace, cwd is set to the workspace root folder;

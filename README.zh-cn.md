@@ -59,15 +59,15 @@ source ~/.bashrc
 
 ### 1. 语法高亮、代码补全
 
-<img src="" alt="语法高亮演示" width="700" />
+<img src="./images/highlight-comp.png" alt="语法高亮演示" />
 
 ### 2. 帮助查询系统
 
-<img src="" alt="帮助查询系统演示" width="700" />
+<img src="./images/help-search.webp" alt="帮助查询系统演示" />
 
 ### 3. GAP 运行及命令行选项配置
 
-<img src="" alt="GAP 命令行选项配置演示" width="700" />
+<img src="./images/run-gap.webp" alt="GAP 运行及命令行选项配置演示" />
 
 > 说明：运行 GAP 文件时，终端的 cwd 通过 `vscode.workspace.getWorkspaceFolder(doc.uri)` 函数获取。
 > 对于单根工作区，cwd 会被设置为工作区根目录；
