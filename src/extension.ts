@@ -1,6 +1,4 @@
-/**
- * GAP language support, extension entry point.
- */
+/** GAP extension entry point. */
 
 import * as vscode from 'vscode';
 import * as fs from 'fs';
@@ -11,6 +9,7 @@ import { GAPFoldsProvider } from './folds/foldsProvider';
 import { GAPDiagnosticsProvider } from './diagnostics/diagnosticsProvider';
 import { ensureData, generateData, resetData } from './completion/dataManager';
 import { GapCompletionProvider } from './completion/completionProvider';
+import { GapHoverProvider } from './hover/hoverProvider';
 import { toShellPath, resolveHelpPath } from './path';
 import { searchHelp } from './help/searchEngine';
 import { HelpEntry } from './help/indexData';
@@ -57,7 +56,7 @@ let lastRunRoot: string | undefined;
 // Guard against concurrent help index rebuilds.
 let rebuildHelpRunning = false;
 
-/** Get selected text under cursor. */
+/** Get the word under the cursor. */
 function getSelectedWord(): string | undefined {
     const ed = vscode.window.activeTextEditor;
     if (!ed) return;
@@ -213,7 +212,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     initStyleState(context);
 
-    // Re-render the open help page when the MathJax setting changes.
+    // Refresh the open help page when the MathJax setting changes.
     context.subscriptions.push(
         vscode.workspace.onDidChangeConfiguration(e => {
             if (e.affectsConfiguration('gap.mathJax')) {
@@ -222,7 +221,7 @@ export async function activate(context: vscode.ExtensionContext) {
         })
     );
 
-    // Publish tree-sitter syntax diagnostics (Problems panel, squiggles).
+    // Publish diagnostics for the current syntax tree.
     const diagnosticsProvider = new GAPDiagnosticsProvider();
     context.subscriptions.push(diagnosticsProvider);
 
@@ -236,7 +235,7 @@ export async function activate(context: vscode.ExtensionContext) {
         }),
     );
 
-    // Register the document range semantic tokens provider.
+    // Register the document-range semantic tokens provider.
     const highlightsPath = vscode.Uri.joinPath(context.extensionUri, 'queries', 'highlights.scm').fsPath;
     const highlightsGlobalPath = vscode.Uri.joinPath(context.extensionUri, 'queries', 'highlights.global.scm').fsPath;
     const localsPath = vscode.Uri.joinPath(context.extensionUri, 'queries', 'locals.scm').fsPath;
@@ -260,13 +259,22 @@ export async function activate(context: vscode.ExtensionContext) {
         ),
     );
 
-    // Register the completion provider: static data scope aware completions.
+    // Register the completion provider.
     const completionPath = vscode.Uri.joinPath(context.extensionUri, 'queries', 'completion.scm').fsPath;
     const completionProvider = new GapCompletionProvider(completionPath);
     context.subscriptions.push(
         vscode.languages.registerCompletionItemProvider(
             { language: 'gap' },
             completionProvider,
+        ),
+    );
+
+    // Register the hover provider.
+    const hoverProvider = new GapHoverProvider(completionPath);
+    context.subscriptions.push(
+        vscode.languages.registerHoverProvider(
+            { language: 'gap' },
+            hoverProvider,
         ),
     );
 
@@ -301,6 +309,7 @@ export async function activate(context: vscode.ExtensionContext) {
             onDocumentClosed(doc.uri);
             semanticProvider.onDocumentClosed(doc.uri);
             completionProvider.onDocumentClosed(doc.uri);
+            hoverProvider.onDocumentClosed(doc.uri);
             diagnosticsProvider.onDocumentClosed(doc.uri);
         }),
     );
@@ -313,37 +322,44 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('gap.resetCompletionData', () => resetData(context)),
     );
 
+    /** Open the help QuickPick seeded with `seed`. Shared by the search
+     *  command and by command links inside hovers. */
+    const openHelpSearch = async (seed: string): Promise<void> => {
+        const paths = getHelpPaths();
+        if (!paths) return;
+        let helpEntries: HelpEntry[];
+        let books: Map<string, string>;
+        try {
+            const state = getHelpState();
+            helpEntries = state.entries;
+            books = state.bookDescriptions;
+        } catch (e: any) {
+            vscode.window.showErrorMessage(`GAP: failed to load help index: ${e.message}`);
+            return;
+        }
+        if (!helpEntries.length) {
+            vscode.window.showWarningMessage('GAP: Help index not loaded. Try running "GAP: Rebuild Help Index".');
+            return;
+        }
+
+        const cfg = vscode.workspace.getConfiguration('gap');
+        const fromBegin = cfg.get<string>('searchMode') === 'prefix';
+
+        const picked = await showLiveSearchPicker(seed,
+            (topic, fb) => searchHelp(helpEntries, topic, fb),
+            fromBegin, books);
+        if (!picked) return;
+
+        showHelpPanel(picked, paths.docPath, paths.pkgPath);
+    };
+
     // Live search through the GAP help index.
     context.subscriptions.push(
-        vscode.commands.registerCommand('gap.searchHelp', async () => {
-            const paths = getHelpPaths();
-            if (!paths) return;
-            let helpEntries: HelpEntry[];
-            let books: Map<string, string>;
-            try {
-                const state = getHelpState();
-                helpEntries = state.entries;
-                books = state.bookDescriptions;
-            } catch (e: any) {
-                vscode.window.showErrorMessage(`GAP: failed to load help index: ${e.message}`);
-                return;
-            }
-            if (!helpEntries.length) {
-                vscode.window.showWarningMessage('GAP: Help index not loaded. Try running "GAP: Rebuild Help Index".');
-                return;
-            }
-            const seed = getSelectedWord() || '';
-
-            const cfg = vscode.workspace.getConfiguration('gap');
-            const fromBegin = cfg.get<string>('searchMode') === 'prefix';
-
-            const picked = await showLiveSearchPicker(seed,
-                (topic, fb) => searchHelp(helpEntries, topic, fb),
-                fromBegin, books);
-            if (!picked) return;
-
-            showHelpPanel(picked, paths.docPath, paths.pkgPath);
-        }),
+        vscode.commands.registerCommand('gap.searchHelp', () => openHelpSearch(getSelectedWord() || '')),
+    );
+    // Internal command behind hover links: search a term from an argument.
+    context.subscriptions.push(
+        vscode.commands.registerCommand('gap.searchHelpTerm', (term: string) => openHelpSearch(term || '')),
     );
 
     // Open the GAP Reference Manual in the help panel.

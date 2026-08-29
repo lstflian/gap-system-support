@@ -1,4 +1,4 @@
-/** Read("file.g") completions, following the Read chain recursively. */
+/** Resolve function names from nested Read files. */
 
 import * as vscode from 'vscode';
 import * as fs from 'fs';
@@ -45,7 +45,7 @@ export class GapReadCompletions {
         return this.query;
     }
 
-    /** Collect user defined function names from the given Read calls. */
+    /** Collect user-defined function names from the Read chain. */
     getFunctionNames(document: vscode.TextDocument, readCalls: ReadCall[]): string[] {
         if (!isParserReady() || readCalls.length === 0) return [];
 
@@ -65,7 +65,7 @@ export class GapReadCompletions {
         return folder ? folder.uri.fsPath : null;
     }
 
-    /** Load one file, then recurse into its Read calls. */
+    /** Load one file and recurse through its Read calls. */
     private collect(
         pathText: string,
         baseDir: string,
@@ -90,7 +90,7 @@ export class GapReadCompletions {
         }
     }
 
-    /** Resolve a Read path: reject backslashes, keep absolute paths, join others to baseDir. */
+    /** Resolve a Read path from the workspace base directory. */
     private resolveTarget(pathText: string, baseDir: string): string | null {
         const trimmed = pathText.trim();
         if (!trimmed) return null;
@@ -100,7 +100,7 @@ export class GapReadCompletions {
         return fs.existsSync(candidate) ? candidate : null;
     }
 
-    /** Read and parse one file, cached by a content signature. */
+    /** Read and parse one file with a content-based cache. */
     private loadFile(filePath: string): LoadedFile | null {
         const open = vscode.workspace.textDocuments.find(d => d.uri.fsPath === filePath);
         let content: string;
@@ -139,7 +139,7 @@ export class GapReadCompletions {
         return file;
     }
 
-    /** Parse one file, collect user defined functions and Read paths. */
+    /** Parse one file and collect top-level functions plus Read paths. */
     private parseFile(content: string): LoadedFile | null {
         const tree = parseGapCode(content);
         try {
@@ -171,8 +171,8 @@ export class GapReadCompletions {
     }
 }
 
-/** Whether the node is defined outside any enclosing function body. */
-function isTopLevel(node: SyntaxNode): boolean {
+/** Return whether the node is defined outside an enclosing function. */
+export function isTopLevel(node: SyntaxNode): boolean {
     let current: SyntaxNode | null = node.parent;
     while (current && current.type !== 'source_file') {
         if (current.type === 'function' || current.type === 'lambda' || current.type === 'atomic_function') {
