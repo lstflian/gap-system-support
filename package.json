@@ -44,7 +44,8 @@
         "extensions": [
           ".g",
           ".gi",
-          ".gd"
+          ".gd",
+          ".gap"
         ],
         "configuration": "./language-configuration.json"
       }
@@ -334,6 +335,12 @@
           ],
           "default": "prefix",
           "description": "Search mode: prefix (?topic) matches from the start of a word, substring (??topic) matches anywhere"
+        },
+        "gap.diagnostics": {
+          "type": "boolean",
+          "default": true,
+          "order": 8,
+          "description": "Show syntax error diagnostics (missing/expected tokens, unexpected syntax) from the GAP parser in the Problems panel."
         }
       }
     }

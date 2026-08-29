@@ -8,6 +8,7 @@ import * as path from 'path';
 import { initGapParser, onDocumentChanged, onDocumentClosed, disposeAll } from './parser/gapParser';
 import { GAPSemanticTokensProvider, legend } from './semantic/semanticTokensProvider';
 import { GAPFoldsProvider } from './folds/foldsProvider';
+import { GAPDiagnosticsProvider } from './diagnostics/diagnosticsProvider';
 import { ensureData, generateData, resetData } from './completion/dataManager';
 import { GapCompletionProvider } from './completion/completionProvider';
 import { toShellPath, resolveHelpPath } from './path';
@@ -221,11 +222,16 @@ export async function activate(context: vscode.ExtensionContext) {
         })
     );
 
+    // Publish tree-sitter syntax diagnostics (Problems panel, squiggles).
+    const diagnosticsProvider = new GAPDiagnosticsProvider();
+    context.subscriptions.push(diagnosticsProvider);
+
     // Record content changes.
     context.subscriptions.push(
         vscode.workspace.onDidChangeTextDocument(e => {
             if (e.document.languageId === 'gap') {
                 onDocumentChanged(e.document.uri, e.contentChanges);
+                diagnosticsProvider.schedule(e.document);
             }
         }),
     );
@@ -273,12 +279,29 @@ export async function activate(context: vscode.ExtensionContext) {
         ),
     );
 
+    // Validate immediately when a document is opened or saved.
+    context.subscriptions.push(
+        vscode.workspace.onDidOpenTextDocument(doc => diagnosticsProvider.checkNow(doc)),
+    );
+    context.subscriptions.push(
+        vscode.workspace.onDidSaveTextDocument(doc => diagnosticsProvider.checkNow(doc)),
+    );
+    // Enable/disable diagnostics when the gap.diagnostics setting changes.
+    context.subscriptions.push(
+        vscode.workspace.onDidChangeConfiguration(e => {
+            if (e.affectsConfiguration('gap.diagnostics')) {
+                diagnosticsProvider.onConfigurationChanged();
+            }
+        }),
+    );
+
     // Handle document close events.
     context.subscriptions.push(
         vscode.workspace.onDidCloseTextDocument(doc => {
             onDocumentClosed(doc.uri);
             semanticProvider.onDocumentClosed(doc.uri);
             completionProvider.onDocumentClosed(doc.uri);
+            diagnosticsProvider.onDocumentClosed(doc.uri);
         }),
     );
 
@@ -485,6 +508,11 @@ export async function activate(context: vscode.ExtensionContext) {
             }
         })
     );
+
+    // Sweep GAP documents that were already open when the extension activated.
+    for (const doc of vscode.workspace.textDocuments) {
+        diagnosticsProvider.checkNow(doc);
+    }
 
     console.log('[GAP] extension activated, semantic highlighting and folding ready');
 
