@@ -3,7 +3,7 @@
  */
 
 import type { SyntaxNode } from 'web-tree-sitter';
-import { byteKey } from './keys';
+import { byteKey } from '../shared/keys';
 import type { TokenMapping } from './captureMap';
 
 interface Definition {
@@ -107,14 +107,4 @@ export function findDefinition(name: string, idx: number, entries: ScopeEntry[])
         }
     }
     return null;
-}
-
-/** Check whether the node or any ancestor up to source_file is an ERROR node. */
-export function hasErrorAncestor(node: SyntaxNode): boolean {
-    let current: SyntaxNode | null = node;
-    while (current && current.type !== 'source_file') {
-        if (current.type === 'ERROR') return true;
-        current = current.parent;
-    }
-    return false;
 }

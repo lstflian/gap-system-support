@@ -28,6 +28,7 @@ import {
     EXPORT_GAPDOC_TIMEOUT_MS,
     EXPORT_TEXT_TIMEOUT_MS,
 } from './help/helpData';
+import { SEMANTIC_CONTENT_LIMIT, SEMANTIC_GLOBAL_CACHE_MAX_BYTES } from './limits';
 
 interface GapFlag {
     flag: string;
@@ -246,8 +247,8 @@ export async function activate(context: vscode.ExtensionContext) {
         highlightsGlobalPath,
         {
             globalIndexMode: 'enabled',
-            contentLengthLimit: 2 * 1024 * 1024,
-            maxGlobalCacheBytes: 256 * 1024 * 1024,
+            contentLengthLimit: SEMANTIC_CONTENT_LIMIT,
+            maxGlobalCacheBytes: SEMANTIC_GLOBAL_CACHE_MAX_BYTES,
         },
     );
     context.subscriptions.push({ dispose: () => semanticProvider.dispose() });
@@ -322,8 +323,10 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('gap.resetCompletionData', () => resetData(context)),
     );
 
-    /** Open the help QuickPick seeded with `seed`. Shared by the search
-     *  command and by command links inside hovers. */
+    /**
+     * Open the help QuickPick seeded with `seed`.
+     * Shared by the search command and by command links inside hovers.
+     */
     const openHelpSearch = async (seed: string): Promise<void> => {
         const paths = getHelpPaths();
         if (!paths) return;

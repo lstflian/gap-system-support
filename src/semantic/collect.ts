@@ -3,20 +3,23 @@
  */
 
 import type { QueryMatch, SyntaxNode } from 'web-tree-sitter';
-import { posOuter, byteKey } from './keys';
+import { posOuter, byteKey } from '../shared/keys';
 import { CAPTURE_MAP, isDefinitionLikeCapture } from './captureMap';
 import type { TokenMapping } from './captureMap';
-import { buildScopes, findDefinition, hasErrorAncestor, CAPTURE_KIND } from './locals';
+import { buildScopes, findDefinition, CAPTURE_KIND } from './locals';
 import type { ScopeEntry } from './locals';
+import { hasErrorAncestor } from '../shared/treeUtils';
 import { splitOverlapping, filterNullTokens } from './tokens';
 import type { InternalToken, DeferredToken, TokenEntry, CombinedData } from './tokens';
 
 /**
  * One pass over the matches, locals feed scopes and highlights feed tokens.
  * Same start position keeps the larger pattern index.
+ * Without tokens, only locals and the final index remain.
  */
 function singlePassCollect(
     combinedMatches: QueryMatch[],
+    collectTokens: boolean,
 ): CombinedData {
     const tokenMap = new Map<number, InternalToken>();
     const nullMap = new Map<number, InternalToken>();
@@ -65,6 +68,8 @@ function singlePassCollect(
                 }
             }
 
+            if (!collectTokens) continue;
+
             const sp = node.startPosition;
             const ep = node.endPosition;
             const sl = sp.row;
@@ -75,25 +80,10 @@ function singlePassCollect(
             const ok = posOuter(sl, sc);
 
             if (!rawMapping) {
-                const existingNull = nullMap.get(ok);
-                if (!existingNull || match.pattern > existingNull.pattern) {
-                    nullMap.set(ok, { pattern: match.pattern, sl, sc, el, ec, startIndex: node.startIndex, endIndex: node.endIndex, type: null, modifiers: [], captureName: name });
-                }
+                putNullToken(nullMap, ok, match.pattern, node, sl, sc, el, ec, name);
                 continue;
             }
-
-            const existing = tokenMap.get(ok);
-            if (!existing || match.pattern > existing.pattern) {
-                tokenMap.set(ok, {
-                    pattern: match.pattern,
-                    sl, sc, el, ec,
-                    startIndex: node.startIndex,
-                    endIndex: node.endIndex,
-                    type: rawMapping.type,
-                    modifiers: rawMapping.modifiers,
-                    captureName: name,
-                });
-            }
+            putToken(tokenMap, ok, match.pattern, node, sl, sc, el, ec, rawMapping, name);
         }
     }
 
@@ -105,69 +95,41 @@ function singlePassCollect(
     return { tokenMap, nullMap, finalMappingIndex, referenceNodes, definitionNodes, scopeNodes, definitions };
 }
 
-export interface GlobalCollectData {
-    finalMappingIndex: Map<number, { mapping: TokenMapping; captureName: string }>;
-    referenceNodes: Set<number>;
-    definitionNodes: Set<number>;
-    scopeNodes: SyntaxNode[];
-    definitions: SyntaxNode[];
+/** Write a null (unmapped) token, the larger pattern index wins. */
+function putNullToken(
+    nullMap: Map<number, InternalToken>,
+    ok: number,
+    pattern: number,
+    node: SyntaxNode,
+    sl: number, sc: number, el: number, ec: number,
+    captureName: string,
+): void {
+    const existing = nullMap.get(ok);
+    if (existing && pattern <= existing.pattern) return;
+    nullMap.set(ok, { pattern, sl, sc, el, ec, startIndex: node.startIndex, endIndex: node.endIndex, type: null, modifiers: [], captureName });
 }
 
-/**
- * The global data is independent of any viewport range.
- */
-export function singlePassCollectGlobal(
-    combinedMatches: QueryMatch[],
-): GlobalCollectData {
-    const finalIndex = new Map<number, { pattern: number; mapping: TokenMapping; captureName: string }>();
-    const referenceNodes = new Set<number>();
-    const definitionNodes = new Set<number>();
-    const scopeNodes: SyntaxNode[] = [];
-    const definitions: SyntaxNode[] = [];
-
-    for (const match of combinedMatches) {
-        for (const capture of match.captures) {
-            const node = capture.node;
-            const name = capture.name;
-
-            if (name === 'local.scope') {
-                if (hasErrorAncestor(node)) continue;
-                scopeNodes.push(node);
-                continue;
-            }
-            if (CAPTURE_KIND[name]) {
-                // Record fields are not variables in GAP.
-                // Keep them out of the scope table, or a same-name reference resolves to the field.
-                if (CAPTURE_KIND[name] !== 'field') {
-                    definitionNodes.add(byteKey(node.startIndex, node.endIndex));
-                    definitions.push(node);
-                }
-                continue;
-            }
-            if (name === 'local.reference') {
-                referenceNodes.add(byteKey(node.startIndex, node.endIndex));
-                continue;
-            }
-
-            const rawMapping = CAPTURE_MAP[name];
-
-            if (name === 'variable.parameter' || name === 'variable.parameter.builtin') {
-                if (hasErrorAncestor(node)) continue;
-            }
-
-            if (!rawMapping || !isDefinitionLikeCapture(name)) continue;
-            const bkey = byteKey(node.startIndex, node.endIndex);
-            const existingIdx = finalIndex.get(bkey);
-            if (!existingIdx || match.pattern > existingIdx.pattern) {
-                finalIndex.set(bkey, { pattern: match.pattern, mapping: rawMapping, captureName: name });
-            }
-        }
-    }
-
-    const finalMappingIndex = new Map<number, { mapping: TokenMapping; captureName: string }>();
-    for (const [k, v] of finalIndex) finalMappingIndex.set(k, { mapping: v.mapping, captureName: v.captureName });
-
-    return { finalMappingIndex, referenceNodes, definitionNodes, scopeNodes, definitions };
+/** Write a mapped token, the larger pattern index wins. */
+function putToken(
+    tokenMap: Map<number, InternalToken>,
+    ok: number,
+    pattern: number,
+    node: SyntaxNode,
+    sl: number, sc: number, el: number, ec: number,
+    mapping: TokenMapping,
+    captureName: string,
+): void {
+    const existing = tokenMap.get(ok);
+    if (existing && pattern <= existing.pattern) return;
+    tokenMap.set(ok, {
+        pattern,
+        sl, sc, el, ec,
+        startIndex: node.startIndex,
+        endIndex: node.endIndex,
+        type: mapping.type,
+        modifiers: mapping.modifiers,
+        captureName,
+    });
 }
 
 /** Global (range independent) collect data, cacheable across viewport requests. */
@@ -184,10 +146,9 @@ export interface CollectGlobal {
  * Build the range independent global data, cacheable by document version.
  */
 export function buildCollectGlobal(code: string, matches: QueryMatch[]): CollectGlobal {
-    const data = singlePassCollectGlobal(matches);
+    const data = singlePassCollect(matches, false);
     const scopes = buildScopes(data);
-    const rawLines = code.split('\n');
-    const lineLens = rawLines.map(l => l.endsWith('\r') ? l.length - 1 : l.length);
+    const { rawLines, lineLens } = splitLines(code);
     return {
         finalMappingIndex: data.finalMappingIndex,
         referenceNodes: data.referenceNodes,
@@ -299,25 +260,10 @@ function collectViewportTokens(
 
             if (!rawMapping) {
                 if (!includeNullTokens) continue;
-                const existingNull = nullMap.get(ok);
-                if (!existingNull || match.pattern > existingNull.pattern) {
-                    nullMap.set(ok, { pattern: match.pattern, sl, sc, el, ec, startIndex: node.startIndex, endIndex: node.endIndex, type: null, modifiers: [], captureName: name });
-                }
+                putNullToken(nullMap, ok, match.pattern, node, sl, sc, el, ec, name);
                 continue;
             }
-
-            const existing = tokenMap.get(ok);
-            if (!existing || match.pattern > existing.pattern) {
-                tokenMap.set(ok, {
-                    pattern: match.pattern,
-                    sl, sc, el, ec,
-                    startIndex: node.startIndex,
-                    endIndex: node.endIndex,
-                    type: rawMapping.type,
-                    modifiers: rawMapping.modifiers,
-                    captureName: name,
-                });
-            }
+            putToken(tokenMap, ok, match.pattern, node, sl, sc, el, ec, rawMapping, name);
         }
     }
 
@@ -333,6 +279,12 @@ function collectViewportTokens(
     };
 }
 
+/** Split lines and their UTF-16 lengths, CRLF counts as the line end. */
+function splitLines(code: string): { rawLines: string[]; lineLens: number[] } {
+    const rawLines = code.split('\n');
+    return { rawLines, lineLens: rawLines.map(l => l.endsWith('\r') ? l.length - 1 : l.length) };
+}
+
 /** Resolve references, split overlaps, sort and slice into final entries. */
 function finishEntries(
     code: string,
@@ -341,8 +293,9 @@ function finishEntries(
     cachedRawLines?: string[],
     cachedLineLens?: number[],
 ): TokenEntry[] {
-    const rawLines = cachedRawLines ?? code.split('\n');
-    const lineLens = cachedLineLens ?? rawLines.map(l => l.endsWith('\r') ? l.length - 1 : l.length);
+    const { rawLines, lineLens } = cachedRawLines
+        ? { rawLines: cachedRawLines, lineLens: cachedLineLens ?? cachedRawLines.map(l => l.endsWith('\r') ? l.length - 1 : l.length) }
+        : splitLines(code);
 
     const tokenMap = data.tokenMap;
 
@@ -445,7 +398,7 @@ export function collectTokenEntries(
     code: string,
     combinedMatches: QueryMatch[],
 ): TokenEntry[] {
-    const data = singlePassCollect(combinedMatches);
+    const data = singlePassCollect(combinedMatches, true);
     const scopes = buildScopes(data);
     return finishEntries(code, data, scopes);
 }

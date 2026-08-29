@@ -2,14 +2,11 @@
 
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import * as path from 'path';
-import { getGapLanguage, parseGapCode, isParserReady } from '../parser/gapParser';
-import { hasErrorAncestor } from '../semantic/locals';
-import type { Query, QueryMatch, SyntaxNode } from 'web-tree-sitter';
+import { parseGapCode, isParserReady } from '../parser/gapParser';
+import { hasErrorAncestor, isTopLevel } from '../shared/treeUtils';
+import { ReadChainFileCache, resolveReadBaseDir, resolveReadTarget } from '../shared/readFileCache';
+import { LazyQuery } from '../shared/lazyQuery';
 import type { ReadCall } from './scoped';
-
-/** Over this length (UTF-16 code units) a loaded file is skipped. */
-const CONTENT_LENGTH_LIMIT = 1 * 1024 * 1024;
 
 interface LoadedFile {
     functions: string[];
@@ -17,39 +14,24 @@ interface LoadedFile {
     readPaths: string[];
 }
 
-/** Cached parse of one file, invalidated by a content signature. */
-interface FileCacheEntry {
-    signature: string;
-    file: LoadedFile | null;
-}
-
 export class GapReadCompletions {
 
-    private query: Query | null = null;
-    private queryText: string;
-    // File cache, keyed by absolute path.
-    private fileCache = new Map<string, FileCacheEntry>();
+    private readonly query: LazyQuery;
+    private readonly fileCache = new ReadChainFileCache<LoadedFile>(content => this.parseFile(content));
 
     constructor(completionPath: string) {
-        this.queryText = fs.readFileSync(completionPath, 'utf-8');
+        this.query = new LazyQuery(fs.readFileSync(completionPath, 'utf-8'));
     }
 
     onDocumentClosed(uri: vscode.Uri): void {
-        this.fileCache.delete(uri.fsPath);
-    }
-
-    private getQuery(): Query {
-        if (!this.query) {
-            this.query = getGapLanguage().query(this.queryText);
-        }
-        return this.query;
+        this.fileCache.onDocumentClosed(uri);
     }
 
     /** Collect user-defined function names from the Read chain. */
     getFunctionNames(document: vscode.TextDocument, readCalls: ReadCall[]): string[] {
         if (!isParserReady() || readCalls.length === 0) return [];
 
-        const baseDir = this.resolveBaseDir(document);
+        const baseDir = resolveReadBaseDir(document);
         if (!baseDir) return [];
 
         const names = new Set<string>();
@@ -60,11 +42,6 @@ export class GapReadCompletions {
         return [...names];
     }
 
-    private resolveBaseDir(document: vscode.TextDocument): string | null {
-        const folder = vscode.workspace.getWorkspaceFolder(document.uri);
-        return folder ? folder.uri.fsPath : null;
-    }
-
     /** Load one file and recurse through its Read calls. */
     private collect(
         pathText: string,
@@ -72,7 +49,7 @@ export class GapReadCompletions {
         names: Set<string>,
         visited: Set<string>,
     ): void {
-        const target = this.resolveTarget(pathText, baseDir);
+        const target = resolveReadTarget(pathText, baseDir);
         if (!target) return;
 
         const key = target;
@@ -80,7 +57,7 @@ export class GapReadCompletions {
         if (visited.has(key)) return;
         visited.add(key);
 
-        const loaded = this.loadFile(key);
+        const loaded = this.fileCache.loadFile(key);
         if (!loaded) return;
 
         for (const name of loaded.functions) names.add(name);
@@ -90,60 +67,10 @@ export class GapReadCompletions {
         }
     }
 
-    /** Resolve a Read path from the workspace base directory. */
-    private resolveTarget(pathText: string, baseDir: string): string | null {
-        const trimmed = pathText.trim();
-        if (!trimmed) return null;
-        if (trimmed.includes('\\')) return null;
-        if (path.isAbsolute(trimmed)) return trimmed;
-        const candidate = path.join(baseDir, trimmed);
-        return fs.existsSync(candidate) ? candidate : null;
-    }
-
-    /** Read and parse one file with a content-based cache. */
-    private loadFile(filePath: string): LoadedFile | null {
-        const open = vscode.workspace.textDocuments.find(d => d.uri.fsPath === filePath);
-        let content: string;
-        let signature: string;
-        if (open) {
-            content = open.getText();
-            signature = `doc:${open.version}`;
-        } else {
-            try {
-                const stat = fs.statSync(filePath);
-                signature = `file:${stat.mtimeMs}:${stat.size}`;
-                if (stat.size > CONTENT_LENGTH_LIMIT) return null;
-                content = fs.readFileSync(filePath, 'utf-8');
-            } catch {
-                // Missing file, silently skip.
-                return null;
-            }
-        }
-        if (content.length > CONTENT_LENGTH_LIMIT) return null;
-
-        const cached = this.fileCache.get(filePath);
-        if (cached && cached.signature === signature) {
-            this.fileCache.delete(filePath);
-            this.fileCache.set(filePath, cached);
-            return cached.file;
-        }
-
-        const file = this.parseFile(content);
-        this.fileCache.delete(filePath);
-        this.fileCache.set(filePath, { signature, file });
-        // Bound the cache size, least recently used first.
-        if (this.fileCache.size > 64) {
-            const first = this.fileCache.keys().next().value;
-            if (first !== undefined) this.fileCache.delete(first);
-        }
-        return file;
-    }
-
-    /** Parse one file and collect top-level functions plus Read paths. */
     private parseFile(content: string): LoadedFile | null {
         const tree = parseGapCode(content);
         try {
-            const matches = this.getQuery().matches(tree.rootNode);
+            const matches = this.query.get().matches(tree.rootNode);
             const functions: string[] = [];
             const readPaths: string[] = [];
             for (const match of matches) {
@@ -169,16 +96,4 @@ export class GapReadCompletions {
             tree.delete();
         }
     }
-}
-
-/** Return whether the node is defined outside an enclosing function. */
-export function isTopLevel(node: SyntaxNode): boolean {
-    let current: SyntaxNode | null = node.parent;
-    while (current && current.type !== 'source_file') {
-        if (current.type === 'function' || current.type === 'lambda' || current.type === 'atomic_function') {
-            return false;
-        }
-        current = current.parent;
-    }
-    return true;
 }

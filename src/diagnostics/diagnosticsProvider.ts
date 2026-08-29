@@ -22,10 +22,7 @@ export interface ErrorEntry {
     snippet: string;
 }
 
-/**
- * Walk the tree, collecting `isError` and `isMissing` nodes.
- * ERROR subtrees are not descended into (nested errors share one root cause).
- */
+/** Walk the tree, collecting `isError` and `isMissing` nodes. */
 export function collectErrorEntries(rootNode: SyntaxNode, code: string): ErrorEntry[] {
     const entries: ErrorEntry[] = [];
     visit(rootNode, code, entries);
@@ -60,9 +57,7 @@ function missingEntry(node: SyntaxNode, code: string): ErrorEntry {
     const offset = node.startIndex;
     return {
         kind: 'missing',
-        // Zero-width ranges are invisible in the editor: back up to (and
-        // covering) the previous non-whitespace character so the squiggle
-        // lands on something the user can see and fix.
+        // Zero-width ranges are invisible: back up to the previous non-whitespace character for a visible squiggle.
         startIndex: computeMissingStart(code, offset),
         endIndex: offset,
         token: node.type,
@@ -71,10 +66,8 @@ function missingEntry(node: SyntaxNode, code: string): ErrorEntry {
 }
 
 /**
- * Start offset for a MISSING node squiggle: the previous non-whitespace
- * character position, so the squiggle covers visible source up to the
- * insertion point. When nothing visible precedes it (file start or blank
- * prefix) the returned offset keeps the range zero-width.
+ * Start offset for a MISSING node squiggle: the previous non-whitespace character, covering visible source up to the insertion point.
+ * When nothing visible precedes it (file start or blank prefix) the returned offset keeps the range zero-width.
  */
 export function computeMissingStart(code: string, offset: number): number {
     const bounded = Math.max(0, Math.min(offset, code.length));
@@ -216,8 +209,7 @@ export class GAPDiagnosticsProvider implements vscode.Disposable {
             const entries = tree.rootNode.hasError ? collectErrorEntries(tree.rootNode, text) : [];
             this.collection.set(uri, entriesToDiagnostics(document, entries));
         } catch {
-            // Parser failures must never surface as broken editor state;
-            // retract stale diagnostics and let the next change retry.
+            // Parser failures must never surface as broken editor state; retract stale diagnostics and let the next change retry.
             this.collection.delete(uri);
         }
     }

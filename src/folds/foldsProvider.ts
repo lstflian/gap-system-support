@@ -4,25 +4,17 @@
  */
 
 import * as vscode from 'vscode';
+import { getDocumentTree, isParserReady } from '../parser/gapParser';
+import { hasErrorAncestor } from '../shared/treeUtils';
+import { LazyQuery } from '../shared/lazyQuery';
 import * as fs from 'fs';
-import { getDocumentTree, isParserReady, getGapLanguage } from '../parser/gapParser';
-import { hasErrorAncestor } from '../semantic/locals';
-import type { Query } from 'web-tree-sitter';
 
 export class GAPFoldsProvider implements vscode.FoldingRangeProvider {
 
-    private foldQuery: Query | null = null;
-    private foldText: string;
+    private readonly foldQuery: LazyQuery;
 
     constructor(foldsPath: string) {
-        this.foldText = fs.readFileSync(foldsPath, 'utf-8');
-    }
-
-    private getFoldQuery(): Query {
-        if (!this.foldQuery) {
-            this.foldQuery = getGapLanguage().query(this.foldText);
-        }
-        return this.foldQuery;
+        this.foldQuery = new LazyQuery(fs.readFileSync(foldsPath, 'utf-8'));
     }
 
     provideFoldingRanges(
@@ -35,7 +27,7 @@ export class GAPFoldsProvider implements vscode.FoldingRangeProvider {
         const ranges: vscode.FoldingRange[] = [];
 
         // Each @fold capture node becomes one folding range.
-        for (const match of this.getFoldQuery().matches(tree.rootNode)) {
+        for (const match of this.foldQuery.get().matches(tree.rootNode)) {
             for (const capture of match.captures) {
                 if (capture.name !== 'fold') continue;
                 const node = capture.node;

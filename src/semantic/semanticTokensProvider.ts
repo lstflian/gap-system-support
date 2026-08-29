@@ -4,8 +4,8 @@
 
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import { parseGapCode, getDocumentTreeSnapshot, isParserReady, getGapLanguage } from '../parser/gapParser';
-import type { Query, SyntaxNode } from 'web-tree-sitter';
+import { parseGapCode, getDocumentTreeSnapshot, isParserReady } from '../parser/gapParser';
+import type { SyntaxNode } from 'web-tree-sitter';
 import { legend } from './captureMap';
 import { collectTokenEntries, collectTokenEntriesInRangeCached, buildCollectGlobal, filterViewportMatches, filterTokenEntriesInRange } from './collect';
 import type { CollectGlobal } from './collect';
@@ -18,6 +18,15 @@ import {
     validateGlobalTopologyIndex,
 } from './globalIndex';
 import type { GlobalTopologyIndex, GlobalIndexFallbackReason } from './globalIndex';
+import {
+    SEMANTIC_CONTENT_LIMIT,
+    SEMANTIC_GLOBAL_CACHE_MAX_BYTES,
+    SEMANTIC_GLOBAL_CACHE_MAX_ENTRIES,
+    SEMANTIC_TEXT_CACHE_MAX_BYTES,
+    SEMANTIC_TEXT_CACHE_MAX_ENTRIES,
+} from '../limits';
+import { LruCache } from '../shared/lruCache';
+import { LazyQuery } from '../shared/lazyQuery';
 
 export { legend } from './captureMap';
 
@@ -132,38 +141,38 @@ function createGlobalIndexDiagnostics(mode: GlobalIndexMode): GlobalIndexDiagnos
 
 export class GAPSemanticTokensProvider implements vscode.DocumentRangeSemanticTokensProvider {
 
-    private viewportQuery: Query | null = null;
-    private viewportText: string;
-    private globalQuery: Query | null = null;
-    private globalText: string;
+    private readonly viewportQuery: LazyQuery;
+    private readonly globalQuery: LazyQuery;
     // Global data is range independent, reused across viewport requests.
-    private globalCache = new Map<string, GlobalCacheEntry>();
-    private globalFailureCache = new Map<string, GlobalFailureCacheEntry>();
+    private readonly globalCache = new LruCache<string, GlobalCacheEntry>({
+        maxEntries: SEMANTIC_GLOBAL_CACHE_MAX_ENTRIES,
+        onEvict: (_key, entry) => { this.globalCacheBytes -= entry.estimatedBytes; },
+    });
+    private readonly globalFailureCache = new LruCache<string, GlobalFailureCacheEntry>({
+        maxEntries: SEMANTIC_GLOBAL_CACHE_MAX_ENTRIES,
+    });
     // Text snapshots avoid rereading an unchanged document on repeated viewport requests.
-    private textCache = new Map<string, TextCacheEntry>();
+    private readonly textCache = new LruCache<string, TextCacheEntry>({
+        maxEntries: SEMANTIC_TEXT_CACHE_MAX_ENTRIES,
+        onEvict: (_key, entry) => { this.textCacheBytes -= entry.estimatedBytes; },
+    });
     private globalCacheBytes = 0;
     private textCacheBytes = 0;
     private uncachedGlobalBuilds = 0;
     private readonly globalIndexMode: GlobalIndexMode;
     private globalIndexDiagnostics: GlobalIndexDiagnostics;
 
-    private static readonly MAX_GLOBAL_CACHE_ENTRIES = 32;
-    private static readonly DEFAULT_MAX_GLOBAL_CACHE_BYTES = 256 * 1024 * 1024;
-    private readonly maxGlobalCacheBytes: number;
-    private static readonly MAX_TEXT_CACHE_ENTRIES = 8;
-    private static readonly MAX_TEXT_CACHE_BYTES = 8 * 1024 * 1024;
     private static readonly QUERY_MATCH_LIMIT = 1_000_000;
     private static readonly GLOBAL_INDEX_DIRTY_LIMIT = 0.25;
     private static readonly INDEX_RETRY_COOLDOWN_VERSIONS = 64;
-    /** Over this length (UTF-16 code units) documents skip semantic tokens. */
-    private static readonly DEFAULT_CONTENT_LENGTH_LIMIT = 2 * 1024 * 1024;
     private readonly contentLengthLimit: number;
+    private readonly maxGlobalCacheBytes: number;
 
     onDocumentClosed(uri: vscode.Uri): void {
         const key = uri.toString();
-        this.removeGlobalCacheEntry(key);
+        this.globalCache.delete(key);
         this.globalFailureCache.delete(key);
-        this.removeTextCacheEntry(key);
+        this.textCache.delete(key);
     }
 
     constructor(
@@ -173,94 +182,35 @@ export class GAPSemanticTokensProvider implements vscode.DocumentRangeSemanticTo
         options: SemanticTokensProviderOptions = {},
     ) {
         this.globalIndexMode = options.globalIndexMode ?? 'disabled';
-        this.contentLengthLimit = options.contentLengthLimit ??
-            GAPSemanticTokensProvider.DEFAULT_CONTENT_LENGTH_LIMIT;
-        this.maxGlobalCacheBytes = options.maxGlobalCacheBytes ??
-            GAPSemanticTokensProvider.DEFAULT_MAX_GLOBAL_CACHE_BYTES;
+        this.contentLengthLimit = options.contentLengthLimit ?? SEMANTIC_CONTENT_LIMIT;
+        this.maxGlobalCacheBytes = options.maxGlobalCacheBytes ?? SEMANTIC_GLOBAL_CACHE_MAX_BYTES;
         this.globalIndexDiagnostics = createGlobalIndexDiagnostics(this.globalIndexMode);
         const highlightsText = fs.readFileSync(highlightsPath, 'utf-8');
         const localsText = fs.readFileSync(localsPath, 'utf-8');
-        this.viewportText = localsText + '\n' + highlightsText;
         const globalHighlights = highlightsGlobalPath
             ? fs.readFileSync(highlightsGlobalPath, 'utf-8')
             : highlightsText;
-        this.globalText = localsText + '\n' + globalHighlights;
+        this.viewportQuery = new LazyQuery(localsText + '\n' + highlightsText);
+        this.globalQuery = new LazyQuery(localsText + '\n' + globalHighlights);
         console.log(`[GAP] loaded highlights.scm (${highlightsText.length} bytes), locals.scm (${localsText.length} bytes)`);
     }
 
-    private getViewportQuery(): Query {
-        if (!this.viewportQuery) {
-            this.viewportQuery = getGapLanguage().query(this.viewportText);
-        }
-        return this.viewportQuery;
-    }
-
-    private getGlobalQuery(): Query {
-        if (!this.globalQuery) {
-            this.globalQuery = getGapLanguage().query(this.globalText);
-        }
-        return this.globalQuery;
-    }
-
-    private removeGlobalCacheEntry(key: string): void {
-        const cached = this.globalCache.get(key);
-        if (!cached) return;
-        this.globalCache.delete(key);
-        this.globalCacheBytes -= cached.estimatedBytes;
-    }
-
-    private removeTextCacheEntry(key: string): void {
-        const cached = this.textCache.get(key);
-        if (!cached) return;
-        this.textCache.delete(key);
-        this.textCacheBytes -= cached.estimatedBytes;
-    }
-
-    private touchGlobalCacheEntry(key: string, cached: GlobalCacheEntry): void {
-        this.globalCache.delete(key);
-        this.globalCache.set(key, cached);
-    }
-
-    private touchGlobalFailureCacheEntry(key: string, cached: GlobalFailureCacheEntry): void {
-        this.globalFailureCache.delete(key);
-        this.globalFailureCache.set(key, cached);
-    }
-
-    private touchTextCacheEntry(key: string, cached: TextCacheEntry): void {
-        this.textCache.delete(key);
-        this.textCache.set(key, cached);
-    }
-
     private trimGlobalCache(): void {
-        while (this.globalCache.size > GAPSemanticTokensProvider.MAX_GLOBAL_CACHE_ENTRIES ||
+        while (this.globalCache.size > SEMANTIC_GLOBAL_CACHE_MAX_ENTRIES ||
             this.globalCacheBytes > this.maxGlobalCacheBytes) {
-            const oldest = this.globalCache.keys().next().value;
-            if (oldest === undefined) break;
-            this.removeGlobalCacheEntry(oldest);
-        }
-    }
-
-    private insertGlobalFailureCacheEntry(key: string, entry: GlobalFailureCacheEntry): void {
-        this.globalFailureCache.delete(key);
-        this.globalFailureCache.set(key, entry);
-        while (this.globalFailureCache.size > GAPSemanticTokensProvider.MAX_GLOBAL_CACHE_ENTRIES) {
-            const oldest = this.globalFailureCache.keys().next().value;
-            if (oldest === undefined) break;
-            this.globalFailureCache.delete(oldest);
+            if (!this.globalCache.evictOldest()) break;
         }
     }
 
     private trimTextCache(): void {
-        while (this.textCache.size > GAPSemanticTokensProvider.MAX_TEXT_CACHE_ENTRIES ||
-            this.textCacheBytes > GAPSemanticTokensProvider.MAX_TEXT_CACHE_BYTES) {
-            const oldest = this.textCache.keys().next().value;
-            if (oldest === undefined) break;
-            this.removeTextCacheEntry(oldest);
+        while (this.textCache.size > SEMANTIC_TEXT_CACHE_MAX_ENTRIES ||
+            this.textCacheBytes > SEMANTIC_TEXT_CACHE_MAX_BYTES) {
+            if (!this.textCache.evictOldest()) break;
         }
     }
 
     private insertGlobalCacheEntry(key: string, entry: GlobalCacheEntry): boolean {
-        this.removeGlobalCacheEntry(key);
+        this.globalCache.delete(key);
         this.globalFailureCache.delete(key);
         if (entry.estimatedBytes > this.maxGlobalCacheBytes) {
             this.uncachedGlobalBuilds++;
@@ -269,16 +219,16 @@ export class GAPSemanticTokensProvider implements vscode.DocumentRangeSemanticTo
         this.globalCache.set(key, entry);
         this.globalCacheBytes += entry.estimatedBytes;
         this.trimGlobalCache();
-        return this.globalCache.get(key) === entry;
+        return this.globalCache.peek(key) === entry;
     }
 
     private insertTextCacheEntry(key: string, entry: TextCacheEntry): boolean {
-        this.removeTextCacheEntry(key);
-        if (entry.estimatedBytes > GAPSemanticTokensProvider.MAX_TEXT_CACHE_BYTES) return false;
+        this.textCache.delete(key);
+        if (entry.estimatedBytes > SEMANTIC_TEXT_CACHE_MAX_BYTES) return false;
         this.textCache.set(key, entry);
         this.textCacheBytes += entry.estimatedBytes;
         this.trimTextCache();
-        return this.textCache.get(key) === entry;
+        return this.textCache.peek(key) === entry;
     }
 
     private estimateGlobalBytes(
@@ -313,13 +263,13 @@ export class GAPSemanticTokensProvider implements vscode.DocumentRangeSemanticTo
 
     private getDocumentText(document: vscode.TextDocument): string | null {
         const key = document.uri.toString();
-        const cached = this.textCache.get(key);
+        const cached = this.textCache.peek(key);
         if (cached && cached.version === document.version) {
-            this.touchTextCacheEntry(key, cached);
+            this.textCache.touch(key, cached);
             return cached.overLimit ? null : cached.code;
         }
 
-        this.removeTextCacheEntry(key);
+        this.textCache.delete(key);
         const code = document.getText();
         if (code.length > this.contentLengthLimit) {
             this.insertTextCacheEntry(key, {
@@ -357,7 +307,7 @@ export class GAPSemanticTokensProvider implements vscode.DocumentRangeSemanticTo
         snapshot: ReturnType<typeof getDocumentTreeSnapshot>,
         withTopology: boolean,
     ): { global: CollectGlobal; topology: GlobalTopologyIndex | null } | null {
-        const query = this.getGlobalQuery();
+        const query = this.globalQuery.get();
         const matches = query.matches(snapshot.tree.rootNode, {
             matchLimit: GAPSemanticTokensProvider.QUERY_MATCH_LIMIT,
         });
@@ -429,7 +379,7 @@ export class GAPSemanticTokensProvider implements vscode.DocumentRangeSemanticTo
 
         let result: ReturnType<typeof updateGlobalTopologyIndex>;
         try {
-            const query = this.getGlobalQuery();
+            const query = this.globalQuery.get();
             result = updateGlobalTopologyIndex(
                 cached.topology,
                 cached.global,
@@ -475,23 +425,23 @@ export class GAPSemanticTokensProvider implements vscode.DocumentRangeSemanticTo
         snapshot: ReturnType<typeof getDocumentTreeSnapshot>,
     ): CollectGlobal | null {
         const key = document.uri.toString();
-        const failed = this.globalFailureCache.get(key);
+        const failed = this.globalFailureCache.peek(key);
         if (failed) {
             if (failed.version === document.version && failed.generation === snapshot.generation) {
-                this.touchGlobalFailureCacheEntry(key, failed);
+                this.globalFailureCache.touch(key, failed);
                 this.globalIndexDiagnostics.globalQueryLimitCacheHits++;
                 return null;
             }
             this.globalFailureCache.delete(key);
         }
-        let cached = this.globalCache.get(key);
+        let cached = this.globalCache.peek(key);
         if (cached && cached.version === document.version && cached.generation === snapshot.generation) {
-            this.touchGlobalCacheEntry(key, cached);
+            this.globalCache.touch(key, cached);
             return cached.global;
         }
         if (cached && cached.generation === snapshot.generation) {
             cached.version = document.version;
-            this.touchGlobalCacheEntry(key, cached);
+            this.globalCache.touch(key, cached);
             return cached.global;
         }
 
@@ -504,7 +454,7 @@ export class GAPSemanticTokensProvider implements vscode.DocumentRangeSemanticTo
             estimatedBytes: cached.estimatedBytes,
         } : null;
         if (cached) {
-            this.removeGlobalCacheEntry(key);
+            this.globalCache.delete(key);
             cached = undefined;
         }
         const incremental = previous
@@ -543,8 +493,8 @@ export class GAPSemanticTokensProvider implements vscode.DocumentRangeSemanticTo
             shouldBuildTopology,
         );
         if (!full) {
-            this.removeGlobalCacheEntry(key);
-            this.insertGlobalFailureCacheEntry(key, {
+            this.globalCache.delete(key);
+            this.globalFailureCache.set(key, {
                 version: document.version,
                 generation: snapshot.generation,
             });
@@ -597,7 +547,7 @@ export class GAPSemanticTokensProvider implements vscode.DocumentRangeSemanticTo
             uncachedGlobalBuilds: this.uncachedGlobalBuilds,
             textEntries: this.textCache.size,
             textEstimatedBytes: this.textCacheBytes,
-            textBudgetBytes: GAPSemanticTokensProvider.MAX_TEXT_CACHE_BYTES,
+            textBudgetBytes: SEMANTIC_TEXT_CACHE_MAX_BYTES,
             overLimitTextEntries,
         };
     }
@@ -638,7 +588,7 @@ export class GAPSemanticTokensProvider implements vscode.DocumentRangeSemanticTo
         const queryStartLine = Math.max(0, range.start.line - 1);
         const queryEndLine = Math.min(lastLine, range.end.line + 1);
         const queryEndColumn = global.lineLens[queryEndLine] ?? 0;
-        const viewportQuery = this.getViewportQuery();
+        const viewportQuery = this.viewportQuery.get();
         const matches = viewportQuery.matches(snapshot.tree.rootNode, {
             startPosition: { row: queryStartLine, column: 0 },
             endPosition: { row: queryEndLine, column: queryEndColumn },
@@ -674,13 +624,11 @@ export class GAPSemanticTokensProvider implements vscode.DocumentRangeSemanticTo
     }
 
     dispose(): void {
-        this.viewportQuery?.delete();
-        this.globalQuery?.delete();
-        this.viewportQuery = null;
-        this.globalQuery = null;
-        for (const key of [...this.globalCache.keys()]) this.removeGlobalCacheEntry(key);
+        this.viewportQuery.dispose();
+        this.globalQuery.dispose();
+        for (const key of [...this.globalCache.keys()]) this.globalCache.delete(key);
         this.globalFailureCache.clear();
-        for (const key of [...this.textCache.keys()]) this.removeTextCacheEntry(key);
+        for (const key of [...this.textCache.keys()]) this.textCache.delete(key);
         this.uncachedGlobalBuilds = 0;
         this.globalIndexDiagnostics = createGlobalIndexDiagnostics(this.globalIndexMode);
     }
@@ -689,7 +637,7 @@ export class GAPSemanticTokensProvider implements vscode.DocumentRangeSemanticTo
     queryEntries(code: string): TokenEntry[] {
         const tree = parseGapCode(code);
         try {
-            const matches = this.getViewportQuery().matches(tree.rootNode);
+            const matches = this.viewportQuery.get().matches(tree.rootNode);
             return collectTokenEntries(code, matches);
         } finally {
             tree.delete();

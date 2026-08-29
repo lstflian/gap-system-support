@@ -7,9 +7,10 @@ import type { Edit, QueryMatch, SyntaxNode } from 'web-tree-sitter';
 import type { DocumentTreeChange } from '../parser/gapParser';
 import { CAPTURE_MAP, isDefinitionLikeCapture } from './captureMap';
 import type { TokenMapping } from './captureMap';
-import { byteKey, decodeByteKey } from './keys';
-import { CAPTURE_KIND, hasErrorAncestor } from './locals';
+import { byteKey, decodeByteKey } from '../shared/keys';
+import { CAPTURE_KIND } from './locals';
 import type { ScopeEntry } from './locals';
+import { hasErrorAncestor } from '../shared/treeUtils';
 import type { CollectGlobal } from './collect';
 
 export interface OffsetRange {

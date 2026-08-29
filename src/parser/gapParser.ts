@@ -4,6 +4,7 @@
 
 import * as vscode from 'vscode';
 import Parser, { type Language, type Tree, type Edit, type Point, type Range as TreeRange } from 'web-tree-sitter';
+import { PARSER_MAX_DOCS, PARSER_MAX_IDLE_MS, PARSER_MAX_PENDING_EDITS, PARSER_MAX_TOTAL_TEXT } from '../limits';
 
 let gapParser: Parser | null = null;
 let gapLanguage: Language | null = null;
@@ -23,12 +24,6 @@ interface DocState {
 /** Document states, keyed by uri.toString(). */
 const docs = new Map<string, DocState>();
 let nextTreeGeneration = 1;
-
-/** Cache limits for the document map. */
-const MAX_DOCS = 20;
-const MAX_TOTAL_TEXT = 50 * 1024 * 1024;
-const MAX_IDLE_MS = 3 * 60 * 1000;
-const MAX_PENDING_EDITS = 1000;
 
 export interface ParserDiagnostics {
     initialFullParses: number;
@@ -196,7 +191,7 @@ export function onDocumentChanged(uri: vscode.Uri, changes: readonly vscode.Text
     }
     // Over the cap, force a full reparse on the next request.
     // A negative event count marks the loss, the next request reparses.
-    if (state.edits.length > MAX_PENDING_EDITS) {
+    if (state.edits.length > PARSER_MAX_PENDING_EDITS) {
         state.edits = [];
         state.editEvents = -1;
         parserDiagnostics.droppedEditBatches++;
@@ -222,7 +217,7 @@ function evictIfNeeded(now: number, keepKey?: string): void {
     // Idle eviction.
     for (const [k, s] of [...docs]) {
         if (k === keepKey) continue;
-        if (now - s.lastUsed > MAX_IDLE_MS) dropState(k);
+        if (now - s.lastUsed > PARSER_MAX_IDLE_MS) dropState(k);
     }
     // Count and total text eviction, oldest first.
     const oldestKey = (): string | null => {
@@ -237,14 +232,14 @@ function evictIfNeeded(now: number, keepKey?: string): void {
         }
         return key;
     };
-    while (docs.size > MAX_DOCS) {
+    while (docs.size > PARSER_MAX_DOCS) {
         const k = oldestKey();
         if (k === null) break;
         dropState(k);
     }
     let total = 0;
     for (const s of docs.values()) total += s.text.length;
-    while (total > MAX_TOTAL_TEXT) {
+    while (total > PARSER_MAX_TOTAL_TEXT) {
         const k = oldestKey();
         if (k === null) break;
         const len = docs.get(k)?.text.length ?? 0;

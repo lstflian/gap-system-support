@@ -2,7 +2,7 @@
   "name": "gap-system-support",
   "displayName": "GAP System Support",
   "description": "GAP language support for VS Code with syntax highlighting, completion and run, powered by tree-sitter-gap",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "publisher": "flianlee",
   "author": "Songtai Li",
   "license": "SEE LICENSE IN LICENSE",
@@ -129,6 +129,11 @@
         "category": "GAP"
       },
       {
+        "command": "gap.searchHelpTerm",
+        "title": "Search GAP Help Term",
+        "category": "GAP"
+      },
+      {
         "command": "gap.rebuildHelpIndex",
         "title": "Rebuild Help Index",
         "category": "GAP"
@@ -172,6 +177,10 @@
         },
         {
           "command": "gap.openPkgPathSetting",
+          "when": "false"
+        },
+        {
+          "command": "gap.searchHelpTerm",
           "when": "false"
         }
       ],

@@ -1,3 +1,10 @@
+## 0.3.1
+
+1. Add tree-sitter syntax diagnostics to GAP extension
+2. Add `.gap` file association to GAP extension
+3. Add hover on function names
+4. Optimize the structure of files under `src/`
+
 ## 0.3.0
 
 1. Integrate the [GAP Help extension](https://github.com/lstflian/gap-help), including search and documentation viewer.

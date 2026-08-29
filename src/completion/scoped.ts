@@ -5,10 +5,13 @@
 
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import { getGapLanguage, getDocumentTree, isParserReady } from '../parser/gapParser';
-import type { Query, QueryMatch, SyntaxNode, Tree } from 'web-tree-sitter';
-import { byteKey } from '../semantic/keys';
-import { hasErrorAncestor } from '../semantic/locals';
+import { getDocumentTree, isParserReady } from '../parser/gapParser';
+import type { QueryMatch, SyntaxNode, Tree } from 'web-tree-sitter';
+import { byteKey } from '../shared/keys';
+import { hasErrorAncestor } from '../shared/treeUtils';
+import { LruCache } from '../shared/lruCache';
+import { LazyQuery } from '../shared/lazyQuery';
+import { SCOPED_CONTENT_LIMIT, SCOPED_MODEL_CACHE_MAX_ENTRIES } from '../limits';
 
 export type ScopedKind = 'parameter' | 'variable' | 'function';
 
@@ -65,47 +68,31 @@ const KIND_PRIORITY: Record<ScopedKind, number> = {
 
 export class GapScopedCompletions {
 
-    /** Over this length (UTF-16 code units) documents skip scoped completions. */
-    private static readonly CONTENT_LENGTH_LIMIT = 1 * 1024 * 1024;
-
-    private query: Query | null = null;
-    private queryText: string;
+    private readonly query: LazyQuery;
     // Model cache, keyed by uri and invalidated by (version, tree) identity.
-    private modelCache = new Map<string, { version: number; tree: Tree; model: DocumentModel }>();
+    private modelCache = new LruCache<string, { version: number; tree: Tree; model: DocumentModel }>({
+        maxEntries: SCOPED_MODEL_CACHE_MAX_ENTRIES,
+    });
 
     constructor(completionPath: string) {
-        this.queryText = fs.readFileSync(completionPath, 'utf-8');
+        this.query = new LazyQuery(fs.readFileSync(completionPath, 'utf-8'));
     }
 
     onDocumentClosed(uri: vscode.Uri): void {
         this.modelCache.delete(uri.toString());
     }
 
-    private getQuery(): Query {
-        if (!this.query) {
-            this.query = getGapLanguage().query(this.queryText);
-        }
-        return this.query;
-    }
-
     /** Run the query once per document version, cache the built model. */
     private getModel(document: vscode.TextDocument, tree: Tree): DocumentModel {
         const key = document.uri.toString();
-        const cached = this.modelCache.get(key);
+        const cached = this.modelCache.peek(key);
         if (cached && cached.version === document.version && cached.tree === tree) {
-            this.modelCache.delete(key);
-            this.modelCache.set(key, cached);
+            this.modelCache.touch(key, cached);
             return cached.model;
         }
-        const matches = this.getQuery().matches(tree.rootNode);
+        const matches = this.query.get().matches(tree.rootNode);
         const model = this.buildModel(matches);
-        this.modelCache.delete(key);
         this.modelCache.set(key, { version: document.version, tree, model });
-        // Bound the cache size.
-        if (this.modelCache.size > 32) {
-            const first = this.modelCache.keys().next().value;
-            if (first !== undefined) this.modelCache.delete(first);
-        }
         return model;
     }
 
@@ -220,7 +207,7 @@ export class GapScopedCompletions {
         if (!isParserReady()) return [];
 
         const code = document.getText();
-        if (code.length > GapScopedCompletions.CONTENT_LENGTH_LIMIT) return [];
+        if (code.length > SCOPED_CONTENT_LIMIT) return [];
 
         const tree = getDocumentTree(document, code);
         const model = this.getModel(document, tree);
@@ -272,7 +259,7 @@ export class GapScopedCompletions {
         if (!isParserReady()) return [];
 
         const code = document.getText();
-        if (code.length > GapScopedCompletions.CONTENT_LENGTH_LIMIT) return [];
+        if (code.length > SCOPED_CONTENT_LIMIT) return [];
 
         const tree = getDocumentTree(document, code);
         const model = this.getModel(document, tree);

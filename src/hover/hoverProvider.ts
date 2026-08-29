@@ -103,9 +103,8 @@ export class GapHoverProvider implements vscode.HoverProvider {
         if (resolved.commentLines.length > 0) {
             md.appendMarkdown('\n---\n');
             for (const line of resolved.commentLines) {
-                // Comment lines render as Markdown (bold, code, links, math
-                // syntax), one comment line per displayed line. The string is
-                // not trusted, so command links stay inert.
+                // Comment lines render as Markdown (bold, code, links, math syntax), one comment line per displayed line.
+                // The string is not trusted, so command links stay inert.
                 md.appendMarkdown(line);
                 md.appendMarkdown('  \n');
             }
