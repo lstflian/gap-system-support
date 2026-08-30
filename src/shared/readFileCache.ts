@@ -1,4 +1,7 @@
-/** Shared file loading for nested Read chains: open document reuse, size-limited reads, signature invalidation and an LRU parse cache. */
+/**
+ * Shared file loading for nested Read chains.
+ * Reuses open documents, limits read size, and caches parses with LRU.
+ */
 
 import * as vscode from 'vscode';
 import * as fs from 'fs';
@@ -7,13 +10,13 @@ import { LruCache } from './lruCache';
 import { READ_CONTENT_LIMIT, READ_FILE_CACHE_MAX_ENTRIES } from '../limits';
 
 /** Cached parse of one file, invalidated by a content signature. */
-export interface ReadChainFileEntry<T> {
+interface ReadChainFileEntry<T> {
     signature: string;
     file: T | null;
 }
 
 /** Parses file content into the caller specific model. */
-export type ParseReadChainFile<T> = (content: string) => T | null;
+type ParseReadChainFile<T> = (content: string) => T | null;
 
 export class ReadChainFileCache<T> {
 
@@ -31,7 +34,7 @@ export class ReadChainFileCache<T> {
         this.cache.delete(uri.fsPath);
     }
 
-    /** Read and parse one file with a content-based cache. */
+    /** Read and parse one file through the shared cache. */
     loadFile(filePath: string): T | null {
         const open = vscode.workspace.textDocuments.find(d => d.uri.fsPath === filePath);
         let content: string;

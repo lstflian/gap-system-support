@@ -299,7 +299,7 @@ function buildGlobalCaptureIndexFromCollect(
         definitions.push({
             startIndex: range.start,
             endIndex: range.end,
-            // Scope-less definitions keep their name sliced from the text.
+            // Definitions without a scope keep their name sliced from the text.
             name: code.slice(range.start, range.end),
             errorAncestor: false,
         });
@@ -737,7 +737,7 @@ function tryReuseUnchangedGlobalIndex(
     queryTopLevel: (node: SyntaxNode) => QueryMatch[] | null,
     dirtyLimit: number,
 ): GlobalIndexUpdateResult | null {
-    // Fast path: a net-zero-length edit inside one top level.
+    // Fast path: an edit with zero net length inside one top level.
     // Requery that top level and reuse the index when its parts are unchanged.
     if (!previousGlobal || change.edits.length !== 1) return null;
     const edit = change.edits[0];
@@ -864,7 +864,7 @@ function updateGlobalCaptureIndex(
     }
 
     // Mark every top level touched by a parser changed range as dirty.
-    // The old-side loop also catches levels without a new counterpart.
+    // The old side loop also catches levels without a new counterpart.
     for (const changedRange of change.changedRanges) {
         for (let newIndex = 0; newIndex < newTopLevels.length; newIndex++) {
             if (!rangesTouch(newTopLevels[newIndex], changedRange)) continue;
@@ -996,7 +996,7 @@ function definitelyTouchedTopLevelLength(
     endIndex: number,
 ): number {
     if (startIndex === endIndex) {
-        // A zero-length insertion only counts when it is strictly inside a top level.
+        // A zero length insertion only counts when it is strictly inside a top level.
         const ownerIndex = findTopLevelIndex(topLevels, { startIndex, endIndex });
         if (ownerIndex < 0) return 0;
         const owner = topLevels[ownerIndex];
@@ -1062,7 +1062,7 @@ export function updateGlobalTopologyIndex(
             materializedPreviousIndex: false,
         };
     }
-    // The incremental path assumes ERROR-free trees on both sides.
+    // The incremental path assumes trees without ERROR nodes on both sides.
     if (change.oldHasError || change.newHasError) {
         return {
             status: 'fallback',

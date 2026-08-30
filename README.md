@@ -4,7 +4,7 @@
 
 English | [简体中文](README.zh-cn.md)
 
-This extension provides semantic highlighting, code completion, running GAP files, and a help system for GAP in VS Code, powered by [tree-sitter-gap](https://github.com/gap-system/tree-sitter-gap), so that GAP users can write, read, and run GAP code and look up GAP documentation at any time.
+This extension provides semantic highlighting, code completion, syntax diagnostics, hover hints, code folding, running GAP files, and a help system for GAP in VS Code, powered by [tree-sitter-gap](https://github.com/gap-system/tree-sitter-gap), so that GAP users can write, read, and run GAP code and look up GAP documentation at any time. The file extensions recognized as GAP are `.g`, `.gi`, `.gd`, and `.gap`.
 
 > GAP is a system for computational discrete algebra, with particular emphasis on Computational Group Theory. GAP provides a programming language, a library of thousands of functions implementing algebraic algorithms written in the GAP language as well as large data libraries of algebraic objects. For more information, see the [GAP official website](https://www.gap-system.org/).
 
@@ -48,12 +48,15 @@ Set the following settings in the walkthroughs on the Welcome page or in the VS 
 ## Features
 
 - **Semantic highlighting**: based on `tree-sitter-gap`.
-- **Code completion**: completion for GAP constants, keywords, statement structures and GAP functions while typing, as well as the variables and user defined functions actually available at the cursor (including user defined functions in other GAP files loaded via `Read`).
-- **Running GAP code**: run the current GAP file in the VS Code integrated terminal without leaving the editor.
-- **Help system**: built-in GAP help search with two search modes, switchable at any time in the settings or the Quick Pick search box.
-  - **prefix**: corresponds to `?help` in GAP
-  - **substring**: corresponds to `??help` in GAP
-- **Documentation viewer**: search results are displayed in a webview panel, with support for in-page link navigation and MathJax math rendering.
+- **Code folding**: folding ranges follow the syntax structure (for example, `if ... fi`, `function ... end`).
+- **Syntax diagnostics**: missing required syntax and unexpected syntax are reported in the Problems panel while you type.
+- **Hover hints**: hovering over a function name shows a help link for GAP functions; for user defined functions it shows the definition line and the `##` comments, with a jump to the definition (including files loaded via `Read`).
+- **Code completion**: provides completion for GAP constants, keywords, statement structures, and GAP functions, while also suggesting the variables and user defined functions visible at the cursor (including functions from other GAP files loaded via `Read`).
+- **Running GAP code**: runs the current GAP file in the VS Code integrated terminal, with configurable GAP command line options and terminal reuse.
+- **Help system**: built-in GAP help search with two search modes (switchable at any time in the settings or the Quick Pick search box), and filtering the results by book.
+  - **prefix**: corresponds to `?topic` in GAP
+  - **substring**: corresponds to `??topic` in GAP
+- **Documentation viewer**: search results are displayed in a webview panel, with support for in-page link navigation, MathJax rendering, and light or dark documentation appearance.
 
 ## Feature Demos
 
@@ -85,7 +88,8 @@ Set the following settings in the walkthroughs on the Welcome page or in the VS 
 | `gap.mathJax` | `true` | Whether to render MathJax math in GAP documentation pages |
 | `gap.runMode` | `reuse` | When running GAP: `reuse` keeps the same terminal, `new` opens a new terminal for each run |
 | `gap.terminalRoot` | `""` | Unix root for Windows drive letters. Example: `/` turns `C:\project\file.g` into `/c/project/file.g`; leave empty to use the WSL default `/mnt/` |
-| `gap.searchMode` | `prefix` | Search mode: `prefix` corresponds to `?help`, `substring` corresponds to `??help` |
+| `gap.searchMode` | `prefix` | Search mode: `prefix` corresponds to `?topic`, `substring` corresponds to `??topic` |
+| `gap.diagnostics` | `true` | Show syntax error diagnostics (missing/expected tokens, unexpected syntax) from the GAP parser in the Problems panel |
 
 ## Commands
 

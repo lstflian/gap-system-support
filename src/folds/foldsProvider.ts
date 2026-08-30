@@ -22,7 +22,7 @@ export class GAPFoldsProvider implements vscode.FoldingRangeProvider {
     ): vscode.FoldingRange[] {
         if (!isParserReady()) return [];
 
-        // The cached document tree; the parser manager owns its lifetime.
+        // The cached syntax tree; the parser manager owns its lifetime.
         const tree = getDocumentTree(document);
         const ranges: vscode.FoldingRange[] = [];
 

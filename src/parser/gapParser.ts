@@ -25,36 +25,6 @@ interface DocState {
 const docs = new Map<string, DocState>();
 let nextTreeGeneration = 1;
 
-export interface ParserDiagnostics {
-    initialFullParses: number;
-    incrementalParses: number;
-    fallbackFullParses: number;
-    versionFallbacks: number;
-    missingEditFallbacks: number;
-    cacheReuses: number;
-    droppedEditBatches: number;
-}
-
-const parserDiagnostics: ParserDiagnostics = {
-    initialFullParses: 0,
-    incrementalParses: 0,
-    fallbackFullParses: 0,
-    versionFallbacks: 0,
-    missingEditFallbacks: 0,
-    cacheReuses: 0,
-    droppedEditBatches: 0,
-};
-
-export function getParserDiagnostics(): ParserDiagnostics {
-    return { ...parserDiagnostics };
-}
-
-export function resetParserDiagnostics(): void {
-    for (const key of Object.keys(parserDiagnostics) as (keyof ParserDiagnostics)[]) {
-        parserDiagnostics[key] = 0;
-    }
-}
-
 export interface DocumentTreeSnapshot {
     tree: Tree;
     generation: number;
@@ -151,7 +121,7 @@ export function isParserReady(): boolean {
     return gapParser !== null;
 }
 
-/** Convert a VS Code content change to a tree-sitter edit. */
+/** Convert a VS Code content change to a syntax tree edit. */
 function toTreeSitterEdit(c: vscode.TextDocumentContentChangeEvent): Edit {
     const startIndex = c.rangeOffset;
     const oldEndIndex = c.rangeOffset + c.rangeLength;
@@ -194,7 +164,6 @@ export function onDocumentChanged(uri: vscode.Uri, changes: readonly vscode.Text
     if (state.edits.length > PARSER_MAX_PENDING_EDITS) {
         state.edits = [];
         state.editEvents = -1;
-        parserDiagnostics.droppedEditBatches++;
     }
 }
 
@@ -219,7 +188,7 @@ function evictIfNeeded(now: number, keepKey?: string): void {
         if (k === keepKey) continue;
         if (now - s.lastUsed > PARSER_MAX_IDLE_MS) dropState(k);
     }
-    // Count and total text eviction, oldest first.
+    // Count and total text eviction, least recently used first.
     const oldestKey = (): string | null => {
         let key: string | null = null;
         let oldest = Infinity;
@@ -249,7 +218,7 @@ function evictIfNeeded(now: number, keepKey?: string): void {
 }
 
 /**
- * Return the document tree, incrementally updated when possible.
+ * Return the syntax tree, incrementally updated when possible.
  * The tree is only valid for the current synchronous call, the caller must not delete it.
  * The code parameter is the document text when the caller already read it.
  */
@@ -279,7 +248,6 @@ export function getDocumentTreeSnapshot(document: vscode.TextDocument, code?: st
         try {
             state.tree = parseGapCode(newText);
             state.generation = nextGeneration();
-            parserDiagnostics.initialFullParses++;
         } catch (err) {
             // Delete the state, the next request reparses from scratch.
             state.tree?.delete();
@@ -300,15 +268,11 @@ export function getDocumentTreeSnapshot(document: vscode.TextDocument, code?: st
             try {
                 state.tree = parseGapCode(newText);
                 state.generation = nextGeneration();
-                parserDiagnostics.fallbackFullParses++;
-                parserDiagnostics.missingEditFallbacks++;
             } catch (err) {
                 state.tree?.delete();
                 docs.delete(key);
                 throw err;
             }
-        } else {
-            parserDiagnostics.cacheReuses++;
         }
         if (hadPendingEdits) state.change = null;
         return { tree: state.tree, generation: state.generation, change: state.change };
@@ -353,7 +317,6 @@ export function getDocumentTreeSnapshot(document: vscode.TextDocument, code?: st
             state.change = change;
             newTree = null;
             state.edits = [];
-            parserDiagnostics.incrementalParses++;
         } catch (err) {
             newTree?.delete();
             if (state.tree === oldTree) oldTree.delete();
@@ -370,9 +333,6 @@ export function getDocumentTreeSnapshot(document: vscode.TextDocument, code?: st
             state.generation = nextGeneration();
             state.change = null;
             state.edits = [];
-            parserDiagnostics.fallbackFullParses++;
-            if (versionJumped) parserDiagnostics.versionFallbacks++;
-            else parserDiagnostics.missingEditFallbacks++;
         } catch (err) {
             state.tree?.delete();
             docs.delete(key);

@@ -42,7 +42,7 @@ function singlePassCollect(
             }
             if (CAPTURE_KIND[name]) {
                 // Record fields are not variables in GAP.
-                // Keep them out of the scope table, or a same-name reference resolves to the field.
+                // Keep them out of the scope table, or a reference with the same name resolves to the field.
                 if (CAPTURE_KIND[name] !== 'field') {
                     definitionNodes.add(byteKey(node.startIndex, node.endIndex));
                     definitions.push(node);
@@ -191,7 +191,7 @@ export function collectTokenEntriesInRangeCached(
 }
 
 /**
- * Keep complete single-line tokens that intersect a VS Code range.
+ * Keep complete tokens on one line that intersect a VS Code range.
  * LSP allows a boundary token to extend beyond the requested range.
  */
 export function filterTokenEntriesInRange(
@@ -279,7 +279,7 @@ function collectViewportTokens(
     };
 }
 
-/** Split lines and their UTF-16 lengths, CRLF counts as the line end. */
+/** Split lines and their code unit lengths, CRLF counts as the line end. */
 function splitLines(code: string): { rawLines: string[]; lineLens: number[] } {
     const rawLines = code.split('\n');
     return { rawLines, lineLens: rawLines.map(l => l.endsWith('\r') ? l.length - 1 : l.length) };

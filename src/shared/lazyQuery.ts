@@ -1,5 +1,5 @@
 /**
- * Lazy tree-sitter query: stores the query text, compiles on first use.
+ * Lazy syntax query: stores the query text, compiles on first use.
  */
 
 import type { Query } from 'web-tree-sitter';

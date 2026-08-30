@@ -48,7 +48,13 @@ for (let i = 0; i < gapFiles.length; i++) {
 }
 
 // 4. Run the help tests.
-for (const file of ['search.test.js', 'chooser.test.js']) {
+const unitTests = [
+    'search.test.js',
+    'chooser.test.js',
+    path.join('..', 'diagnostics', 'diagnostics.test.js'),
+    path.join('..', 'hover', 'hover.test.js'),
+];
+for (const file of unitTests) {
     try {
         execSync(`node test/lib/help/${file}`, { stdio: 'inherit', cwd: root });
     } catch {

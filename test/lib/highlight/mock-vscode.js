@@ -55,6 +55,9 @@ const vscodeMock = {
             const basePath = typeof base === 'string' ? base : base.fsPath;
             return { fsPath: path.join(basePath, ...segments) };
         },
+        file(fsPath) {
+            return { fsPath };
+        },
     },
 };
 

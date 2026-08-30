@@ -3,13 +3,14 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import { spawnSync } from 'child_process';
 import { initGapParser, onDocumentChanged, onDocumentClosed, disposeAll } from './parser/gapParser';
 import { GAPSemanticTokensProvider, legend } from './semantic/semanticTokensProvider';
 import { GAPFoldsProvider } from './folds/foldsProvider';
 import { GAPDiagnosticsProvider } from './diagnostics/diagnosticsProvider';
 import { ensureData, generateData, resetData } from './completion/dataManager';
-import { GapCompletionProvider } from './completion/completionProvider';
-import { GapHoverProvider } from './hover/hoverProvider';
+import { GAPCompletionProvider } from './completion/completionProvider';
+import { GAPHoverProvider } from './hover/hoverProvider';
 import { toShellPath, resolveHelpPath } from './path';
 import { searchHelp } from './help/searchEngine';
 import { HelpEntry } from './help/indexData';
@@ -24,18 +25,18 @@ import {
     restoreHelpIndexData,
     commitHelpIndexData,
     getHelpDataDir,
-    waitTerminalClose,
     EXPORT_GAPDOC_TIMEOUT_MS,
     EXPORT_TEXT_TIMEOUT_MS,
 } from './help/helpData';
+import { waitTerminalClose } from './shared/terminal';
 import { SEMANTIC_CONTENT_LIMIT, SEMANTIC_GLOBAL_CACHE_MAX_BYTES } from './limits';
 
-interface GapFlag {
+interface GAPFlag {
     flag: string;
     description: string;
 }
 
-const GAP_FLAGS: GapFlag[] = [
+const GAP_FLAGS: GAPFlag[] = [
     { flag: '-q', description: 'Enable or disable quiet mode' },
     { flag: '-b', description: 'Disable or enable the banner' },
     { flag: '-T', description: 'Disable or enable break loop and error traceback' },
@@ -67,7 +68,7 @@ function getSelectedWord(): string | undefined {
 }
 
 /**
- * Read the doc and pkg paths from the configuration.
+ * Read the doc and pkg paths from the settings.
  * Warn and open the settings for a path that is unset, not absolute, or missing.
  * Return null when either path is not usable.
  */
@@ -100,16 +101,20 @@ function getHelpPaths(): { docPath: string; pkgPath: string } | null {
     return { docPath, pkgPath };
 }
 
-/** Run convert_export.js */
-function runConvertScript(scriptPath: string, cwd: string): void {
-    const prev = process.cwd();
-    process.chdir(cwd);
-    try {
-        const p = require.resolve(scriptPath);
-        if (p in require.cache) delete require.cache[p];
-        require(p);
-    } finally {
-        process.chdir(prev);
+/** Run convert_export.js in a child process, cwd set to the data directory. */
+function runConvertScript(scriptPath: string, dataDir: string): void {
+    const { status, error, stderr: errorOutput, stdout: output } = spawnSync(
+        process.execPath,
+        [scriptPath],
+        { cwd: dataDir, encoding: 'utf-8', timeout: 60_000, env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' } },
+    );
+    if (error) {
+        throw new Error(`failed to run convert_export.js: ${error.message}`);
+    }
+    // Forward the converted counts, matching the old in-process console output.
+    if (output) console.log(`[GAP] ${output.trim()}`);
+    if (status !== 0) {
+        throw new Error(`convert_export.js failed with status ${status}: ${(errorOutput || output).trim()}`);
     }
 }
 
@@ -131,7 +136,9 @@ async function runExportScript(scriptUri: vscode.Uri, dataDir: string, timeoutMs
         terminal.sendText('exit');
         await closed;
     } catch (e: any) {
-        throw new Error(`${path.basename(scriptUri.fsPath)} timed out`);
+        throw new Error(
+            `${path.basename(scriptUri.fsPath)} did not complete within ${Math.round(timeoutMs / 1000)} seconds`
+        );
     } finally {
         terminal.dispose();
     }
@@ -236,7 +243,7 @@ export async function activate(context: vscode.ExtensionContext) {
         }),
     );
 
-    // Register the document-range semantic tokens provider.
+    // Register the document range semantic tokens provider.
     const highlightsPath = vscode.Uri.joinPath(context.extensionUri, 'queries', 'highlights.scm').fsPath;
     const highlightsGlobalPath = vscode.Uri.joinPath(context.extensionUri, 'queries', 'highlights.global.scm').fsPath;
     const localsPath = vscode.Uri.joinPath(context.extensionUri, 'queries', 'locals.scm').fsPath;
@@ -262,7 +269,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Register the completion provider.
     const completionPath = vscode.Uri.joinPath(context.extensionUri, 'queries', 'completion.scm').fsPath;
-    const completionProvider = new GapCompletionProvider(completionPath);
+    const completionProvider = new GAPCompletionProvider(completionPath);
     context.subscriptions.push(
         vscode.languages.registerCompletionItemProvider(
             { language: 'gap' },
@@ -271,7 +278,7 @@ export async function activate(context: vscode.ExtensionContext) {
     );
 
     // Register the hover provider.
-    const hoverProvider = new GapHoverProvider(completionPath);
+    const hoverProvider = new GAPHoverProvider(completionPath);
     context.subscriptions.push(
         vscode.languages.registerHoverProvider(
             { language: 'gap' },
@@ -363,6 +370,20 @@ export async function activate(context: vscode.ExtensionContext) {
     // Internal command behind hover links: search a term from an argument.
     context.subscriptions.push(
         vscode.commands.registerCommand('gap.searchHelpTerm', (term: string) => openHelpSearch(term || '')),
+    );
+    // Internal command behind the Go to Definition hover link.
+    context.subscriptions.push(
+        vscode.commands.registerCommand('gap.goToDefinition', async (filePath: string, row: number) => {
+            try {
+                const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(filePath));
+                const editor = await vscode.window.showTextDocument(doc);
+                const position = new vscode.Position(row, 0);
+                editor.selection = new vscode.Selection(position, position);
+                editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenter);
+            } catch (e: any) {
+                vscode.window.showErrorMessage(`GAP: failed to open definition: ${e?.message ?? e}`);
+            }
+        }),
     );
 
     // Open the GAP Reference Manual in the help panel.

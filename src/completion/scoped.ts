@@ -66,7 +66,7 @@ const KIND_PRIORITY: Record<ScopedKind, number> = {
     function: 3,
 };
 
-export class GapScopedCompletions {
+export class GAPScopedCompletions {
 
     private readonly query: LazyQuery;
     // Model cache, keyed by uri and invalidated by (version, tree) identity.

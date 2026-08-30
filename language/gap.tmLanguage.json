@@ -42,6 +42,10 @@
       "match": "\\b\\d+\\b"
     },
     {
+      "name": "entity.name.function.gap",
+      "match": "(?<![A-Za-z0-9_.])[A-Za-z_][A-Za-z0-9_]*(?=\\s*:=\\s*(?:atomic\\s+function\\b|function\\b|\\{[^{}]*\\}\\s*->|[A-Za-z_][A-Za-z0-9_]*\\s*->))"
+    },
+    {
       "name": "keyword.control.gap",
       "match": "\\b(function|local|end|if|then|elif|else|fi|for|while|do|od|repeat|until|return|break|continue|atomic|rec|readonly|readwrite|quit|QUIT)\\b"
     },

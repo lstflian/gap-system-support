@@ -1,12 +1,12 @@
 /**
- * Diagnostics provider: reports syntax errors from the tree-sitter GAP syntax tree.
+ * Diagnostics provider: reports syntax errors from the GAP syntax tree.
  */
 
 import * as vscode from 'vscode';
 import { type SyntaxNode } from 'web-tree-sitter';
 import { getDocumentTreeSnapshot, isParserReady } from '../parser/gapParser';
 
-/** Debounce for typing-triggered re-validation. */
+/** Debounce for revalidation after typing. */
 const DEBOUNCE_MS = 250;
 
 /** Max snippet length shown in "Unexpected syntax" messages. */
@@ -52,12 +52,12 @@ function visit(node: SyntaxNode, code: string, entries: ErrorEntry[]): void {
     }
 }
 
-/** Build the entry for a zero-width MISSING node. */
+/** Build the entry for a MISSING node with zero width. */
 function missingEntry(node: SyntaxNode, code: string): ErrorEntry {
     const offset = node.startIndex;
     return {
         kind: 'missing',
-        // Zero-width ranges are invisible: back up to the previous non-whitespace character for a visible squiggle.
+        // Zero width ranges are invisible: back up to the last character that is not whitespace for a visible squiggle.
         startIndex: computeMissingStart(code, offset),
         endIndex: offset,
         token: node.type,
@@ -66,8 +66,9 @@ function missingEntry(node: SyntaxNode, code: string): ErrorEntry {
 }
 
 /**
- * Start offset for a MISSING node squiggle: the previous non-whitespace character, covering visible source up to the insertion point.
- * When nothing visible precedes it (file start or blank prefix) the returned offset keeps the range zero-width.
+ * Start offset for a MISSING node squiggle.
+ * Covers visible source up to the insertion point.
+ * When nothing visible precedes it, the range stays empty.
  */
 export function computeMissingStart(code: string, offset: number): number {
     const bounded = Math.max(0, Math.min(offset, code.length));
@@ -76,7 +77,7 @@ export function computeMissingStart(code: string, offset: number): number {
         i--;
     }
     if (i < 0 || (i === 0 && isSpace(code.charCodeAt(0)))) {
-        // Nothing visible before the insertion point: keep zero-width.
+        // Nothing visible before the insertion point: keep the range empty.
         return bounded;
     }
     return i;
@@ -123,7 +124,7 @@ export function entriesToDiagnostics(document: vscode.TextDocument, entries: Err
 }
 
 /**
- * Publishes GAP syntax diagnostics as squiggles and Problems-panel entries.
+ * Publishes GAP syntax errors as squiggles and Problems panel entries.
  * Validation is debounced on typing and retracted when a document closes.
  */
 export class GAPDiagnosticsProvider implements vscode.Disposable {

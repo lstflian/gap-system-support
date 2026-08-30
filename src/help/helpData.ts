@@ -121,22 +121,3 @@ export function commitHelpIndexData(): void {
         try { fs.unlinkSync(path.join(dataDir, name + BAK_SUFFIX)); } catch {}
     }
 }
-
-/**
- * Resolve once the terminal closes.
- * Reject on timeout.
- */
-export function waitTerminalClose(terminal: vscode.Terminal, timeoutMs: number): Promise<void> {
-    return new Promise((resolve, reject) => {
-        const sub = vscode.window.onDidCloseTerminal((t) => {
-            if (t === terminal) {
-                sub.dispose();
-                resolve();
-            }
-        });
-        setTimeout(() => {
-            sub.dispose();
-            reject(new Error('timeout'));
-        }, timeoutMs);
-    });
-}

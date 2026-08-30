@@ -4,24 +4,24 @@
 
 [English](README.md) | 简体中文
 
-在 VS Code 中为 GAP 代码提供基于 [tree-sitter-gap](https://github.com/gap-system/tree-sitter-gap) 的语义高亮、代码补全、GAP 文件运行和帮助系统，让 GAP 用户在 VS Code 中便捷地编写、阅读和运行 GAP 代码，并随时查询 GAP 帮助文档。
+在 VS Code 中为 GAP 代码提供基于 [tree-sitter-gap](https://github.com/gap-system/tree-sitter-gap) 的语义高亮、代码补全、语法诊断、悬停提示、代码折叠、GAP 文件运行和帮助系统，让 GAP 用户在 VS Code 中便捷地编写、阅读和运行 GAP 代码，并随时查询 GAP 帮助文档。扩展可识别的 GAP 文件扩展名为：`.g`、`.gi`、`.gd`、`.gap`。
 
-> GAP 是一个面向计算离散代数的系统，尤其擅长计算群论。它提供了一门编程语言和数千个用该语言编写的代数算法函数，并附带大型代数对象数据库。更多信息可见 [GAP 官方网站](https://www.gap-system.org/)。
+> GAP 是一个面向计算离散代数的系统，尤其侧重于计算群论。它提供了一门编程语言和数千个用该语言编写的代数算法函数，并附带大型代数对象数据库。更多信息可见 [GAP 官方网站](https://www.gap-system.org/)。
 
-## 使用方法
+## 快速开始
 
 ### 1. 安装 GAP 并配置 PATH
 
 先确认 GAP 已经安装成功并且已经添加到系统 `PATH`。如果未添加到 `PATH`，则可以参考下面的步骤进行配置。
 
-**Windows**：如果通过 `.exe` 安装器安装的 GAP，则可以在 PowerShell 中执行：
+**Windows**：如果 GAP 是通过 `.exe` 安装器安装的，则可以在 PowerShell 中执行：
 
 ```powershell
 $userPath = [Environment]::GetEnvironmentVariable('PATH', 'User')
 [Environment]::SetEnvironmentVariable('PATH', $userPath + ';C:\Program Files\GAP-4.16.0\runtime\opt\gap-4.16.0;C:\Program Files\GAP-4.16.0\runtime\bin', 'User')
 ```
 
-执行完上述命令后，重开一个 PowerShell 终端，运行 `gap --version`，如果能正常输出 GAP 版本号，说明环境已配置成功。
+执行完上述命令后，重新打开一个 PowerShell 终端，运行 `gap --version`，如果能正常输出 GAP 版本号，说明环境已配置成功。
 
 **Linux / macOS**：在终端运行以下命令（macOS 请将 `~/.bashrc` 换成 `~/.zshrc`）：
 
@@ -48,12 +48,15 @@ source ~/.bashrc
 ## 主要功能说明
 
 - **语义高亮**：基于 `tree-sitter-gap`。
-- **代码补全**：支持 GAP 常量、关键字、语句结构和 GAP 函数；同时根据光标位置，补全当前上下文可用的变量与自定义函数（包括通过 `Read` 加载的其他 GAP 文件中的自定义函数）。
-- **运行 GAP 代码**：在 VS Code 集成终端中运行当前 GAP 文件，无需离开编辑器。
-- **帮助系统**：内置 GAP 帮助搜索，支持两种搜索模式，可在设置或 QuickPick 搜索框中随时切换。
-  - **prefix**：对应 GAP 中的 `?help`
-  - **substring**：对应 GAP 中的 `??help`
-- **帮助文档浏览**：搜索结果在 Webview 面板中展示，支持页内链接跳转与 MathJax 数学公式渲染。
+- **代码折叠**：按语法结构（例如 `if ... fi`、`function ... end`）提供折叠范围。
+- **语法诊断**：在问题面板中实时报告语法错误（缺失语法、意外语法）。
+- **悬停提示**：将鼠标悬停在函数名上时，GAP 函数会显示帮助链接；自定义函数则显示定义行和 `##` 注释，并支持跳转到定义（包括通过 `Read` 加载的文件）。
+- **代码补全**：支持 GAP 常量、关键字、语句结构和 GAP 函数，同时根据光标位置补全当前上下文可用的变量和自定义函数（包括通过 `Read` 加载的其他 GAP 文件中的函数）。
+- **运行 GAP 代码**：在 VS Code 集成终端中运行当前 GAP 文件，并支持配置 GAP 命令行选项和终端复用方式。
+- **帮助系统**：内置 GAP 帮助搜索，支持两种搜索模式（可在设置或 Quick Pick 搜索框中随时切换），并可按书籍（books）过滤结果。
+  - **prefix**：对应 GAP 中的 `?topic`
+  - **substring**：对应 GAP 中的 `??topic`
+- **帮助文档浏览**：搜索结果会在 Webview 面板中展示，并支持链接导航（含页内锚点跳转）、MathJax 数学公式渲染以及深浅色文档外观。
 
 ## 功能演示
 
@@ -85,7 +88,8 @@ source ~/.bashrc
 | `gap.mathJax` | `true` | 是否在 GAP 文档页面中渲染 MathJax 数学公式 |
 | `gap.runMode` | `reuse` | 运行 GAP 时，`reuse` 复用同一个终端，`new` 每次新建终端 |
 | `gap.terminalRoot` | `""` | Windows 盘符对应的 Unix 根目录。示例：`/` 会把 `C:\project\file.g` 转成 `/c/project/file.g`；留空时 WSL 默认使用 `/mnt/` |
-| `gap.searchMode` | `prefix` | 搜索模式，`prefix` 对应 `?help`，`substring` 对应 `??help` |
+| `gap.searchMode` | `prefix` | 搜索模式，`prefix` 对应 `?topic`，`substring` 对应 `??topic` |
+| `gap.diagnostics` | `true` | 在问题面板显示 GAP 解析器产生的语法错误诊断 |
 
 ## 命令
 

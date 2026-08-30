@@ -1,7 +1,7 @@
 {
   "name": "gap-system-support",
   "displayName": "GAP System Support",
-  "description": "GAP language support for VS Code with syntax highlighting, completion and run, powered by tree-sitter-gap",
+  "description": "GAP language support for VS Code with semantic highlighting, code completion, syntax diagnostics, hover hints, code folding, running GAP files, and a built-in GAP help system with documentation viewer, powered by tree-sitter-gap",
   "version": "0.3.1",
   "publisher": "flianlee",
   "author": "Songtai Li",
@@ -134,6 +134,11 @@
         "category": "GAP"
       },
       {
+        "command": "gap.goToDefinition",
+        "title": "Go to Definition",
+        "category": "GAP"
+      },
+      {
         "command": "gap.rebuildHelpIndex",
         "title": "Rebuild Help Index",
         "category": "GAP"
@@ -181,6 +186,10 @@
         },
         {
           "command": "gap.searchHelpTerm",
+          "when": "false"
+        },
+        {
+          "command": "gap.goToDefinition",
           "when": "false"
         }
       ],
@@ -349,7 +358,7 @@
           "type": "boolean",
           "default": true,
           "order": 8,
-          "description": "Show syntax error diagnostics (missing/expected tokens, unexpected syntax) from the GAP parser in the Problems panel."
+          "description": "Show syntax error diagnostics from the GAP parser in the Problems panel."
         }
       }
     }

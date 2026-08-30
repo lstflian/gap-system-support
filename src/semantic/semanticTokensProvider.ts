@@ -17,7 +17,7 @@ import {
     updateGlobalTopologyIndex,
     validateGlobalTopologyIndex,
 } from './globalIndex';
-import type { GlobalTopologyIndex, GlobalIndexFallbackReason } from './globalIndex';
+import type { GlobalTopologyIndex } from './globalIndex';
 import {
     SEMANTIC_CONTENT_LIMIT,
     SEMANTIC_GLOBAL_CACHE_MAX_BYTES,
@@ -55,24 +55,12 @@ type TextCacheEntry = {
     estimatedBytes: number;
 };
 
-export interface SemanticTokensCacheStats {
-    globalEntries: number;
-    globalFailureEntries: number;
-    globalEstimatedBytes: number;
-    globalBudgetBytes: number;
-    uncachedGlobalBuilds: number;
-    textEntries: number;
-    textEstimatedBytes: number;
-    textBudgetBytes: number;
-    overLimitTextEntries: number;
-}
-
 export type GlobalIndexMode = 'disabled' | 'shadow' | 'enabled';
 
 export interface SemanticTokensProviderOptions {
     globalIndexMode?: GlobalIndexMode;
     /**
-     * Document length limit in UTF-16 code units.
+     * Document length limit in code units.
      * Longer documents skip semantic tokens.
      */
     contentLengthLimit?: number;
@@ -81,62 +69,6 @@ export interface SemanticTokensProviderOptions {
      * Documents whose global data exceeds the budget are not cached.
      */
     maxGlobalCacheBytes?: number;
-}
-
-export interface GlobalIndexDiagnostics {
-    mode: GlobalIndexMode;
-    fullBuilds: number;
-    incrementalAttempts: number;
-    incrementalHits: number;
-    fullFallbacks: number;
-    shadowComparisons: number;
-    shadowMismatches: number;
-    invariantFailures: number;
-    generationFallbacks: number;
-    errorFallbacks: number;
-    invalidTransitionFallbacks: number;
-    dirtyLimitFallbacks: number;
-    queryLimitFallbacks: number;
-    invalidIndexFallbacks: number;
-    fastPathHits: number;
-    topologyBuilds: number;
-    temporaryIndexBuilds: number;
-    preMaterializationDirtySkips: number;
-    cooldownSkips: number;
-    globalQueryLimitFailures: number;
-    globalQueryLimitCacheHits: number;
-    lastDirtyRatio: number;
-    maxDirtyRatio: number;
-    lastDirtyTopLevels: number;
-}
-
-function createGlobalIndexDiagnostics(mode: GlobalIndexMode): GlobalIndexDiagnostics {
-    return {
-        mode,
-        fullBuilds: 0,
-        incrementalAttempts: 0,
-        incrementalHits: 0,
-        fullFallbacks: 0,
-        shadowComparisons: 0,
-        shadowMismatches: 0,
-        invariantFailures: 0,
-        generationFallbacks: 0,
-        errorFallbacks: 0,
-        invalidTransitionFallbacks: 0,
-        dirtyLimitFallbacks: 0,
-        queryLimitFallbacks: 0,
-        invalidIndexFallbacks: 0,
-        fastPathHits: 0,
-        topologyBuilds: 0,
-        temporaryIndexBuilds: 0,
-        preMaterializationDirtySkips: 0,
-        cooldownSkips: 0,
-        globalQueryLimitFailures: 0,
-        globalQueryLimitCacheHits: 0,
-        lastDirtyRatio: 0,
-        maxDirtyRatio: 0,
-        lastDirtyTopLevels: 0,
-    };
 }
 
 export class GAPSemanticTokensProvider implements vscode.DocumentRangeSemanticTokensProvider {
@@ -158,9 +90,7 @@ export class GAPSemanticTokensProvider implements vscode.DocumentRangeSemanticTo
     });
     private globalCacheBytes = 0;
     private textCacheBytes = 0;
-    private uncachedGlobalBuilds = 0;
     private readonly globalIndexMode: GlobalIndexMode;
-    private globalIndexDiagnostics: GlobalIndexDiagnostics;
 
     private static readonly QUERY_MATCH_LIMIT = 1_000_000;
     private static readonly GLOBAL_INDEX_DIRTY_LIMIT = 0.25;
@@ -184,7 +114,6 @@ export class GAPSemanticTokensProvider implements vscode.DocumentRangeSemanticTo
         this.globalIndexMode = options.globalIndexMode ?? 'disabled';
         this.contentLengthLimit = options.contentLengthLimit ?? SEMANTIC_CONTENT_LIMIT;
         this.maxGlobalCacheBytes = options.maxGlobalCacheBytes ?? SEMANTIC_GLOBAL_CACHE_MAX_BYTES;
-        this.globalIndexDiagnostics = createGlobalIndexDiagnostics(this.globalIndexMode);
         const highlightsText = fs.readFileSync(highlightsPath, 'utf-8');
         const localsText = fs.readFileSync(localsPath, 'utf-8');
         const globalHighlights = highlightsGlobalPath
@@ -213,7 +142,6 @@ export class GAPSemanticTokensProvider implements vscode.DocumentRangeSemanticTo
         this.globalCache.delete(key);
         this.globalFailureCache.delete(key);
         if (entry.estimatedBytes > this.maxGlobalCacheBytes) {
-            this.uncachedGlobalBuilds++;
             return false;
         }
         this.globalCache.set(key, entry);
@@ -288,20 +216,6 @@ export class GAPSemanticTokensProvider implements vscode.DocumentRangeSemanticTo
         return code;
     }
 
-    private noteFallback(reason: GlobalIndexFallbackReason): void {
-        this.globalIndexDiagnostics.fullFallbacks++;
-        if (reason === 'invalid-transition' || reason === 'too-many-edits') {
-            this.globalIndexDiagnostics.invalidTransitionFallbacks++;
-        } else if (reason === 'dirty-limit') {
-            this.globalIndexDiagnostics.dirtyLimitFallbacks++;
-        } else if (reason === 'query-limit') {
-            this.globalIndexDiagnostics.queryLimitFallbacks++;
-        } else {
-            this.globalIndexDiagnostics.invalidIndexFallbacks++;
-            this.globalIndexDiagnostics.invariantFailures++;
-        }
-    }
-
     private buildFullGlobal(
         code: string,
         snapshot: ReturnType<typeof getDocumentTreeSnapshot>,
@@ -312,10 +226,8 @@ export class GAPSemanticTokensProvider implements vscode.DocumentRangeSemanticTo
             matchLimit: GAPSemanticTokensProvider.QUERY_MATCH_LIMIT,
         });
         if (query.didExceedMatchLimit()) {
-            this.globalIndexDiagnostics.globalQueryLimitFailures++;
             return null;
         }
-        this.globalIndexDiagnostics.fullBuilds++;
         let oracleGlobal: CollectGlobal | null = null;
         const getOracleGlobal = (): CollectGlobal => {
             if (!oracleGlobal) oracleGlobal = buildCollectGlobal(code, matches);
@@ -327,13 +239,10 @@ export class GAPSemanticTokensProvider implements vscode.DocumentRangeSemanticTo
             const global = getOracleGlobal();
             const topology = buildGlobalTopologyIndex(snapshot.tree.rootNode);
             if (validateGlobalTopologyIndex(topology, code.length)) {
-                this.globalIndexDiagnostics.invariantFailures++;
                 return { global, topology: null };
             }
-            this.globalIndexDiagnostics.topologyBuilds++;
             return { global, topology };
         } catch {
-            this.globalIndexDiagnostics.invariantFailures++;
             return { global: getOracleGlobal(), topology: null };
         }
     }
@@ -350,30 +259,17 @@ export class GAPSemanticTokensProvider implements vscode.DocumentRangeSemanticTo
         if (this.globalIndexMode === 'disabled') return null;
         const change = snapshot.change;
         if (!cached.topology) {
-            if (change && change.fromGeneration === cached.generation &&
-                change.toGeneration === snapshot.generation && change.fromVersion === cached.version &&
-                change.toVersion === documentVersion && change.toVersion === change.fromVersion + 1 &&
-                (change.oldHasError || change.newHasError)) {
-                this.globalIndexDiagnostics.errorFallbacks++;
-                this.globalIndexDiagnostics.fullFallbacks++;
-            }
             return null;
         }
         if (documentVersion < cached.indexRetryVersion) {
-            this.globalIndexDiagnostics.cooldownSkips++;
             return null;
         }
-        this.globalIndexDiagnostics.incrementalAttempts++;
         if (!change || change.fromGeneration !== cached.generation ||
             change.toGeneration !== snapshot.generation || change.fromVersion !== cached.version ||
             change.toVersion !== documentVersion || change.toVersion !== change.fromVersion + 1) {
-            this.globalIndexDiagnostics.generationFallbacks++;
-            this.globalIndexDiagnostics.fullFallbacks++;
             return null;
         }
         if (change.oldHasError || change.newHasError) {
-            this.globalIndexDiagnostics.errorFallbacks++;
-            this.globalIndexDiagnostics.fullFallbacks++;
             return null;
         }
 
@@ -396,26 +292,8 @@ export class GAPSemanticTokensProvider implements vscode.DocumentRangeSemanticTo
                 this.globalIndexMode === 'shadow',
             );
         } catch {
-            this.noteFallback('invalid-index');
             return null;
         }
-        if (result.materializedPreviousIndex) this.globalIndexDiagnostics.temporaryIndexBuilds++;
-        if (result.status === 'fallback' && result.reason === 'dirty-limit' &&
-            !result.materializedPreviousIndex) {
-            this.globalIndexDiagnostics.preMaterializationDirtySkips++;
-        }
-        this.globalIndexDiagnostics.lastDirtyRatio = result.dirtyRatio;
-        this.globalIndexDiagnostics.maxDirtyRatio = Math.max(
-            this.globalIndexDiagnostics.maxDirtyRatio,
-            result.dirtyRatio,
-        );
-        if (result.status === 'fallback') {
-            this.globalIndexDiagnostics.lastDirtyTopLevels = 0;
-            this.noteFallback(result.reason);
-            return result;
-        }
-        this.globalIndexDiagnostics.lastDirtyTopLevels = result.dirtyTopLevels;
-        if (result.reusedGlobalIndex) this.globalIndexDiagnostics.fastPathHits++;
         return result;
     }
 
@@ -429,7 +307,6 @@ export class GAPSemanticTokensProvider implements vscode.DocumentRangeSemanticTo
         if (failed) {
             if (failed.version === document.version && failed.generation === snapshot.generation) {
                 this.globalFailureCache.touch(key, failed);
-                this.globalIndexDiagnostics.globalQueryLimitCacheHits++;
                 return null;
             }
             this.globalFailureCache.delete(key);
@@ -461,7 +338,6 @@ export class GAPSemanticTokensProvider implements vscode.DocumentRangeSemanticTo
             ? this.tryIncrementalGlobal(code, snapshot, previous, document.version)
             : null;
         if (incremental?.status === 'updated' && this.globalIndexMode === 'enabled') {
-            this.globalIndexDiagnostics.incrementalHits++;
             const estimatedBytes = incremental.reusedGlobalIndex && previous?.global
                 ? previous.estimatedBytes +
                     (incremental.global.rawLines.length - previous.global.rawLines.length) * 30
@@ -503,14 +379,8 @@ export class GAPSemanticTokensProvider implements vscode.DocumentRangeSemanticTo
 
         let topology = full.topology;
         if (incremental?.status === 'updated' && this.globalIndexMode === 'shadow') {
-            this.globalIndexDiagnostics.shadowComparisons++;
             if (collectGlobalsEqual(full.global, incremental.global)) {
-                this.globalIndexDiagnostics.incrementalHits++;
                 topology = incremental.index;
-            } else {
-                this.globalIndexDiagnostics.shadowMismatches++;
-                this.globalIndexDiagnostics.invariantFailures++;
-                this.globalIndexDiagnostics.fullFallbacks++;
             }
         }
 
@@ -532,28 +402,6 @@ export class GAPSemanticTokensProvider implements vscode.DocumentRangeSemanticTo
             estimatedBytes,
         });
         return full.global;
-    }
-
-    getCacheStats(): SemanticTokensCacheStats {
-        let overLimitTextEntries = 0;
-        for (const entry of this.textCache.values()) {
-            if (entry.overLimit) overLimitTextEntries++;
-        }
-        return {
-            globalEntries: this.globalCache.size,
-            globalFailureEntries: this.globalFailureCache.size,
-            globalEstimatedBytes: this.globalCacheBytes,
-            globalBudgetBytes: this.maxGlobalCacheBytes,
-            uncachedGlobalBuilds: this.uncachedGlobalBuilds,
-            textEntries: this.textCache.size,
-            textEstimatedBytes: this.textCacheBytes,
-            textBudgetBytes: SEMANTIC_TEXT_CACHE_MAX_BYTES,
-            overLimitTextEntries,
-        };
-    }
-
-    getGlobalIndexDiagnostics(): GlobalIndexDiagnostics {
-        return { ...this.globalIndexDiagnostics };
     }
 
     async provideDocumentRangeSemanticTokens(
@@ -629,8 +477,6 @@ export class GAPSemanticTokensProvider implements vscode.DocumentRangeSemanticTo
         for (const key of [...this.globalCache.keys()]) this.globalCache.delete(key);
         this.globalFailureCache.clear();
         for (const key of [...this.textCache.keys()]) this.textCache.delete(key);
-        this.uncachedGlobalBuilds = 0;
-        this.globalIndexDiagnostics = createGlobalIndexDiagnostics(this.globalIndexMode);
     }
 
     /** Query one GAP file and return the final token entries. */

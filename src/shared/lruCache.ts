@@ -60,7 +60,7 @@ export class LruCache<K, V> {
         return this.map.delete(key);
     }
 
-    /** Evict the oldest entry regardless of capacity, false when empty. */
+    /** Evict the least recently used entry regardless of capacity, false when empty. */
     evictOldest(): boolean {
         const oldest = this.map.keys().next().value;
         if (oldest === undefined) return false;
@@ -81,12 +81,12 @@ export class LruCache<K, V> {
         }
     }
 
-    /** Keys from oldest to newest, snapshot before removing while iterating. */
+    /** Keys from least to most recently used, snapshot before removing while iterating. */
     keys(): IterableIterator<K> {
         return this.map.keys();
     }
 
-    /** Values from oldest to newest, read only. */
+    /** Values from least to most recently used, read only. */
     values(): IterableIterator<V> {
         return this.map.values();
     }

@@ -14,7 +14,7 @@ interface LoadedFile {
     readPaths: string[];
 }
 
-export class GapReadCompletions {
+export class GAPReadCompletions {
 
     private readonly query: LazyQuery;
     private readonly fileCache = new ReadChainFileCache<LoadedFile>(content => this.parseFile(content));
@@ -27,7 +27,7 @@ export class GapReadCompletions {
         this.fileCache.onDocumentClosed(uri);
     }
 
-    /** Collect user-defined function names from the Read chain. */
+    /** Collect user defined function names from the Read chain. */
     getFunctionNames(document: vscode.TextDocument, readCalls: ReadCall[]): string[] {
         if (!isParserReady() || readCalls.length === 0) return [];
 

@@ -103,7 +103,7 @@ export function findDefinition(name: string, idx: number, entries: ScopeEntry[])
         if (!defs) continue;
         // The latest definition ending before the reference wins.
         for (let j = defs.length - 1; j >= 0; j--) {
-            if (defs[j].end <= idx) return defs[j];
+            if (defs[j].end < idx) return defs[j];
         }
     }
     return null;

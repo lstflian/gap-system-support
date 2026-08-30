@@ -1,7 +1,7 @@
 /**
  * GAP completion provider.
  * Static categories: builtin constants, keywords, statement snippets, GAP functions.
- * Scope-aware items: variables, parameters and functions visible at the cursor.
+ * Scoped items: variables, parameters and functions visible at the cursor.
  * Filtering and sorting are handled by VS Code.
  */
 
@@ -10,8 +10,8 @@ import { GAP_KEYWORDS } from './keywords';
 import { STATEMENT_SNIPPETS, type StatementSnippet } from './snippets';
 import { GAP_CONSTANTS } from './constants';
 import { getFunctionNames } from './dataManager';
-import { GapScopedCompletions, type ScopedItem } from './scoped';
-import { GapReadCompletions } from './readCompletions';
+import { GAPScopedCompletions, type ScopedItem } from './scoped';
+import { GAPReadCompletions } from './readCompletions';
 
 const SORT_SCOPED = '00-';
 const SORT_CONSTANT = '01-';
@@ -72,14 +72,14 @@ function scopedItem(item: ScopedItem): vscode.CompletionItem {
     return ci;
 }
 
-export class GapCompletionProvider implements vscode.CompletionItemProvider {
+export class GAPCompletionProvider implements vscode.CompletionItemProvider {
 
-    private scoped: GapScopedCompletions | null;
-    private read: GapReadCompletions | null;
+    private scoped: GAPScopedCompletions | null;
+    private read: GAPReadCompletions | null;
 
     constructor(completionQueryPath?: string) {
-        this.scoped = completionQueryPath ? new GapScopedCompletions(completionQueryPath) : null;
-        this.read = completionQueryPath ? new GapReadCompletions(completionQueryPath) : null;
+        this.scoped = completionQueryPath ? new GAPScopedCompletions(completionQueryPath) : null;
+        this.read = completionQueryPath ? new GAPReadCompletions(completionQueryPath) : null;
     }
 
     onDocumentClosed(uri: vscode.Uri): void {

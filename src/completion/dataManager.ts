@@ -7,28 +7,13 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { toShellPath } from '../path';
+import { waitTerminalClose } from '../shared/terminal';
 
 let functionNames: Set<string> | null = null;
 let generating = false;
 const GENERATION_TIMEOUT_MS = 300_000;
 
 const DONE_MARKER = 'Data generation done, ready to convert';
-
-/** Resolve once the terminal closes, reject on timeout. */
-function waitTerminalClose(terminal: vscode.Terminal, timeoutMs: number): Promise<void> {
-    return new Promise((resolve, reject) => {
-        const sub = vscode.window.onDidCloseTerminal((t) => {
-            if (t === terminal) {
-                sub.dispose();
-                resolve();
-            }
-        });
-        setTimeout(() => {
-            sub.dispose();
-            reject(new Error('timeout'));
-        }, timeoutMs);
-    });
-}
 
 /** The txt file state after the gap process exited. */
 type TxtState = 'missing' | 'complete' | 'incomplete';
@@ -53,6 +38,9 @@ function checkTxt(txtPath: string): TxtState {
         fs.readSync(fd, buf, 0, buf.length, start);
         const tail = buf.toString('utf8').trimEnd().split('\n').pop();
         return tail === DONE_MARKER ? 'complete' : 'incomplete';
+    } catch {
+        // The file vanished or became unreadable; treat it as missing.
+        return 'missing';
     } finally {
         fs.closeSync(fd);
     }
