@@ -78,7 +78,7 @@ if (require.main === module) {
     const writeMode = args.length === 0;
     const checkMode = args.length === 1 && args[0] === '--check';
     if (!writeMode && !checkMode) {
-        console.error('Usage: node scripts/query-generator/generate-highlight-queries.js [--check]');
+        console.error('Usage: node scripts/queryGenerator/generate-highlight-queries.js [--check]');
         process.exitCode = 2;
     } else if (writeMode) {
         const generated = loadGeneratedQueries();
