@@ -30,6 +30,7 @@ import {
 } from './help/helpData';
 import { waitTerminalClose } from './shared/terminal';
 import { SEMANTIC_CONTENT_LIMIT, SEMANTIC_GLOBAL_CACHE_MAX_BYTES } from './limits';
+import { registerLmTools } from './lmtools';
 
 interface GAPFlag {
     flag: string;
@@ -196,6 +197,8 @@ async function doRebuildHelpIndex(context: vscode.ExtensionContext): Promise<voi
 
 export async function activate(context: vscode.ExtensionContext) {
     console.log('[GAP] extension activate start');
+    // Register the agent tools before the parser init, which can fail and return early.
+    registerLmTools(context);
     try {
         await initGapParser(context);
     } catch (err) {
