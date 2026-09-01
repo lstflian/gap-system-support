@@ -14,7 +14,6 @@ import {
 import { buildNavScript } from './navScript';
 import { buildChooserShim, parseStyleValue, buildRenderStyleValue, buildChooserStyleValue } from './chooser';
 import { HelpPanelSession } from './panelState';
-import { resolveHelpPath } from '../../path';
 
 /** Turn a file path into a webview URL. */
 function resolveUri(s: HelpPanelSession, abs: string): string {
@@ -62,12 +61,7 @@ export function navigatePage(s: HelpPanelSession, navFile: string, anchor: strin
         styleValue = applyStyleFromChooser(docStyle);
     }
 
-    // Support absolute, root relative (/pkg/), and relative links.
-    const newFile = path.isAbsolute(navFile)
-        ? navFile
-        : navFile.startsWith('/')
-            ? resolveHelpPath(navFile, s.docPath, s.pkgPath)
-            : path.resolve(s.currentDocDir, navFile);
+    const newFile = path.resolve(s.currentDocDir, navFile);
     if (!fs.existsSync(newFile)) {
         vscode.window.showWarningMessage(`GAP: File not found: ${navFile}`);
         return;

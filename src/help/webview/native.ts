@@ -217,11 +217,6 @@ function processHtmlFile(
         html = html.replace(/<head[^>]*>/i, m => m + cookieSeed + styleGuard);
 
         const resolveLink = (rel: string) => {
-            if (rel.startsWith('/')) {
-                const abs = resolveHelpPath(rel, docPath, pkgPath);
-                // Keep the original href when the folder is unknown.
-                return abs ? toWebviewUri(abs) : rel;
-            }
             return toWebviewUri(path.resolve(docDir, rel));
         };
 
