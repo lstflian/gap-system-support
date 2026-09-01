@@ -361,7 +361,106 @@
           "description": "Show syntax error diagnostics from the GAP parser in the Problems panel."
         }
       }
-    }
+    },
+    "languageModelTools": [
+      {
+        "name": "search_gap_help",
+        "displayName": "Search GAP Help",
+        "icon": "$(search)",
+        "userDescription": "Search the GAP help index and get line locations",
+        "toolReferenceName": "gapSearch",
+        "canBeReferencedInPrompt": true,
+        "tags": [
+          "documentation"
+        ],
+        "modelDescription": "Searches GAP help and returns matched entries with their exact file location, so you can read the content with your built-in file-reading tool.\n\nResponse: { \"results\": [ { \"index\": int, \"display\": string, \"type\": \"function\"|\"section\"|\"chapter\"|\"index\"|omitted, \"absPath\": string, \"targetLine\": int, \"totalLines\": int } ], \"total\": int, \"returned\": int, \"note\": string, \"distribution\": { book: int } }\n\n- Each entry has 6 fields: index, display, type (omitted when there is no type code), absPath, targetLine, totalLines.\n- index: 1-based position in the result list, stable within one index version.\n- absPath: absolute path of the entry's file; pass it directly to your file-reading tool.\n- targetLine: 1-based start line; 0 means the entry has no anchor and covers the whole file.\n- note: hints when there are special entries or invalid input.\n- distribution: hit counts per book over ALL matches (global; independent of range), sorted descending; empty when there are no matches.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "topic": {
+              "type": "string",
+              "description": "Search word or phrase, as in ?topic (prefix) or ??topic (substring) in the GAP terminal. Must be non-empty. Special topics return no results: '-', '+', '&', '<', '>', '<<', '>>', 'books', 'chapters', 'contents', 'sections', 'welcome to gap', and digit-only topics (prefix mode only)."
+            },
+            "mode": {
+              "type": "string",
+              "enum": [
+                "prefix",
+                "substring"
+              ],
+              "description": "Search mode; defaults to gap.searchMode."
+            },
+            "books": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Book short names to search (get valid names from list_gap_books). Every name must be valid or the call is rejected."
+            },
+            "range": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              },
+              "minItems": 2,
+              "maxItems": 2,
+              "description": "1-based inclusive [start, end] window of the result list, for paging. Defaults to [1, 20]; end > total is clamped, start > total returns empty results."
+            }
+          },
+          "required": [
+            "topic"
+          ]
+        }
+      },
+      {
+        "name": "list_gap_books",
+        "displayName": "List GAP Help Books",
+        "icon": "$(book)",
+        "userDescription": "List all GAP books",
+        "toolReferenceName": "gapBooks",
+        "canBeReferencedInPrompt": true,
+        "tags": [
+          "documentation"
+        ],
+        "modelDescription": "Lists all GAP help books with short name and full name; use short names in search_gap_help",
+        "inputSchema": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      {
+        "name": "gap_resolve_link",
+        "displayName": "Resolve GAP Help Link",
+        "icon": "$(link)",
+        "userDescription": "Resolve a relative GAP help link to its absolute path and target line",
+        "toolReferenceName": "gapResolveLink",
+        "canBeReferencedInPrompt": true,
+        "tags": [
+          "documentation"
+        ],
+        "modelDescription": "Follows a relative link in a GAP help file and returns the target file's location, so you can read the linked page.\n\nResponse: { \"targetPath\": string, \"targetLine\": int, \"totalLines\": int, \"anchor\": string, \"note\": string }\n\n- targetPath: absolute path of the target file (native separators; '../' resolved).\n- targetLine: 1-based start line; 0 means no anchor, so read the whole file (line 1 to totalLines).\n- note: empty when resolved successfully; otherwise explains why: missing anchor, target file not found, or external URL.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "filePath": {
+              "type": "string",
+              "description": "Absolute path of the GAP help file currently being read."
+            },
+            "relativePath": {
+              "type": "string",
+              "description": "The relative link (href) found in filePath; may contain '../'. External http(s) or mailto: URLs are not resolved; use a web tool or other tool for those."
+            },
+            "anchor": {
+              "type": "string",
+              "description": "Optional anchor to locate in the target file. Omitted, empty, or not found: targetLine is 0 and the whole file is read."
+            }
+          },
+          "required": [
+            "filePath",
+            "relativePath"
+          ]
+        }
+      }
+    ]
   },
   "scripts": {
     "compile": "tsc -p ./",
