@@ -1,8 +1,8 @@
 {
   "name": "gap-system-support",
   "displayName": "GAP System Support",
-  "description": "GAP language support for VS Code with semantic highlighting, code completion, syntax diagnostics, hover hints, code folding, running GAP files, and a built-in GAP help system with documentation viewer, powered by tree-sitter-gap",
-  "version": "0.3.1",
+  "description": "Intelligent code editing powered by tree-sitter-gap, GAP code running, a help system, and language model tools for GAP help",
+  "version": "0.3.2",
   "publisher": "flianlee",
   "author": "Songtai Li",
   "license": "SEE LICENSE IN LICENSE",
@@ -19,6 +19,7 @@
   ],
   "keywords": [
     "gap",
+    "language model tools",
     "algebra",
     "group theory",
     "syntax highlighting",
