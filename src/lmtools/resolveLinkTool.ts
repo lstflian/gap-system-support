@@ -3,7 +3,7 @@
  */
 
 import * as vscode from 'vscode';
-import { ResolveLinkInput, ResolveLinkOutput, ToolError, resolveLinkOutput } from './toolCore';
+import { ResolveLinkInput, ResolveLinkOutput, ToolError, resolveLinkOutput, toolInvoke } from './toolCore';
 
 export class ResolveLinkTool implements vscode.LanguageModelTool<ResolveLinkInput> {
     constructor(private readonly context: vscode.ExtensionContext) {}
@@ -12,19 +12,7 @@ export class ResolveLinkTool implements vscode.LanguageModelTool<ResolveLinkInpu
         options: vscode.LanguageModelToolInvocationOptions<ResolveLinkInput>,
         _token: vscode.CancellationToken,
     ): Promise<vscode.LanguageModelToolResult> {
-        try {
-            const output = resolveLinkOutput(options.input);
-            return new vscode.LanguageModelToolResult([
-                new vscode.LanguageModelTextPart(JSON.stringify(output, null, 2)),
-            ]);
-        } catch (err) {
-            if (err instanceof ToolError) {
-                return new vscode.LanguageModelToolResult([
-                    new vscode.LanguageModelTextPart(err.message),
-                ]);
-            }
-            throw err;
-        }
+        return toolInvoke(() => resolveLinkOutput(options.input));
     }
 
     prepareInvocation(options: vscode.LanguageModelToolInvocationPrepareOptions<ResolveLinkInput>): vscode.PreparedToolInvocation {

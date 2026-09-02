@@ -11,6 +11,7 @@ import { byteKey, decodeByteKey } from '../shared/keys';
 import { CAPTURE_KIND } from './locals';
 import type { ScopeEntry } from './locals';
 import { hasErrorAncestor } from '../shared/treeUtils';
+import { tryValue } from '../shared/guarded';
 import type { CollectGlobal } from './collect';
 
 export interface OffsetRange {
@@ -928,7 +929,7 @@ function updateGlobalCaptureIndex(
         return { status: 'fallback', reason: 'invalid-index', dirtyRatio };
     }
 
-    try {
+    return tryValue<GlobalIndexUpdateResult>(() => {
         return {
             status: 'updated',
             index,
@@ -937,9 +938,9 @@ function updateGlobalCaptureIndex(
             dirtyTopLevels: dirtyNew.size,
             reusedGlobalIndex: false,
         };
-    } catch {
+    }, () => {
         return { status: 'fallback', reason: 'invalid-index', dirtyRatio };
-    }
+    });
 }
 
 export function collectGlobalsEqual(left: CollectGlobal, right: CollectGlobal): boolean {
@@ -1123,10 +1124,11 @@ export function updateGlobalTopologyIndex(
     }
 
     // Materialize the full capture index from the cached global data.
-    let previousCaptureIndex: GlobalCaptureIndex;
-    try {
-        previousCaptureIndex = buildGlobalCaptureIndexFromCollect(previous, previousCode, previousGlobal);
-    } catch {
+    const previousCaptureIndex = tryValue(
+        () => buildGlobalCaptureIndexFromCollect(previous, previousCode, previousGlobal),
+        null,
+    );
+    if (previousCaptureIndex === null) {
         return {
             status: 'fallback',
             reason: 'invalid-index',

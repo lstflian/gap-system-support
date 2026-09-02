@@ -4,9 +4,9 @@
  * This module computes values and builds the chooser shim script.
  */
 
-import * as fs from 'fs';
 import * as path from 'path';
 import { escapeInlineJs } from './navScript';
+import { tryReadFileWarn } from '../../shared/guarded';
 
 export interface ParsedStyleValue {
     /** The dark or light value if chosen, empty otherwise. */
@@ -52,14 +52,10 @@ const BACK_PLACEHOLDER = 'BACK_PLACEHOLDER';
 
 // The shim script used in chooser pages.
 // It is loaded once at module load time.
-const CHOOSER_SHIM_JS = (() => {
-    try {
-        return fs.readFileSync(path.join(__dirname, '..', '..', '..', 'webresources', 'chooser-shim.js'), 'utf-8');
-    } catch (e: any) {
-        console.warn(`GAP: Failed to load chooser-shim.js: ${e.message}`);
-        return '';
-    }
-})();
+const CHOOSER_SHIM_JS = tryReadFileWarn(
+    path.join(__dirname, '..', '..', '..', 'webresources', 'chooser-shim.js'),
+    'chooser-shim.js',
+);
 
 /** Build the extra script for the page head of chooser.html. */
 export function buildChooserShim(backTarget: string, styleValue: string): string {

@@ -5,12 +5,39 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import * as vscode from 'vscode';
 import { HelpEntry } from '../help/indexData';
 import { searchHelp } from '../help/searchEngine';
 import { resolveHelpPath } from '../path';
+import { tryValue } from '../shared/guarded';
 
 /** Thrown when a tool cannot run; the message is returned to the model. */
 export class ToolError extends Error {}
+
+/** Wrap a tool body: ToolError becomes the result message, other errors rethrow. */
+export function toolInvoke<T>(fn: () => T): vscode.LanguageModelToolResult {
+    try {
+        return new vscode.LanguageModelToolResult([
+            new vscode.LanguageModelTextPart(JSON.stringify(fn(), null, 2)),
+        ]);
+    } catch (err) {
+        if (err instanceof ToolError) {
+            return new vscode.LanguageModelToolResult([
+                new vscode.LanguageModelTextPart(err.message),
+            ]);
+        }
+        throw err;
+    }
+}
+
+/** Run fn, converting any error into a ToolError with the given message. */
+export function toolTry<T>(fn: () => T, message: (err: unknown) => string): T {
+    try {
+        return fn();
+    } catch (err) {
+        throw new ToolError(message(err));
+    }
+}
 
 export type SearchMode = 'prefix' | 'substring';
 
@@ -228,12 +255,12 @@ export interface FileScan {
 
 /** Scan one HTML file for id/name anchors and code elements. */
 export function scanFile(absPath: string): FileScan {
-    let text: string;
-    try {
-        text = fs.readFileSync(absPath, 'utf-8');
-    } catch (err) {
-        throw new ToolError(`Failed to read ${absPath}: ${(err as Error).message}`);
-    }
+    const text = tryValue(
+        () => fs.readFileSync(absPath, 'utf-8'),
+        (err) => {
+            throw new ToolError(`Failed to read ${absPath}: ${(err as Error).message}`);
+        },
+    );
     const scan: FileScan = {
         idLines: new Map(),
         nameLines: new Map(),

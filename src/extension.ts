@@ -13,7 +13,6 @@ import { GAPCompletionProvider } from './completion/completionProvider';
 import { GAPHoverProvider } from './hover/hoverProvider';
 import { toShellPath, resolveHelpPath } from './path';
 import { searchHelp } from './help/searchEngine';
-import { HelpEntry } from './help/indexData';
 import { showLiveSearchPicker } from './help/searchPicker';
 import { showHelpPanel, refreshCurrentPage } from './help/helpPanel';
 import { initStyleState } from './help/styleState';
@@ -29,6 +28,7 @@ import {
     EXPORT_TEXT_TIMEOUT_MS,
 } from './help/helpData';
 import { waitTerminalClose } from './shared/terminal';
+import { tryValue, tryValueAsync, onErrorAsync, tryLog } from './shared/guarded';
 import { SEMANTIC_CONTENT_LIMIT, SEMANTIC_GLOBAL_CACHE_MAX_BYTES } from './limits';
 import { registerLmTools } from './lmtools';
 
@@ -131,15 +131,17 @@ async function runExportScript(scriptUri: vscode.Uri, dataDir: string, timeoutMs
         hideFromUser: true,
     });
     try {
-        // Register the close listener, then send the command.
-        const closed = waitTerminalClose(terminal, timeoutMs);
-        terminal.sendText(`gap -q --nointeract ${toShellPath(scriptUri.fsPath, scriptUri)}`);
-        terminal.sendText('exit');
-        await closed;
-    } catch (e: any) {
-        throw new Error(
-            `${path.basename(scriptUri.fsPath)} did not complete within ${Math.round(timeoutMs / 1000)} seconds`
-        );
+        await tryValueAsync(async () => {
+            // Register the close listener, then send the command.
+            const closed = waitTerminalClose(terminal, timeoutMs);
+            terminal.sendText(`gap -q --nointeract ${toShellPath(scriptUri.fsPath, scriptUri)}`);
+            terminal.sendText('exit');
+            await closed;
+        }, () => {
+            throw new Error(
+                `${path.basename(scriptUri.fsPath)} did not complete within ${Math.round(timeoutMs / 1000)} seconds`
+            );
+        });
     } finally {
         terminal.dispose();
     }
@@ -166,30 +168,31 @@ async function doRebuildHelpIndex(context: vscode.ExtensionContext): Promise<voi
     item.text = '$(sync~spin) GAP: rebuilding help index…';
     item.show();
     try {
-        // Back up the current export files first.
-        backupHelpIndexData();
-        await runExportScript(exportG, dataDir, EXPORT_GAPDOC_TIMEOUT_MS);
-        runConvertScript(convert.fsPath, dataDir);
-        await runExportScript(exportText, dataDir, EXPORT_TEXT_TIMEOUT_MS);
+        await onErrorAsync(async () => {
+            // Back up the current export files first.
+            backupHelpIndexData();
+            await runExportScript(exportG, dataDir, EXPORT_GAPDOC_TIMEOUT_MS);
+            runConvertScript(convert.fsPath, dataDir);
+            await runExportScript(exportText, dataDir, EXPORT_TEXT_TIMEOUT_MS);
 
-        // Verify the three export files.
-        // Load the new help index.
-        // Reject an empty index.
-        // Drop the backups after the load succeeds.
-        const missing = products.filter(name => !fs.existsSync(path.join(dataDir, name)));
-        if (missing.length) {
-            throw new Error(`missing index files: ${missing.join(', ')}`);
-        }
-        const state = reloadHelpIndex();
-        if (!state.entries.length) {
-            throw new Error('parsed help index is empty');
-        }
-        commitHelpIndexData();
-        vscode.window.showInformationMessage('GAP: help index rebuilt');
-    } catch (err) {
-        // Remove partial export files and restore the backups.
-        restoreHelpIndexData();
-        throw err;
+            // Verify the three export files.
+            // Load the new help index.
+            // Reject an empty index.
+            // Drop the backups after the load succeeds.
+            const missing = products.filter(name => !fs.existsSync(path.join(dataDir, name)));
+            if (missing.length) {
+                throw new Error(`missing index files: ${missing.join(', ')}`);
+            }
+            const state = reloadHelpIndex();
+            if (!state.entries.length) {
+                throw new Error('parsed help index is empty');
+            }
+            commitHelpIndexData();
+            vscode.window.showInformationMessage('GAP: help index rebuilt');
+        }, () => {
+            // Remove partial export files and restore the backups.
+            restoreHelpIndexData();
+        });
     } finally {
         item.dispose();
     }
@@ -199,27 +202,21 @@ export async function activate(context: vscode.ExtensionContext) {
     console.log('[GAP] extension activate start');
     // Register the agent tools before the parser init, which can fail and return early.
     registerLmTools(context);
-    try {
-        await initGapParser(context);
-    } catch (err) {
-        console.error('[GAP] parser initialization failed: ', err);
-        vscode.window.showErrorMessage(
-            'GAP: failed to load the tree-sitter-gap parser. Check that wasm/tree-sitter-gap.wasm exists.'
-        );
-        return;
-    }
+    const parserReady = await tryValueAsync(
+        () => initGapParser(context).then(() => true),
+        (err) => {
+            console.error('[GAP] parser initialization failed: ', err);
+            vscode.window.showErrorMessage(
+                'GAP: failed to load the tree-sitter-gap parser. Check that wasm/tree-sitter-gap.wasm exists.'
+            );
+            return false;
+        },
+    );
+    if (!parserReady) return;
 
-    try {
-        ensureData(context);
-    } catch (err) {
-        console.error('[GAP] completion data load failed: ', err);
-    }
+    tryLog(() => ensureData(context), '[GAP] completion data load failed: ');
 
-    try {
-        ensureHelpIndex(context);
-    } catch (err) {
-        console.error('[GAP] help index ensure failed: ', err);
-    }
+    tryLog(() => ensureHelpIndex(context), '[GAP] help index ensure failed: ');
 
     initStyleState(context);
 
@@ -340,16 +337,16 @@ export async function activate(context: vscode.ExtensionContext) {
     const openHelpSearch = async (seed: string): Promise<void> => {
         const paths = getHelpPaths();
         if (!paths) return;
-        let helpEntries: HelpEntry[];
-        let books: Map<string, string>;
-        try {
-            const state = getHelpState();
-            helpEntries = state.entries;
-            books = state.bookDescriptions;
-        } catch (e: any) {
-            vscode.window.showErrorMessage(`GAP: failed to load help index: ${e.message}`);
-            return;
-        }
+        const state = tryValue(
+            () => getHelpState(),
+            (e: any) => {
+                vscode.window.showErrorMessage(`GAP: failed to load help index: ${e.message}`);
+                return null;
+            },
+        );
+        if (!state) return;
+        const helpEntries = state.entries;
+        const books = state.bookDescriptions;
         if (!helpEntries.length) {
             vscode.window.showWarningMessage('GAP: Help index not loaded. Try running "GAP: Rebuild Help Index".');
             return;
@@ -377,15 +374,15 @@ export async function activate(context: vscode.ExtensionContext) {
     // Internal command behind the Go to Definition hover link.
     context.subscriptions.push(
         vscode.commands.registerCommand('gap.goToDefinition', async (filePath: string, row: number) => {
-            try {
+            await tryValueAsync(async () => {
                 const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(filePath));
                 const editor = await vscode.window.showTextDocument(doc);
                 const position = new vscode.Position(row, 0);
                 editor.selection = new vscode.Selection(position, position);
                 editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenter);
-            } catch (e: any) {
+            }, (e: any) => {
                 vscode.window.showErrorMessage(`GAP: failed to open definition: ${e?.message ?? e}`);
-            }
+            });
         }),
     );
 
@@ -443,9 +440,12 @@ export async function activate(context: vscode.ExtensionContext) {
             if (yes !== 'Rebuild') return;
             rebuildHelpRunning = true;
             try {
-                await doRebuildHelpIndex(context);
-            } catch (e: any) {
-                vscode.window.showErrorMessage(`GAP: rebuild help index failed: ${e.message}`);
+                await tryValueAsync(
+                    () => doRebuildHelpIndex(context),
+                    (e: any) => {
+                        vscode.window.showErrorMessage(`GAP: rebuild help index failed: ${e.message}`);
+                    },
+                );
             } finally {
                 rebuildHelpRunning = false;
             }

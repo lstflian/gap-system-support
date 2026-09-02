@@ -5,6 +5,7 @@
 import * as vscode from 'vscode';
 import Parser, { type Language, type Tree, type Edit, type Point, type Range as TreeRange } from 'web-tree-sitter';
 import { PARSER_MAX_DOCS, PARSER_MAX_IDLE_MS, PARSER_MAX_PENDING_EDITS, PARSER_MAX_TOTAL_TEXT } from '../limits';
+import { onError, onErrorAsync } from '../shared/guarded';
 
 let gapParser: Parser | null = null;
 let gapLanguage: Language | null = null;
@@ -83,19 +84,18 @@ function cloneRange(range: TreeRange): TreeRangeSnapshot {
 export async function initGapParser(context: vscode.ExtensionContext): Promise<void> {
     if (gapParser) return;
 
-    try {
+    await onErrorAsync(async () => {
         const wasmPath = vscode.Uri.joinPath(context.extensionUri, 'wasm', 'tree-sitter-gap.wasm').fsPath;
 
         await Parser.init();
         gapLanguage = await Parser.Language.load(wasmPath);
         gapParser = new Parser();
         gapParser.setLanguage(gapLanguage);
-    } catch (err) {
+    }, () => {
         gapParser?.delete();
         gapParser = null;
         gapLanguage = null;
-        throw err;
-    }
+    });
 
     console.log('[GAP] parser initialized');
 }
@@ -242,56 +242,60 @@ export function getDocumentTreeSnapshot(document: vscode.TextDocument, code?: st
             version: document.version,
             lastUsed: Date.now(),
         };
+        const st = state;
         docs.set(key, state);
         // The freshly created state is never evicted.
         evictIfNeeded(Date.now(), key);
-        try {
-            state.tree = parseGapCode(newText);
-            state.generation = nextGeneration();
-        } catch (err) {
-            // Delete the state, the next request reparses from scratch.
-            state.tree?.delete();
-            docs.delete(key);
-            throw err;
-        }
-        return { tree: state.tree, generation: state.generation, change: state.change };
+        const tree = onError(
+            () => parseGapCode(newText),
+            () => {
+                // Delete the state, the next request reparses from scratch.
+                st.tree?.delete();
+                docs.delete(key);
+            },
+        );
+        st.tree = tree;
+        st.generation = nextGeneration();
+        return { tree: st.tree, generation: st.generation, change: st.change };
     }
+    const st = state;
 
     // Text unchanged, reuse the cached tree.
-    if (newText === state.text) {
-        const hadPendingEdits = state.edits.length > 0 || state.editEvents !== 0;
-        state.edits = [];
-        state.editEvents = 0;
-        state.version = document.version;
-        state.lastUsed = Date.now();
-        if (!state.tree) {
-            try {
-                state.tree = parseGapCode(newText);
-                state.generation = nextGeneration();
-            } catch (err) {
-                state.tree?.delete();
-                docs.delete(key);
-                throw err;
-            }
+    if (newText === st.text) {
+        const hadPendingEdits = st.edits.length > 0 || st.editEvents !== 0;
+        st.edits = [];
+        st.editEvents = 0;
+        st.version = document.version;
+        st.lastUsed = Date.now();
+        if (!st.tree) {
+            const tree = onError(
+                () => parseGapCode(newText),
+                () => {
+                    st.tree?.delete();
+                    docs.delete(key);
+                },
+            );
+            st.tree = tree;
+            st.generation = nextGeneration();
         }
-        if (hadPendingEdits) state.change = null;
-        return { tree: state.tree, generation: state.generation, change: state.change };
+        if (hadPendingEdits) st.change = null;
+        return { tree: st.tree, generation: st.generation, change: st.change };
     }
 
     // Partial event loss detection, the version difference must equal the event count.
     const versionJumped =
-        document.version < state.version ||
-        document.version - state.version !== state.editEvents;
-    if (state.edits.length > 0 && !versionJumped && state.tree) {
+        document.version < st.version ||
+        document.version - st.version !== st.editEvents;
+    if (st.edits.length > 0 && !versionJumped && st.tree) {
         // Incremental path.
-        const oldTree = state.tree;
-        const fromGeneration = state.generation;
-        const fromVersion = state.version;
-        const oldTextLength = state.text.length;
-        const pendingEdits = state.edits.map(cloneEdit);
+        const oldTree = st.tree;
+        const fromGeneration = st.generation;
+        const fromVersion = st.version;
+        const oldTextLength = st.text.length;
+        const pendingEdits = st.edits.map(cloneEdit);
         const oldHasError = oldTree.rootNode.hasError;
         let newTree: Tree | null = null;
-        try {
+        const result = onError((): { tree: Tree; change: DocumentTreeChange } => {
             if (!gapParser) {
                 throw new Error('GAP parser is not initialized. Call initGapParser() first.');
             }
@@ -312,38 +316,38 @@ export function getDocumentTreeSnapshot(document: vscode.TextDocument, code?: st
                 newHasError: newTree.rootNode.hasError,
             };
             oldTree.delete();
-            state.tree = newTree;
-            state.generation = generation;
-            state.change = change;
-            newTree = null;
-            state.edits = [];
-        } catch (err) {
+            return { tree: newTree, change };
+        }, () => {
             newTree?.delete();
-            if (state.tree === oldTree) oldTree.delete();
+            if (st.tree === oldTree) oldTree.delete();
             docs.delete(key);
-            throw err;
-        }
+        });
+        st.tree = result.tree;
+        st.generation = result.change.toGeneration;
+        st.change = result.change;
+        st.edits = [];
     } else {
         // Event loss or version jump, full parse fallback.
-        const oldTree = state.tree;
-        state.tree = null;
+        const oldTree = st.tree;
+        st.tree = null;
         oldTree?.delete();
-        try {
-            state.tree = parseGapCode(newText);
-            state.generation = nextGeneration();
-            state.change = null;
-            state.edits = [];
-        } catch (err) {
-            state.tree?.delete();
-            docs.delete(key);
-            throw err;
-        }
+        const tree = onError(
+            () => parseGapCode(newText),
+            () => {
+                st.tree?.delete();
+                docs.delete(key);
+            },
+        );
+        st.tree = tree;
+        st.generation = nextGeneration();
+        st.change = null;
+        st.edits = [];
     }
-    state.editEvents = 0;
-    state.text = newText;
-    state.version = document.version;
-    state.lastUsed = Date.now();
-    return { tree: state.tree, generation: state.generation, change: state.change };
+    st.editEvents = 0;
+    st.text = newText;
+    st.version = document.version;
+    st.lastUsed = Date.now();
+    return { tree: st.tree, generation: st.generation, change: st.change };
 }
 
 export function getDocumentTree(document: vscode.TextDocument, code?: string): Tree {

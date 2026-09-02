@@ -5,6 +5,7 @@
 import * as vscode from 'vscode';
 import { type SyntaxNode } from 'web-tree-sitter';
 import { getDocumentTreeSnapshot, isParserReady } from '../parser/gapParser';
+import { tryValue } from '../shared/guarded';
 
 /** Debounce for revalidation after typing. */
 const DEBOUNCE_MS = 250;
@@ -203,15 +204,21 @@ export class GAPDiagnosticsProvider implements vscode.Disposable {
             return;
         }
         const uri = document.uri;
-        try {
-            const text = document.getText();
-            const { tree } = getDocumentTreeSnapshot(document, text);
-            // O(1) gate: clean trees never enter the collector.
-            const entries = tree.rootNode.hasError ? collectErrorEntries(tree.rootNode, text) : [];
-            this.collection.set(uri, entriesToDiagnostics(document, entries));
-        } catch {
+        const diagnostics = tryValue(
+            (): vscode.Diagnostic[] | null => {
+                const text = document.getText();
+                const { tree } = getDocumentTreeSnapshot(document, text);
+                // O(1) gate: clean trees never enter the collector.
+                const entries = tree.rootNode.hasError ? collectErrorEntries(tree.rootNode, text) : [];
+                return entriesToDiagnostics(document, entries);
+            },
+            null,
+        );
+        if (diagnostics === null) {
             // Parser failures must never surface as broken editor state; retract stale diagnostics and let the next change retry.
             this.collection.delete(uri);
+        } else {
+            this.collection.set(uri, diagnostics);
         }
     }
 

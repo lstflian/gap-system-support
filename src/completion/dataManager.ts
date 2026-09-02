@@ -8,6 +8,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { toShellPath } from '../path';
 import { waitTerminalClose } from '../shared/terminal';
+import { tryValue, tryValueAsync, onError, safeUnlink } from '../shared/guarded';
 
 let functionNames: Set<string> | null = null;
 let generating = false;
@@ -25,22 +26,19 @@ function checkTxt(txtPath: string): TxtState {
     }
     // Read only the tail, the marker is near the end.
     const TAIL_BYTES = 200;
-    let fd: number;
-    try {
-        fd = fs.openSync(txtPath, 'r');
-    } catch {
+    const fd = tryValue(() => fs.openSync(txtPath, 'r'), null);
+    if (fd === null) {
         return 'missing';
     }
     try {
-        const size = fs.fstatSync(fd).size;
-        const start = Math.max(0, size - TAIL_BYTES);
-        const buf = Buffer.alloc(size - start);
-        fs.readSync(fd, buf, 0, buf.length, start);
-        const tail = buf.toString('utf8').trimEnd().split('\n').pop();
-        return tail === DONE_MARKER ? 'complete' : 'incomplete';
-    } catch {
-        // The file vanished or became unreadable; treat it as missing.
-        return 'missing';
+        return tryValue((): TxtState => {
+            const size = fs.fstatSync(fd).size;
+            const start = Math.max(0, size - TAIL_BYTES);
+            const buf = Buffer.alloc(size - start);
+            fs.readSync(fd, buf, 0, buf.length, start);
+            const tail = buf.toString('utf8').trimEnd().split('\n').pop();
+            return tail === DONE_MARKER ? 'complete' : 'incomplete';
+        }, 'missing');
     } finally {
         fs.closeSync(fd);
     }
@@ -62,17 +60,11 @@ function convertTxtToJson(txtPath: string, jsonPath: string): void {
     // Write a tmp file first, then rename it over the json.
     const tmpPath = jsonPath + '.tmp';
     fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), 'utf8');
-    try {
-        fs.renameSync(tmpPath, jsonPath);
-    } catch (err) {
-        try {
-            fs.unlinkSync(tmpPath);
-        } catch {}
-        throw err;
-    }
-    try {
-        fs.unlinkSync(txtPath);
-    } catch {}
+    onError(
+        () => fs.renameSync(tmpPath, jsonPath),
+        () => safeUnlink(tmpPath),
+    );
+    safeUnlink(txtPath);
 }
 
 function loadJsonIntoMemory(jsonPath: string): number {
@@ -133,9 +125,7 @@ export async function generateData(context: vscode.ExtensionContext): Promise<bo
 
         // Remove a stale txt.
         if (fs.existsSync(txtPath)) {
-            try {
-                fs.unlinkSync(txtPath);
-            } catch {}
+            safeUnlink(txtPath);
         }
 
         const scriptUri = vscode.Uri.joinPath(context.extensionUri, 'scripts', 'gapFunctions', 'collect-all-functions.g');
@@ -159,9 +149,7 @@ export async function generateData(context: vscode.ExtensionContext): Promise<bo
             outcome = await (async (): Promise<'ok' | 'timeout' | 'convert-failed' | 'gap-exited'> => {
                 // The terminal closes when the gap process exits.
                 // Wait, then check the txt file.
-                try {
-                    await closed;
-                } catch {
+                if (!(await tryValueAsync(() => closed.then(() => true), false))) {
                     // The terminal never closed, the gap process hung.
                     return 'timeout';
                 }
@@ -170,19 +158,17 @@ export async function generateData(context: vscode.ExtensionContext): Promise<bo
                 if (state === 'missing' || state === 'incomplete') {
                     return 'gap-exited';
                 }
-                try {
+                return tryValue((): 'ok' | 'convert-failed' => {
                     convertTxtToJson(txtPath, jsonPath);
                     loadJsonIntoMemory(jsonPath);
                     return 'ok';
-                } catch (err) {
+                }, () => {
                     // Remove the leftover txt.
                     if (fs.existsSync(txtPath)) {
-                        try {
-                            fs.unlinkSync(txtPath);
-                        } catch {}
+                        safeUnlink(txtPath);
                     }
                     return 'convert-failed';
-                }
+                });
             })();
         } finally {
             item.dispose();
@@ -214,13 +200,13 @@ export function resetData(context: vscode.ExtensionContext): boolean {
     const dataDir = getGlobalDataDir(context);
     const jsonPath = path.join(dataDir, 'functions-all.json');
 
-    try {
+    return tryValue((): boolean => {
         copyBuiltinData(context, dataDir, jsonPath);
         loadJsonIntoMemory(jsonPath);
         vscode.window.showInformationMessage('GAP: reset completed');
         return true;
-    } catch {
+    }, () => {
         vscode.window.showErrorMessage('GAP: reset failed');
         return false;
-    }
+    });
 }

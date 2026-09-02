@@ -3,18 +3,14 @@
  * Replace the MathJax, scroll, and anchor placeholders.
  */
 
-import * as fs from 'fs';
 import * as path from 'path';
+import { tryReadFileWarn } from '../../shared/guarded';
 
 // The script used in every webview page.
-const HELP_NAV_JS = (() => {
-    try {
-        return fs.readFileSync(path.join(__dirname, '..', '..', '..', 'webresources', 'help-nav.js'), 'utf-8');
-    } catch (e: any) {
-        console.warn(`GAP: Failed to load help-nav.js: ${e.message}`);
-        return '';
-    }
-})();
+const HELP_NAV_JS = tryReadFileWarn(
+    path.join(__dirname, '..', '..', '..', 'webresources', 'help-nav.js'),
+    'help-nav.js',
+);
 
 /** Escape a string for inline use in a script tag. */
 export function escapeInlineJs(s: string): string {

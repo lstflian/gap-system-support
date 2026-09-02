@@ -5,7 +5,7 @@
 import * as fs from 'fs';
 import * as vscode from 'vscode';
 import { ensureHelpIndex, getHelpState } from '../help/helpData';
-import { CONFIG_MISSING_MESSAGE, SearchInput, SearchOutput, ToolError, searchHelpTool } from './toolCore';
+import { CONFIG_MISSING_MESSAGE, SearchInput, SearchOutput, ToolError, searchHelpTool, toolInvoke, toolTry } from './toolCore';
 
 export class SearchHelpTool implements vscode.LanguageModelTool<SearchInput> {
     constructor(private readonly context: vscode.ExtensionContext) {}
@@ -14,19 +14,7 @@ export class SearchHelpTool implements vscode.LanguageModelTool<SearchInput> {
         options: vscode.LanguageModelToolInvocationOptions<SearchInput>,
         _token: vscode.CancellationToken,
     ): Promise<vscode.LanguageModelToolResult> {
-        try {
-            const output = this.runSearch(options.input);
-            return new vscode.LanguageModelToolResult([
-                new vscode.LanguageModelTextPart(JSON.stringify(output, null, 2)),
-            ]);
-        } catch (err) {
-            if (err instanceof ToolError) {
-                return new vscode.LanguageModelToolResult([
-                    new vscode.LanguageModelTextPart(err.message),
-                ]);
-            }
-            throw err;
-        }
+        return toolInvoke(() => this.runSearch(options.input));
     }
 
     prepareInvocation(options: vscode.LanguageModelToolInvocationPrepareOptions<SearchInput>): vscode.PreparedToolInvocation {
@@ -42,11 +30,10 @@ export class SearchHelpTool implements vscode.LanguageModelTool<SearchInput> {
         }
         const searchMode = config.get<string>('searchMode', 'prefix');
         const defaultMode = searchMode === 'substring' ? 'substring' : 'prefix';
-        try {
-            ensureHelpIndex(this.context);
-        } catch (err) {
-            throw new ToolError(`The GAP help index could not be loaded: ${(err as Error).message}`);
-        }
+        toolTry(
+            () => ensureHelpIndex(this.context),
+            err => `The GAP help index could not be loaded: ${(err as Error).message}`,
+        );
         const state = getHelpState();
         if (!state.entries.length) {
             throw new ToolError('The GAP help index is empty. Try "GAP: Rebuild Help Index" first.');

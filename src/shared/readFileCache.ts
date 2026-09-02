@@ -8,6 +8,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { LruCache } from './lruCache';
 import { READ_CONTENT_LIMIT, READ_FILE_CACHE_MAX_ENTRIES } from '../limits';
+import { tryValue } from './guarded';
 
 /** Cached parse of one file, invalidated by a content signature. */
 interface ReadChainFileEntry<T> {
@@ -43,15 +44,20 @@ export class ReadChainFileCache<T> {
             content = open.getText();
             signature = `doc:${open.version}`;
         } else {
-            try {
+            const loaded = tryValue((): { signature: string; content: string } | null => {
                 const stat = fs.statSync(filePath);
-                signature = `file:${stat.mtimeMs}:${stat.size}`;
                 if (stat.size > READ_CONTENT_LIMIT) return null;
-                content = fs.readFileSync(filePath, 'utf-8');
-            } catch {
+                return {
+                    signature: `file:${stat.mtimeMs}:${stat.size}`,
+                    content: fs.readFileSync(filePath, 'utf-8'),
+                };
+            }, null);
+            if (loaded === null) {
                 // Missing file, silently skip.
                 return null;
             }
+            signature = loaded.signature;
+            content = loaded.content;
         }
         if (content.length > READ_CONTENT_LIMIT) return null;
 

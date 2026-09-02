@@ -9,6 +9,7 @@ import * as path from 'path';
 import { HelpEntry } from '../indexData';
 import { buildCSP } from './csp';
 import { resolveHelpPath } from '../../path';
+import { tryReadFileWarn, tryValue } from '../../shared/guarded';
 
 
 
@@ -168,16 +169,7 @@ export const native = {
 
 // webresources is three levels above the compiled file.
 const RES_DIR = path.join(__dirname, '..', '..', '..', 'webresources');
-const HELP_SUPPLEMENT_CSS = readFile('help-supplement.css');
-
-function readFile(name: string): string {
-    try {
-        return fs.readFileSync(path.join(RES_DIR, name), 'utf-8');
-    } catch (e: any) {
-        console.warn(`GAP: Failed to load ${name}: ${e.message}`);
-        return '';
-    }
-}
+const HELP_SUPPLEMENT_CSS = tryReadFileWarn(path.join(RES_DIR, 'help-supplement.css'), 'help-supplement.css');
 
 function buildStyleTags(html: string): { tags: string; hasManualCSS: boolean } {
     const hasManualCSS = /<link\b[^>]*\bhref=["'][^"']*\bmanual\.css(?=["'\s>])/i.test(html);
@@ -203,7 +195,7 @@ function processHtmlFile(
     docPath: string = '',
     pkgPath: string = ''
 ): string | null {
-    try {
+    return tryValue((): string | null => {
         let html = fs.readFileSync(filePath, 'utf-8');
 
         html = html.replace(/<script[^>]*src=["'][^"']*mathjax[^"']*["'][^>]*>\s*<\/script>/gi, '');
@@ -252,8 +244,8 @@ function processHtmlFile(
             return html.slice(0, headOpen + m![0].length) + inject + html.slice(headOpen + m![0].length);
         }
         return html + inject;
-    } catch (e: any) {
+    }, (e: any) => {
         vscode.window.showErrorMessage(`GAP: ${e.message}`);
         return null;
-    }
+    });
 }

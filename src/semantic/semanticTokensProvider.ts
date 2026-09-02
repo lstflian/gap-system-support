@@ -27,6 +27,7 @@ import {
 } from '../limits';
 import { LruCache } from '../shared/lruCache';
 import { LazyQuery } from '../shared/lazyQuery';
+import { tryValue } from '../shared/guarded';
 
 export { legend } from './captureMap';
 
@@ -235,16 +236,16 @@ export class GAPSemanticTokensProvider implements vscode.DocumentRangeSemanticTo
         };
         if (!withTopology) return { global: getOracleGlobal(), topology: null };
 
-        try {
+        return tryValue((): { global: CollectGlobal; topology: GlobalTopologyIndex | null } => {
             const global = getOracleGlobal();
             const topology = buildGlobalTopologyIndex(snapshot.tree.rootNode);
             if (validateGlobalTopologyIndex(topology, code.length)) {
                 return { global, topology: null };
             }
             return { global, topology };
-        } catch {
+        }, () => {
             return { global: getOracleGlobal(), topology: null };
-        }
+        });
     }
 
     private tryIncrementalGlobal(
@@ -273,11 +274,11 @@ export class GAPSemanticTokensProvider implements vscode.DocumentRangeSemanticTo
             return null;
         }
 
-        let result: ReturnType<typeof updateGlobalTopologyIndex>;
-        try {
+        const topology = cached.topology;
+        return tryValue((): ReturnType<typeof updateGlobalTopologyIndex> | null => {
             const query = this.globalQuery.get();
-            result = updateGlobalTopologyIndex(
-                cached.topology,
+            return updateGlobalTopologyIndex(
+                topology,
                 cached.global,
                 snapshot.tree.rootNode,
                 code,
@@ -291,10 +292,7 @@ export class GAPSemanticTokensProvider implements vscode.DocumentRangeSemanticTo
                 GAPSemanticTokensProvider.GLOBAL_INDEX_DIRTY_LIMIT,
                 this.globalIndexMode === 'shadow',
             );
-        } catch {
-            return null;
-        }
-        return result;
+        }, null);
     }
 
     private getGlobal(

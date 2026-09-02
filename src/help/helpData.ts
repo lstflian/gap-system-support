@@ -9,6 +9,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { loadIndex, HelpEntry } from './indexData';
+import { safeUnlink, safeRename } from '../shared/guarded';
 
 /** The three export files, in load order. */
 const INDEX_FILES = ['export_gapdoc.txt', 'export_default.txt', 'export_text.txt'];
@@ -89,7 +90,7 @@ export function backupHelpIndexData(): void {
         const src = path.join(dataDir, name);
         if (!fs.existsSync(src)) continue;
         const bak = src + BAK_SUFFIX;
-        try { fs.unlinkSync(bak); } catch {}
+        safeUnlink(bak);
         fs.renameSync(src, bak);
     }
 }
@@ -105,8 +106,8 @@ export function restoreHelpIndexData(): void {
         const dst = path.join(dataDir, name);
         const bak = dst + BAK_SUFFIX;
         if (!fs.existsSync(bak)) continue;
-        try { fs.unlinkSync(dst); } catch {}
-        try { fs.renameSync(bak, dst); } catch {}
+        safeUnlink(dst);
+        safeRename(bak, dst);
     }
     // Drop the cached entries.
     entries = null;
@@ -118,6 +119,6 @@ export function restoreHelpIndexData(): void {
 export function commitHelpIndexData(): void {
     if (!dataDir) return;
     for (const name of INDEX_FILES) {
-        try { fs.unlinkSync(path.join(dataDir, name + BAK_SUFFIX)); } catch {}
+        safeUnlink(path.join(dataDir, name + BAK_SUFFIX));
     }
 }
