@@ -6,6 +6,7 @@ import * as vscode from 'vscode';
 import Parser, { type Language, type Tree, type Edit, type Point, type Range as TreeRange } from 'web-tree-sitter';
 import { PARSER_MAX_DOCS, PARSER_MAX_IDLE_MS, PARSER_MAX_PENDING_EDITS, PARSER_MAX_TOTAL_TEXT } from '../limits';
 import { onError, onErrorAsync } from '../shared/guarded';
+import { Messages } from '../shared/messages';
 
 let gapParser: Parser | null = null;
 let gapLanguage: Language | null = null;
@@ -103,7 +104,7 @@ export async function initGapParser(context: vscode.ExtensionContext): Promise<v
 /** Return the loaded GAP language object. */
 export function getGapLanguage(): Language {
     if (!gapLanguage) {
-        throw new Error('GAP language is not loaded. Call initGapParser() first.');
+        throw new Error(Messages.parser.languageNotLoaded);
     }
     return gapLanguage;
 }
@@ -111,7 +112,7 @@ export function getGapLanguage(): Language {
 /** Stateless full parse. */
 export function parseGapCode(code: string): Tree {
     if (!gapParser) {
-        throw new Error('GAP parser is not initialized. Call initGapParser() first.');
+        throw new Error(Messages.parser.parserNotInitialized);
     }
     return gapParser.parse(code);
 }
@@ -297,7 +298,7 @@ export function getDocumentTreeSnapshot(document: vscode.TextDocument, code?: st
         let newTree: Tree | null = null;
         const result = onError((): { tree: Tree; change: DocumentTreeChange } => {
             if (!gapParser) {
-                throw new Error('GAP parser is not initialized. Call initGapParser() first.');
+                throw new Error(Messages.parser.parserNotInitialized);
             }
             for (const edit of pendingEdits) oldTree.edit(edit);
             newTree = gapParser.parse(newText, oldTree);

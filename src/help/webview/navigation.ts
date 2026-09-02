@@ -14,6 +14,8 @@ import {
 import { buildNavScript } from './navScript';
 import { buildChooserShim, parseStyleValue, buildRenderStyleValue, buildChooserStyleValue } from './chooser';
 import { HelpPanelSession } from './panelState';
+import { Messages } from '../../shared/messages';
+import { notifyWarning } from '../../shared/notify';
 
 /** Turn a file path into a webview URL. */
 function resolveUri(s: HelpPanelSession, abs: string): string {
@@ -63,7 +65,7 @@ export function navigatePage(s: HelpPanelSession, navFile: string, anchor: strin
 
     const newFile = path.resolve(s.currentDocDir, navFile);
     if (!fs.existsSync(newFile)) {
-        vscode.window.showWarningMessage(`GAP: File not found: ${navFile}`);
+        notifyWarning(Messages.helpWebview.fileNotFound(navFile));
         return;
     }
 

@@ -12,6 +12,7 @@ import { CAPTURE_KIND } from './locals';
 import type { ScopeEntry } from './locals';
 import { hasErrorAncestor } from '../shared/treeUtils';
 import { tryValue } from '../shared/guarded';
+import { Messages } from '../shared/messages';
 import type { CollectGlobal } from './collect';
 
 export interface OffsetRange {
@@ -371,7 +372,7 @@ export function buildCollectGlobalFromIndex(code: string, index: GlobalCaptureIn
         let target = scopes[0];
         if (definition.scopeStart !== undefined && definition.scopeEnd !== undefined) {
             const localScope = scopeByRange.get(scopeKey(definition.scopeStart, definition.scopeEnd));
-            if (!localScope) throw new Error('definition scope is missing from the global index');
+            if (!localScope) throw new Error(Messages.semantic.definitionScopeMissing);
             target = localScope;
         }
 

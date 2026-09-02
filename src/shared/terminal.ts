@@ -3,6 +3,7 @@
  */
 
 import * as vscode from 'vscode';
+import { Messages } from '../shared/messages';
 
 /**
  * Resolve once the terminal closes, reject on timeout.
@@ -20,7 +21,7 @@ export function waitTerminalClose(terminal: vscode.Terminal, timeoutMs: number):
         });
         timer = setTimeout(() => {
             sub.dispose();
-            reject(new Error('timeout'));
+            reject(new Error(Messages.terminal.timeout));
         }, timeoutMs);
     });
 }

@@ -9,6 +9,8 @@ import * as path from 'path';
 import { toShellPath } from '../path';
 import { waitTerminalClose } from '../shared/terminal';
 import { tryValue, tryValueAsync, onError, safeUnlink } from '../shared/guarded';
+import { Messages } from '../shared/messages';
+import { notifyError, notifyInfo } from '../shared/notify';
 
 let functionNames: Set<string> | null = null;
 let generating = false;
@@ -50,7 +52,7 @@ function convertTxtToJson(txtPath: string, jsonPath: string): void {
         .filter((l) => l.trim() !== '' && l.trim() !== DONE_MARKER)
         .sort();
     if (names.length === 0) {
-        throw new Error('generated data is empty');
+        throw new Error(Messages.completionData.generatedEmpty);
     }
     const data = {
         generatedAt: new Date().toISOString(),
@@ -70,7 +72,7 @@ function convertTxtToJson(txtPath: string, jsonPath: string): void {
 function loadJsonIntoMemory(jsonPath: string): number {
     const data = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
     if (!Array.isArray(data.names)) {
-        throw new Error('invalid data format');
+        throw new Error(Messages.completionData.invalidFormat);
     }
     functionNames = new Set(data.names as string[]);
     return functionNames.size;
@@ -113,7 +115,7 @@ export function ensureData(context: vscode.ExtensionContext): void {
  */
 export async function generateData(context: vscode.ExtensionContext): Promise<boolean> {
     if (generating) {
-        vscode.window.showInformationMessage('GAP: data generation is already running');
+        notifyInfo(Messages.completionData.generationAlreadyRunning);
         return false;
     }
     generating = true;
@@ -177,11 +179,11 @@ export async function generateData(context: vscode.ExtensionContext): Promise<bo
 
         // Notify after the progress finished.
         if (outcome === 'timeout' || outcome === 'convert-failed' || outcome === 'gap-exited') {
-            vscode.window.showErrorMessage('GAP: data generation failed');
+            notifyError(Messages.completionData.generationFailed);
             return false;
         }
         const count = functionNames?.size ?? 0;
-        vscode.window.showInformationMessage(`GAP: completion data generated (${count} functions)`);
+        notifyInfo(Messages.completionData.generationDone(count));
         return true;
     } finally {
         generating = false;
@@ -194,7 +196,7 @@ export async function generateData(context: vscode.ExtensionContext): Promise<bo
  */
 export function resetData(context: vscode.ExtensionContext): boolean {
     if (generating) {
-        vscode.window.showInformationMessage('GAP: data generation is running, please wait');
+        notifyInfo(Messages.completionData.generationRunningWait);
         return false;
     }
     const dataDir = getGlobalDataDir(context);
@@ -203,10 +205,10 @@ export function resetData(context: vscode.ExtensionContext): boolean {
     return tryValue((): boolean => {
         copyBuiltinData(context, dataDir, jsonPath);
         loadJsonIntoMemory(jsonPath);
-        vscode.window.showInformationMessage('GAP: reset completed');
+        notifyInfo(Messages.completionData.resetCompleted);
         return true;
     }, () => {
-        vscode.window.showErrorMessage('GAP: reset failed');
+        notifyError(Messages.completionData.resetFailed);
         return false;
     });
 }

@@ -29,6 +29,8 @@ import {
 } from './help/helpData';
 import { waitTerminalClose } from './shared/terminal';
 import { tryValue, tryValueAsync, onErrorAsync, tryLog } from './shared/guarded';
+import { getErrorMessage, Messages } from './shared/messages';
+import { notifyError, notifyInfo, notifyWarning } from './shared/notify';
 import { SEMANTIC_CONTENT_LIMIT, SEMANTIC_GLOBAL_CACHE_MAX_BYTES } from './limits';
 import { registerLmTools } from './lmtools';
 
@@ -77,10 +79,7 @@ function getHelpPaths(): { docPath: string; pkgPath: string } | null {
     const cfg = vscode.workspace.getConfiguration('gap');
     const docPath = (cfg.get<string>('docPath') || '').trim();
     if (!docPath || !path.isAbsolute(docPath) || !fs.existsSync(docPath)) {
-        vscode.window.showWarningMessage(
-            'GAP: Please set "gap.docPath" to the doc/ folder of your GAP installation.',
-            'Open Settings'
-        ).then(action => {
+        notifyWarning(Messages.extension.docPathMissing, 'Open Settings').then(action => {
             if (action === 'Open Settings') {
                 vscode.commands.executeCommand('workbench.action.openSettings', 'gap.docPath');
             }
@@ -89,10 +88,7 @@ function getHelpPaths(): { docPath: string; pkgPath: string } | null {
     }
     const pkgPath = (cfg.get<string>('pkgPath') || '').trim();
     if (!pkgPath || !path.isAbsolute(pkgPath) || !fs.existsSync(pkgPath)) {
-        vscode.window.showWarningMessage(
-            'GAP: Please set "gap.pkgPath" to the pkg/ folder of your GAP installation.',
-            'Open Settings'
-        ).then(action => {
+        notifyWarning(Messages.extension.pkgPathMissing, 'Open Settings').then(action => {
             if (action === 'Open Settings') {
                 vscode.commands.executeCommand('workbench.action.openSettings', 'gap.pkgPath');
             }
@@ -110,12 +106,12 @@ function runConvertScript(scriptPath: string, dataDir: string): void {
         { cwd: dataDir, encoding: 'utf-8', timeout: 60_000, env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' } },
     );
     if (error) {
-        throw new Error(`failed to run convert_export.js: ${error.message}`);
+        throw new Error(Messages.extension.convertScriptFailed(getErrorMessage(error)));
     }
     // Forward the converted counts, matching the old in-process console output.
     if (output) console.log(`[GAP] ${output.trim()}`);
     if (status !== 0) {
-        throw new Error(`convert_export.js failed with status ${status}: ${(errorOutput || output).trim()}`);
+        throw new Error(Messages.extension.convertScriptStatusFailed(status, (errorOutput || output).trim()));
     }
 }
 
@@ -139,7 +135,7 @@ async function runExportScript(scriptUri: vscode.Uri, dataDir: string, timeoutMs
             await closed;
         }, () => {
             throw new Error(
-                `${path.basename(scriptUri.fsPath)} did not complete within ${Math.round(timeoutMs / 1000)} seconds`
+                Messages.extension.exportScriptTimeout(path.basename(scriptUri.fsPath), Math.round(timeoutMs / 1000))
             );
         });
     } finally {
@@ -181,14 +177,14 @@ async function doRebuildHelpIndex(context: vscode.ExtensionContext): Promise<voi
             // Drop the backups after the load succeeds.
             const missing = products.filter(name => !fs.existsSync(path.join(dataDir, name)));
             if (missing.length) {
-                throw new Error(`missing index files: ${missing.join(', ')}`);
+                throw new Error(Messages.extension.missingIndexFiles(missing.join(', ')));
             }
             const state = reloadHelpIndex();
             if (!state.entries.length) {
-                throw new Error('parsed help index is empty');
+                throw new Error(Messages.extension.helpIndexEmpty);
             }
             commitHelpIndexData();
-            vscode.window.showInformationMessage('GAP: help index rebuilt');
+            notifyInfo(Messages.extension.helpIndexRebuilt);
         }, () => {
             // Remove partial export files and restore the backups.
             restoreHelpIndexData();
@@ -206,9 +202,7 @@ export async function activate(context: vscode.ExtensionContext) {
         () => initGapParser(context).then(() => true),
         (err) => {
             console.error('[GAP] parser initialization failed: ', err);
-            vscode.window.showErrorMessage(
-                'GAP: failed to load the tree-sitter-gap parser. Check that wasm/tree-sitter-gap.wasm exists.'
-            );
+            notifyError(Messages.extension.parserLoadFailed);
             return false;
         },
     );
@@ -340,7 +334,7 @@ export async function activate(context: vscode.ExtensionContext) {
         const state = tryValue(
             () => getHelpState(),
             (e: any) => {
-                vscode.window.showErrorMessage(`GAP: failed to load help index: ${e.message}`);
+                notifyError(Messages.extension.helpIndexLoadFailed(getErrorMessage(e)));
                 return null;
             },
         );
@@ -348,7 +342,7 @@ export async function activate(context: vscode.ExtensionContext) {
         const helpEntries = state.entries;
         const books = state.bookDescriptions;
         if (!helpEntries.length) {
-            vscode.window.showWarningMessage('GAP: Help index not loaded. Try running "GAP: Rebuild Help Index".');
+            notifyWarning(Messages.extension.helpIndexNotLoaded);
             return;
         }
 
@@ -381,7 +375,7 @@ export async function activate(context: vscode.ExtensionContext) {
                 editor.selection = new vscode.Selection(position, position);
                 editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenter);
             }, (e: any) => {
-                vscode.window.showErrorMessage(`GAP: failed to open definition: ${e?.message ?? e}`);
+                notifyError(Messages.extension.openDefinitionFailed(getErrorMessage(e)));
             });
         }),
     );
@@ -393,7 +387,7 @@ export async function activate(context: vscode.ExtensionContext) {
             if (!paths) return;
             const file = resolveHelpPath('/doc/ref/chap0.html', paths.docPath, paths.pkgPath);
             if (!file || !fs.existsSync(file)) {
-                vscode.window.showWarningMessage('GAP: Reference manual not found in this installation.');
+                notifyWarning(Messages.extension.referenceManualMissing);
                 return;
             }
             showHelpPanel({
@@ -432,18 +426,17 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand('gap.rebuildHelpIndex', async () => {
             if (rebuildHelpRunning) {
-                vscode.window.showInformationMessage('GAP: help index rebuild is already running');
+                notifyInfo(Messages.extension.rebuildAlreadyRunning);
                 return;
             }
-            const yes = await vscode.window.showInformationMessage(
-                'GAP: Clear cached help index and rebuild?', 'Rebuild');
+            const yes = await notifyInfo(Messages.extension.rebuildConfirm, 'Rebuild');
             if (yes !== 'Rebuild') return;
             rebuildHelpRunning = true;
             try {
                 await tryValueAsync(
                     () => doRebuildHelpIndex(context),
                     (e: any) => {
-                        vscode.window.showErrorMessage(`GAP: rebuild help index failed: ${e.message}`);
+                        notifyError(Messages.extension.rebuildFailed(getErrorMessage(e)));
                     },
                 );
             } finally {
@@ -501,12 +494,12 @@ export async function activate(context: vscode.ExtensionContext) {
             if (!doc) return;
 
             if (doc.languageId !== 'gap') {
-                vscode.window.showWarningMessage('GAP: this command only works on GAP files.');
+                notifyWarning(Messages.extension.runFileOnlyGap);
                 return;
             }
 
             if (doc.isUntitled) {
-                vscode.window.showWarningMessage('GAP: please save the file before running.');
+                notifyWarning(Messages.extension.runFileSaveFirst);
                 return;
             }
 

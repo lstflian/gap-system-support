@@ -10,6 +10,8 @@ import { HelpEntry } from '../indexData';
 import { buildCSP } from './csp';
 import { resolveHelpPath } from '../../path';
 import { tryReadFileWarn, tryValue } from '../../shared/guarded';
+import { getErrorMessage, Messages } from '../../shared/messages';
+import { notifyError } from '../../shared/notify';
 
 
 
@@ -141,7 +143,7 @@ export const native = {
         const file = resolveHelpPath(entry.filePath, docPath, pkgPath);
         if (!file || !fs.existsSync(file)) {
             const shown = file || entry.filePath;
-            vscode.window.showErrorMessage(`GAP: File not found: ${shown}`);
+            notifyError(Messages.helpWebview.fileNotFound(shown));
             return null;
         }
         const docDir = path.dirname(file);
@@ -245,7 +247,7 @@ function processHtmlFile(
         }
         return html + inject;
     }, (e: any) => {
-        vscode.window.showErrorMessage(`GAP: ${e.message}`);
+        notifyError(Messages.helpWebview.renderFailed(getErrorMessage(e)));
         return null;
     });
 }

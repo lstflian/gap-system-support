@@ -4,6 +4,7 @@
  */
 
 import * as fs from 'fs';
+import { getErrorMessage, Messages } from './messages';
 
 /**
  * Run fn; on error return the fallback.
@@ -88,7 +89,7 @@ export function tryReadFileWarn(filePath: string, name: string, fallback: string
     try {
         return fs.readFileSync(filePath, 'utf-8');
     } catch (e: any) {
-        console.warn(`GAP: Failed to load ${name}: ${e.message}`);
+        console.warn(Messages.loader.failedToLoad(name, getErrorMessage(e)));
         return fallback;
     }
 }
