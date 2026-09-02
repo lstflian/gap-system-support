@@ -4,7 +4,7 @@
 
 English | [简体中文](README.zh-cn.md)
 
-This extension provides semantic highlighting, code completion, syntax diagnostics, hover hints, code folding, running GAP files, and a help system for GAP in VS Code, powered by [tree-sitter-gap](https://github.com/gap-system/tree-sitter-gap), so that GAP users can write, read, and run GAP code and look up GAP documentation at any time. The file extensions recognized as GAP are `.g`, `.gi`, `.gd`, and `.gap`.
+This extension provides intelligent code editing powered by [tree-sitter-gap](https://github.com/gap-system/tree-sitter-gap), GAP code running, a help system, and language model tools for GAP help in VS Code, so that GAP users can write, read, and run GAP code and look up GAP documentation at any time. The file extensions recognized as GAP are `.g`, `.gi`, `.gd`, and `.gap`.
 
 > GAP is a system for computational discrete algebra, with particular emphasis on Computational Group Theory. GAP provides a programming language, a library of thousands of functions implementing algebraic algorithms written in the GAP language as well as large data libraries of algebraic objects. For more information, see the [GAP official website](https://www.gap-system.org/).
 
@@ -20,6 +20,7 @@ This extension provides semantic highlighting, code completion, syntax diagnosti
   - **prefix**: corresponds to `?topic` in GAP
   - **substring**: corresponds to `??topic` in GAP
 - **Documentation viewer**: search results are displayed in a webview panel, with support for in-page link navigation, MathJax rendering, and light or dark documentation appearance.
+- **Language model tools**: GAP help tools that agents can automatically invoke in chat to look up and cite the GAP documentation.
 
 ## Getting Started
 
@@ -60,15 +61,19 @@ Set the following settings in the walkthroughs on the Welcome page or in the VS 
 
 ## Feature Demos
 
-### 1. Syntax Highlighting and Code Completion
+### 1. Language Model Tools
+
+<img src="./images/lmtools.png" alt="Language model tools demo" />
+
+### 2. Syntax Highlighting and Code Completion
 
 <img src="./images/highlight-comp.png" alt="Syntax highlighting and code completion demo" />
 
-### 2. Help Search System
+### 3. Help System
 
 <img src="./images/help-search.webp" alt="Help search system demo" />
 
-### 3. Running GAP and Configuring Command Line Options
+### 4. Running GAP and Configuring Command Line Options
 
 <img src="./images/run-gap.webp" alt="Running GAP and configuring command line options demo" />
 
@@ -105,7 +110,7 @@ Press `Ctrl+Shift+P` or `F1` to open the Command Palette and use the following c
 | `GAP: Generate Completion Data` | Regenerate the completion data |
 | `GAP: Reset Completion Data` | Restore the default completion data |
 
-These commands are also available in the editor context menu (right-click menu) of GAP files for quick access.
+These commands are also available in the editor context menu (right-click menu) of GAP files, where `GAP: Search GAP Help` and `GAP: Run GAP File` are at the top level, while the remaining commands are grouped in the **More GAP Commands** submenu.
 
 ## Development
 

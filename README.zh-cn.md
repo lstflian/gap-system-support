@@ -4,7 +4,7 @@
 
 [English](README.md) | 简体中文
 
-在 VS Code 中为 GAP 代码提供基于 [tree-sitter-gap](https://github.com/gap-system/tree-sitter-gap) 的语义高亮、代码补全、语法诊断、悬停提示、代码折叠、GAP 文件运行和帮助系统，让 GAP 用户在 VS Code 中便捷地编写、阅读和运行 GAP 代码，并随时查询 GAP 帮助文档。扩展可识别的 GAP 文件扩展名为：`.g`、`.gi`、`.gd`、`.gap`。
+在 VS Code 中为 GAP 提供基于 [tree-sitter-gap](https://github.com/gap-system/tree-sitter-gap) 的智能代码编辑、GAP 代码运行和帮助系统，并额外提供用于帮助查询的语言模型工具，让 GAP 用户能便捷地编写、阅读和运行 GAP 代码，并随时查询 GAP 帮助文档。扩展可识别的 GAP 文件扩展名为：`.g`、`.gi`、`.gd`、`.gap`。
 
 > GAP 是一个面向计算离散代数的系统，尤其侧重于计算群论。它提供了一门编程语言和数千个用该语言编写的代数算法函数，并附带大型代数对象数据库。更多信息可见 [GAP 官方网站](https://www.gap-system.org/)。
 
@@ -20,6 +20,7 @@
   - **prefix**：对应 GAP 中的 `?topic`
   - **substring**：对应 GAP 中的 `??topic`
 - **帮助文档浏览**：搜索结果会在 Webview 面板中展示，并支持链接导航（含页内锚点跳转）、MathJax 数学公式渲染以及深浅色文档外观。
+- **语言模型工具**：为对话中的 agents 提供 GAP 帮助工具，使其能自动检索并引用 GAP 文档。
 
 ## 快速开始
 
@@ -60,15 +61,19 @@ source ~/.bashrc
 
 ## 功能演示
 
-### 1. 语法高亮、代码补全
+### 1. 语言模型工具
+
+<img src="./images/lmtools.png" alt="语言模型工具" />
+
+### 2. 语法高亮、代码补全
 
 <img src="./images/highlight-comp.png" alt="语法高亮演示" />
 
-### 2. 帮助查询系统
+### 3. 帮助系统
 
 <img src="./images/help-search.webp" alt="帮助查询系统演示" />
 
-### 3. GAP 运行及命令行选项配置
+### 4. GAP 运行及命令行选项配置
 
 <img src="./images/run-gap.webp" alt="GAP 运行及命令行选项配置演示" />
 
@@ -105,7 +110,7 @@ source ~/.bashrc
 | `GAP: Generate Completion Data` | 重新生成补全数据 |
 | `GAP: Reset Completion Data` | 恢复默认补全数据 |
 
-这些命令也会出现在 GAP 文件的编辑器上下文菜单（右键菜单）中，便于快速访问。
+这些命令也会出现在 GAP 文件的编辑器上下文菜单（右键菜单）中，其中 `GAP: Search GAP Help` 和 `GAP: Run GAP File` 位于菜单顶层，其余命令聚合在 **More GAP Commands** 子菜单中。
 
 ## 开发
 
