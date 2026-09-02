@@ -70,11 +70,6 @@ export interface SearchOutput {
     distribution: Record<string, number>;
 }
 
-export interface BookInfo {
-    name: string;
-    fullName: string;
-}
-
 export interface ResolveLinkInput {
     /** Absolute path of the file currently being read. */
     filePath: string;
@@ -149,13 +144,9 @@ function typeName(type: string): string | undefined {
     return TYPE_MAP[type];
 }
 
-/** Build the list_gap_books response, sorted by short name. */
-export function listBooksOutput(bookDescriptions: Map<string, string>): { books: BookInfo[] } {
-    const books: BookInfo[] = [];
-    for (const [name, fullName] of bookDescriptions) {
-        books.push({ name, fullName });
-    }
-    books.sort((a, b) => a.name.localeCompare(b.name));
+/** Build the list_gap_books response as short names, sorted. */
+export function listBooksOutput(bookDescriptions: Map<string, string>): { books: string[] } {
+    const books = [...bookDescriptions.keys()].sort((a, b) => a.localeCompare(b));
     return { books };
 }
 

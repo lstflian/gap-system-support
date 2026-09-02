@@ -2,7 +2,7 @@
 
 1. Add language model tools for GAP help: `search_gap_help`, `list_gap_books`, and `gap_resolve_link` (referenced as `#gapSearch`, `#gapBooks`, and `#gapResolveLink` in chat)
 2. `search_gap_help`: search the GAP help index and return entry locations (absolute path, target line, total lines), with book filtering and paging
-3. `list_gap_books`: list all GAP help books by short name and full name
+3. `list_gap_books`: list all GAP help books by short name
 4. `gap_resolve_link`: resolve a relative link inside a help file to the target file's absolute path, target line, and total lines
 
 ## 0.3.1

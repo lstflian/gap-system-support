@@ -299,13 +299,13 @@
           "type": "string",
           "default": "",
           "order": 1,
-          "markdownDescription": "Path to the `doc/` directory, e.g. `C:\\Program Files\\GAP-4.16.0\\runtime\\opt\\gap-4.16.0\\doc` or `/opt/gap-4.16.0/doc`."
+          "markdownDescription": "Path to the `doc/` directory, e.g. `C:\\Program Files\\GAP-4.16.1\\runtime\\opt\\gap-4.16.1\\doc` or `/opt/gap-4.16.1/doc`."
         },
         "gap.pkgPath": {
           "type": "string",
           "default": "",
           "order": 2,
-          "markdownDescription": "Path to the `pkg/` directory, e.g. `C:\\Program Files\\GAP-4.16.0\\runtime\\opt\\gap-4.16.0\\pkg` or `/opt/gap-4.16.0/pkg`."
+          "markdownDescription": "Path to the `pkg/` directory, e.g. `C:\\Program Files\\GAP-4.16.1\\runtime\\opt\\gap-4.16.1\\pkg` or `/opt/gap-4.16.1/pkg`."
         },
         "gap.runMode": {
           "type": "string",
@@ -422,7 +422,7 @@
         "tags": [
           "documentation"
         ],
-        "modelDescription": "Lists all GAP help books with short name and full name; use short names in search_gap_help",
+        "modelDescription": "Lists all GAP help book short names; use these names in search_gap_help's books parameter.\n\nResponse: { \"books\": string[] }",
         "inputSchema": {
           "type": "object",
           "properties": {}

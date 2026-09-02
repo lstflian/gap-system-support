@@ -32,7 +32,7 @@ First, make sure GAP is installed and added to the system `PATH`. If it is not o
 
 ```powershell
 $userPath = [Environment]::GetEnvironmentVariable('PATH', 'User')
-[Environment]::SetEnvironmentVariable('PATH', $userPath + ';C:\Program Files\GAP-4.16.0\runtime\opt\gap-4.16.0;C:\Program Files\GAP-4.16.0\runtime\bin', 'User')
+[Environment]::SetEnvironmentVariable('PATH', $userPath + ';C:\Program Files\GAP-4.16.1\runtime\opt\gap-4.16.1;C:\Program Files\GAP-4.16.1\runtime\bin', 'User')
 ```
 
 After running the commands above, open a new PowerShell terminal and run `gap --version`. If it prints the GAP version, your environment is configured successfully.
@@ -40,7 +40,7 @@ After running the commands above, open a new PowerShell terminal and run `gap --
 **Linux / macOS**: Run the following in a terminal (on macOS, replace `~/.bashrc` with `~/.zshrc`):
 
 ```bash
-echo 'export PATH="/opt/gap-4.16.0:$PATH"' >> ~/.bashrc
+echo 'export PATH="/opt/gap-4.16.1:$PATH"' >> ~/.bashrc
 source ~/.bashrc
 ```
 
@@ -53,11 +53,11 @@ Finally, run `gap --version` to verify that it is configured correctly.
 Set the following settings in the walkthroughs on the Welcome page or in the VS Code extension settings:
 
 - `gap.docPath`: the absolute path of the `doc/` folder, for example:
-  - Windows: `C:\Program Files\GAP-4.16.0\runtime\opt\gap-4.16.0\doc`
-  - Linux/macOS: `/opt/gap-4.16.0/doc`
+  - Windows: `C:\Program Files\GAP-4.16.1\runtime\opt\gap-4.16.1\doc`
+  - Linux/macOS: `/opt/gap-4.16.1/doc`
 - `gap.pkgPath`: the absolute path of the `pkg/` folder, for example:
-  - Windows: `C:\Program Files\GAP-4.16.0\runtime\opt\gap-4.16.0\pkg`
-  - Linux/macOS: `/opt/gap-4.16.0/pkg`
+  - Windows: `C:\Program Files\GAP-4.16.1\runtime\opt\gap-4.16.1\pkg`
+  - Linux/macOS: `/opt/gap-4.16.1/pkg`
 
 ## Feature Demos
 

@@ -32,7 +32,7 @@
 
 ```powershell
 $userPath = [Environment]::GetEnvironmentVariable('PATH', 'User')
-[Environment]::SetEnvironmentVariable('PATH', $userPath + ';C:\Program Files\GAP-4.16.0\runtime\opt\gap-4.16.0;C:\Program Files\GAP-4.16.0\runtime\bin', 'User')
+[Environment]::SetEnvironmentVariable('PATH', $userPath + ';C:\Program Files\GAP-4.16.1\runtime\opt\gap-4.16.1;C:\Program Files\GAP-4.16.1\runtime\bin', 'User')
 ```
 
 执行完上述命令后，重新打开一个 PowerShell 终端，运行 `gap --version`，如果能正常输出 GAP 版本号，说明环境已配置成功。
@@ -40,7 +40,7 @@ $userPath = [Environment]::GetEnvironmentVariable('PATH', 'User')
 **Linux / macOS**：在终端运行以下命令（macOS 请将 `~/.bashrc` 换成 `~/.zshrc`）：
 
 ```bash
-echo 'export PATH="/opt/gap-4.16.0:$PATH"' >> ~/.bashrc
+echo 'export PATH="/opt/gap-4.16.1:$PATH"' >> ~/.bashrc
 source ~/.bashrc
 ```
 
@@ -53,11 +53,11 @@ source ~/.bashrc
 在欢迎页面的入门引导（walkthrough）或 VS Code 的扩展设置中填写以下设置项：
 
 - `gap.docPath`：`doc/` 文件夹的绝对路径，例如：
-  - Windows: `C:\Program Files\GAP-4.16.0\runtime\opt\gap-4.16.0\doc`
-  - Linux/macOS: `/opt/gap-4.16.0/doc`
+  - Windows: `C:\Program Files\GAP-4.16.1\runtime\opt\gap-4.16.1\doc`
+  - Linux/macOS: `/opt/gap-4.16.1/doc`
 - `gap.pkgPath`：`pkg/` 文件夹的绝对路径，例如：
-  - Windows: `C:\Program Files\GAP-4.16.0\runtime\opt\gap-4.16.0\pkg`
-  - Linux/macOS: `/opt/gap-4.16.0/pkg`
+  - Windows: `C:\Program Files\GAP-4.16.1\runtime\opt\gap-4.16.1\pkg`
+  - Linux/macOS: `/opt/gap-4.16.1/pkg`
 
 ## 功能演示
 

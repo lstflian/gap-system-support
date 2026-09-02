@@ -4,7 +4,7 @@
 
 import * as vscode from 'vscode';
 import { ensureHelpIndex, getHelpState } from '../help/helpData';
-import { BookInfo, ToolError, listBooksOutput, toolInvoke, toolTry } from './toolCore';
+import { ToolError, listBooksOutput, toolInvoke, toolTry } from './toolCore';
 
 export class ListBooksTool implements vscode.LanguageModelTool<Record<string, never>> {
     constructor(private readonly context: vscode.ExtensionContext) {}
@@ -20,7 +20,7 @@ export class ListBooksTool implements vscode.LanguageModelTool<Record<string, ne
         return { invocationMessage: 'Listing the GAP help books' };
     }
 
-    private listBooks(): { books: BookInfo[] } {
+    private listBooks(): { books: string[] } {
         toolTry(
             () => ensureHelpIndex(this.context),
             err => `The GAP help index could not be loaded: ${(err as Error).message}`,
