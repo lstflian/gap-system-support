@@ -10,16 +10,14 @@ This extension provides intelligent code editing powered by [tree-sitter-gap](ht
 
 ## Features
 
-- **Semantic highlighting**: based on `tree-sitter-gap`.
-- **Code folding**: folding ranges follow the syntax structure (for example, `if ... fi`, `function ... end`).
-- **Syntax diagnostics**: missing required syntax and unexpected syntax are reported in the Problems panel while you type.
-- **Hover hints**: hovering over a function name shows a help link for GAP functions; for user defined functions it shows the definition line and the `##` comments, with a jump to the definition (including files loaded via `Read`).
-- **Code completion**: provides completion for GAP constants, keywords, statement structures, and GAP functions, while also suggesting the variables and user defined functions visible at the cursor (including functions from other GAP files loaded via `Read`).
-- **Running GAP code**: runs the current GAP file in the VS Code integrated terminal, with configurable GAP command line options and terminal reuse.
-- **Help system**: built-in GAP help search with two search modes (switchable at any time in the settings or the Quick Pick search box), and filtering the results by book.
+- **Semantic highlighting and syntax diagnostics**: based on `tree-sitter-gap`.
+- **Code completion**: provides completion for GAP constants, keywords, statement structures, and GAP functions (including functions from other GAP files loaded via `Read`).
+- **Hover hints**: hovering over a function name shows a help link for GAP functions; for user defined functions it shows the definition line and the `##` comments, with a jump to the definition.
+- **Running GAP code**: runs the current GAP file in the VS Code integrated terminal, with configurable GAP command line options.
+- **Help system**: built-in GAP help system with two search modes (switchable at any time in the settings or the Quick Pick search box), and filtering the results by book.
   - **prefix**: corresponds to `?topic` in GAP
   - **substring**: corresponds to `??topic` in GAP
-- **Documentation viewer**: search results are displayed in a webview panel, with support for in-page link navigation, MathJax rendering, and light or dark documentation appearance.
+- **Documentation viewer**: search results are displayed in a webview panel.
 - **Language model tools**: GAP help tools that agents can automatically invoke in chat to look up and cite the GAP documentation.
 
 ## Getting Started
@@ -63,19 +61,25 @@ Set the following settings in the walkthroughs on the Welcome page or in the VS 
 
 ### 1. Language Model Tools
 
+#### 1.1 Extension Tools
+
 <img src="./images/lmtools.png" alt="Language model tools demo" />
 
-### 2. Syntax Highlighting and Code Completion
+#### 1.2 Tool Usage Examples
 
-<img src="./images/highlight-comp.png" alt="Syntax highlighting and code completion demo" />
+<img src="./images/allsubgroups.png" alt="Language model tools demo" />
+
+### 2. Completion, Hover, and Go to Definition
+
+<img src="./images/completion-hover-go.gif" alt="Completion, hover, and Go to definition demo" />
 
 ### 3. Help System
 
-<img src="./images/help-search.webp" alt="Help search system demo" />
+<img src="./images/help.gif" alt="Help search system demo" />
 
 ### 4. Running GAP and Configuring Command Line Options
 
-<img src="./images/run-gap.webp" alt="Running GAP and configuring command line options demo" />
+<img src="./images/run.gif" alt="Running GAP and configuring command line options demo" />
 
 > Note: `vscode.workspace.getWorkspaceFolder(doc.uri)` determines the terminal cwd when running a GAP file.
 > For a single-root workspace, cwd is set to the workspace root folder;
