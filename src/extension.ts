@@ -11,6 +11,7 @@ import { GAPDiagnosticsProvider } from './diagnostics/diagnosticsProvider';
 import { ensureData, generateData, resetData } from './completion/dataManager';
 import { GAPCompletionProvider } from './completion/completionProvider';
 import { GAPHoverProvider } from './hover/hoverProvider';
+import { GAPDefinitionProvider } from './definition/definitionProvider';
 import { toShellPath, resolveHelpPath } from './path';
 import { searchHelp } from './help/searchEngine';
 import { showLiveSearchPicker } from './help/searchPicker';
@@ -280,6 +281,15 @@ export async function activate(context: vscode.ExtensionContext) {
         ),
     );
 
+    // Register the definition provider for Go to Definition and Peek Definition.
+    const definitionProvider = new GAPDefinitionProvider(completionPath);
+    context.subscriptions.push(
+        vscode.languages.registerDefinitionProvider(
+            { language: 'gap' },
+            definitionProvider,
+        ),
+    );
+
     // Register the folding range provider, driven by folds.scm.
     const foldsPath = vscode.Uri.joinPath(context.extensionUri, 'queries', 'folds.scm').fsPath;
     context.subscriptions.push(
@@ -312,6 +322,7 @@ export async function activate(context: vscode.ExtensionContext) {
             semanticProvider.onDocumentClosed(doc.uri);
             completionProvider.onDocumentClosed(doc.uri);
             hoverProvider.onDocumentClosed(doc.uri);
+            definitionProvider.onDocumentClosed(doc.uri);
             diagnosticsProvider.onDocumentClosed(doc.uri);
         }),
     );

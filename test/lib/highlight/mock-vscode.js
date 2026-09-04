@@ -32,6 +32,13 @@ class Range {
     }
 }
 
+class Location {
+    constructor(uri, range) {
+        this.uri = uri;
+        this.range = range;
+    }
+}
+
 class SemanticTokensBuilder {
     constructor(legend) {
         this.legend = legend;
@@ -49,6 +56,7 @@ const vscodeMock = {
     SemanticTokensLegend,
     Position,
     Range,
+    Location,
     SemanticTokensBuilder,
     Uri: {
         joinPath(base, ...segments) {

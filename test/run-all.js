@@ -53,6 +53,7 @@ const unitTests = [
     'chooser.test.js',
     path.join('..', 'diagnostics', 'diagnostics.test.js'),
     path.join('..', 'hover', 'hover.test.js'),
+    path.join('..', 'definition', 'definition.test.js'),
 ];
 for (const file of unitTests) {
     try {

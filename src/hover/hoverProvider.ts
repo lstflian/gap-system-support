@@ -5,6 +5,7 @@ import { isParserReady, getDocumentTree } from '../parser/gapParser';
 import { getFunctionNames } from '../completion/dataManager';
 import { GAPDefinitionResolver, ResolvedDefinition } from './definitionResolver';
 import { definitionPathLink } from './format';
+import { functionNameNodeAt } from '../shared/functionName';
 import type { SyntaxNode } from 'web-tree-sitter';
 
 /** English hover texts. */
@@ -80,7 +81,7 @@ export class GAPHoverProvider implements vscode.HoverProvider {
         const offset = document.offsetAt(position);
         if (token.isCancellationRequested) return undefined;
         const tree = getDocumentTree(document);
-        const node = this.functionNameNode(tree.rootNode, offset);
+        const node = functionNameNodeAt(tree.rootNode, offset);
         if (!node) return undefined;
 
         const name = node.text;
@@ -99,39 +100,6 @@ export class GAPHoverProvider implements vscode.HoverProvider {
 
         // Unknown function names: gentle hint.
         return new vscode.Hover(new vscode.MarkdownString(FALLBACK_TEXT), this.rangeOf(document, node));
-    }
-
-    /** Return the identifier node when the cursor is on a function name. */
-    private functionNameNode(root: SyntaxNode, offset: number): SyntaxNode | null {
-        const clamped = Math.max(0, Math.min(offset, root.endIndex - 1));
-        const node = root.descendantForIndex(clamped);
-        if (!node || node.type !== 'identifier') return null;
-
-        const parent = node.parent;
-        if (!parent) return null;
-
-        if (parent.type === 'assignment_statement') {
-            // Node wrappers are recreated per access: compare by node identity id.
-            const left = parent.childForFieldName('left');
-            if (left && left.id === node.id) {
-                const right = parent.childForFieldName('right');
-                if (right && (right.type === 'function'
-                    || right.type === 'atomic_function'
-                    || right.type === 'lambda')) {
-                    return node;
-                }
-            }
-        }
-
-        if (parent.type === 'call') {
-            const callee = parent.childForFieldName('function');
-            // Both builtin calls (Assert, Info, ...) and normal calls hover.
-            if (callee && callee.id === node.id) {
-                return node;
-            }
-        }
-
-        return null;
     }
 
     private rangeOf(document: vscode.TextDocument, node: SyntaxNode): vscode.Range {

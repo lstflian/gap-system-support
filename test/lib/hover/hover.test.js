@@ -177,6 +177,8 @@ async function main() {
         check('lambda definition hovers', true, (await hoverAt(provider, doc, 'f2 :=')) !== undefined);
         check('variable assignment does not hover', true, (await hoverAt(provider, doc, 'y :=')) === undefined);
         check('keyword does not hover', true, (await hoverAt(provider, doc, 'return')) === undefined);
+        // A position right after the name still hovers.
+        check('definition name at word end still hovers', true, provider.provideHover(doc, { line: 0, character: 4 }, new CancellationTokenStub()) !== undefined);
     }
 
     section('2. Fallback for unknown names');

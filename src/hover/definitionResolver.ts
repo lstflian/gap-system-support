@@ -17,9 +17,11 @@ type FileEvent =
         name: string;
         offset: number;
         end: number;
-        /** Start index of the enclosing scope, negative one for the global scope. */
+        /** Start index of the enclosing scope, -1 for the global scope. */
         scope: number;
         row: number;
+        /** Column of the definition name, zero-based. */
+        column: number;
         /**
          * The function header text from the syntax tree.
          * Null for lambdas and definitions without a parameter list.
@@ -46,8 +48,10 @@ export interface ResolvedDefinition {
     commentLines: string[];
     /** Absolute path of the file containing the definition, or '' for untitled. */
     filePath: string;
-    /** Row of the definition line, zero based. */
+    /** Row of the definition line, zero-based. */
     row: number;
+    /** Column of the definition name, zero-based. */
+    column: number;
 }
 
 export class GAPDefinitionResolver {
@@ -112,7 +116,7 @@ export class GAPDefinitionResolver {
         // Phase 0: hovering the definition's own name shows that definition.
         for (const event of events) {
             if (event.kind === 'def' && event.name === name && event.offset <= offset && offset <= event.end) {
-                return this.toDefinition({ lines, row: event.row, filePath: currentFilePath, headerText: event.headerText, name: event.name });
+                return this.toDefinition({ lines, row: event.row, column: event.column, filePath: currentFilePath, headerText: event.headerText, name: event.name });
             }
         }
 
@@ -124,7 +128,7 @@ export class GAPDefinitionResolver {
         );
         const scopedHit = this.pickLatestByName(scoped, name);
         if (scopedHit) {
-            return this.toDefinition({ lines, row: scopedHit.row, filePath: currentFilePath, headerText: scopedHit.headerText, name: scopedHit.name });
+            return this.toDefinition({ lines, row: scopedHit.row, column: scopedHit.column, filePath: currentFilePath, headerText: scopedHit.headerText, name: scopedHit.name });
         }
 
         // Phase 2: global fallback over Read chains and remaining global events.
@@ -173,12 +177,12 @@ export class GAPDefinitionResolver {
         baseDir: string | null,
         visited: Set<string>,
         currentFilePath: string,
-    ): { lines: string[]; row: number; filePath: string; headerText: string | null; name: string } | null {
+    ): { lines: string[]; row: number; column: number; filePath: string; headerText: string | null; name: string } | null {
         for (let i = events.length - 1; i >= 0; i--) {
             const event = events[i];
             if (event.kind === 'def') {
                 if (names.has(event.name)) {
-                    return { lines, row: event.row, filePath: currentFilePath, headerText: event.headerText, name: event.name };
+                    return { lines, row: event.row, column: event.column, filePath: currentFilePath, headerText: event.headerText, name: event.name };
                 }
             } else if (baseDir) {
                 const target = resolveReadTarget(event.pathText, baseDir);
@@ -198,6 +202,7 @@ export class GAPDefinitionResolver {
     private toDefinition(start: {
         lines: string[];
         row: number;
+        column: number;
         filePath: string;
         headerText: string | null;
         name: string;
@@ -215,7 +220,7 @@ export class GAPDefinitionResolver {
             commentLines.push(line.replace(/^#+ ?/, ''));
         }
         commentLines.reverse();
-        return { definitionLine, commentLines, filePath: start.filePath, row: start.row };
+        return { definitionLine, commentLines, filePath: start.filePath, row: start.row, column: start.column };
     }
 
     /** Collect definition and Read events plus the scope index for one parsed file. */
@@ -270,6 +275,7 @@ export class GAPDefinitionResolver {
                 end: node.endIndex,
                 scope,
                 row: node.startPosition.row,
+                column: node.startPosition.column,
                 headerText: this.functionHeaderText(node),
             });
         }
