@@ -65,11 +65,11 @@ Set the following settings in the walkthroughs on the Welcome page or in the VS 
 
 ### 1. Language Model Tools
 
-#### 1.1 Extension Tools
+#### Extension Tools
 
 <img src="./images/lmtools.png" alt="Language model tools demo" />
 
-#### 1.2 Tool Usage Examples
+#### Tool Usage Examples
 
 <img src="./images/allsubgroups.png" alt="Language model tools demo" />
 
