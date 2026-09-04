@@ -2,7 +2,7 @@
   "name": "gap-system-support",
   "displayName": "GAP System Support",
   "description": "Intelligent code editing powered by tree-sitter-gap, GAP code running, a help system, and language model tools for GAP help",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "publisher": "flianlee",
   "author": "Songtai Li",
   "license": "SEE LICENSE IN LICENSE",

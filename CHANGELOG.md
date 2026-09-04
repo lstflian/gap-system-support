@@ -1,3 +1,6 @@
+## 0.3.3
+1. Update `README.md` and `README.zh-cn.md`
+
 ## 0.3.2
 
 1. Add language model tools for GAP help: `search_gap_help`, `list_gap_books`, and `gap_resolve_link` (referenced as `#gapSearch`, `#gapBooks`, and `#gapResolveLink` in chat)
