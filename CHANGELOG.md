@@ -1,3 +1,7 @@
+## 0.3.4
+
+1. Add Go to Definition and Peek Definition support through VS Code's DefinitionProvider API
+
 ## 0.3.3
 1. Update `README.md` and `README.zh-cn.md`
 

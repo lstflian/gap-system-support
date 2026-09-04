@@ -12,11 +12,15 @@ This extension provides intelligent code editing powered by [tree-sitter-gap](ht
 
 - **Semantic highlighting and syntax diagnostics**: based on `tree-sitter-gap`.
 - **Code completion**: provides completion for GAP constants, keywords, statement structures, and GAP functions (including functions from other GAP files loaded via `Read`).
-- **Hover hints**: hovering over a function name shows a help link for GAP functions; for user defined functions it shows the definition line and the `##` comments, with a jump to the definition.
+- **Hover hints**: hovering over a function name shows a help link for GAP functions; for user defined functions it shows the definition line and the `##` comments.
+- **Go to Definition**: native VS Code definition navigation for user defined functions.
+  - Go to Definition (`F12`)
+  - Peek Definition (`Alt+F12`)
+  - `Ctrl` / `Cmd` + Click
 - **Running GAP code**: runs the current GAP file in the VS Code integrated terminal, with configurable GAP command line options.
-- **Help system**: built-in GAP help system with two search modes (switchable at any time in the settings or the Quick Pick search box), and filtering the results by book.
-  - **prefix**: corresponds to `?topic` in GAP
-  - **substring**: corresponds to `??topic` in GAP
+- **Help system**: built-in GAP help system with two search modes (switchable at any time in the settings or the Quick Pick search box), with results filterable by book.
+  - **prefix**: same behavior as `?topic` in GAP
+  - **substring**: same behavior as `??topic` in GAP
 - **Documentation viewer**: search results are displayed in a webview panel.
 - **Language model tools**: GAP help tools that agents can automatically invoke in chat to look up and cite the GAP documentation.
 
@@ -74,6 +78,8 @@ Set the following settings in the walkthroughs on the Welcome page or in the VS 
 <img src="./images/completion-hover-go.gif" alt="Completion, hover, and Go to definition demo" />
 
 ### 3. Help System
+
+#### Same behavior as `?topic` and `??topic` in GAP, and the demo shows `AllSmallGroups` for prefix search.
 
 <img src="./images/help.gif" alt="Help search system demo" />
 
