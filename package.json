@@ -245,14 +245,13 @@
       {
         "id": "gap-support.gettingStarted",
         "title": "Start with GAP System Support",
-        "description": "Syntax highlighting, code completion, running GAP code, and a help system for GAP. To get started, we need to make sure GAP is ready to use. Follow the steps below.",
+        "description": "Syntax highlighting, code completion, code running, a help system, and language model tools for GAP.",
         "steps": [
           {
             "id": "addGapToPath",
             "title": "Add GAP to the PATH",
-            "description": "First, check that GAP is in your system PATH so the gap command works in the terminal. Skip this step if GAP is already configured. For configuration details, click the button below.\n[Open README](command:gap.openReadme)",
             "media": {
-              "markdown": "media/gap-log.md"
+              "markdown": "media/install-gap.md"
             }
           },
           {
@@ -374,7 +373,7 @@
         "tags": [
           "documentation"
         ],
-        "modelDescription": "Searches GAP help and returns matched entries with their exact file location, so you can read the content with your built-in file-reading tool.\n\nResponse: { \"results\": [ { \"index\": int, \"display\": string, \"type\": \"function\"|\"section\"|\"chapter\"|\"index\"|omitted, \"absPath\": string, \"targetLine\": int, \"totalLines\": int } ], \"total\": int, \"returned\": int, \"note\": string, \"distribution\": { book: int } }\n\n- Each entry has 6 fields: index, display, type (omitted when there is no type code), absPath, targetLine, totalLines.\n- index: 1-based position in the result list, stable within one index version.\n- absPath: absolute path of the entry's file; pass it directly to your file-reading tool.\n- targetLine: 1-based start line; 0 means the entry has no anchor and covers the whole file.\n- note: hints when there are special entries or invalid input.\n- distribution: hit counts per book over ALL matches (global; independent of range), sorted descending; empty when there are no matches.",
+        "modelDescription": "Searches GAP help and returns matched entries with their exact file location, so you can read the content with your built-in file-reading tool.\n\nResponse: { \"results\": [ { \"index\": int, \"display\": string, \"type\": \"function\"|\"section\"|\"chapter\"|\"index\"|omitted, \"book\": string, \"absPath\": string, \"targetLine\": int, \"totalLines\": int } ], \"total\": int, \"returned\": int, \"note\": string, \"distribution\": { book: int } }\n\n- Each entry has 7 fields: index, display, type (omitted when there is no type code), book, absPath, targetLine, totalLines.\n- index: 1-based position in the result list, stable within one index version.\n- book: book short name; same as the books filter parameter and list_gap_books.\n- absPath: absolute path of the entry's file; pass it directly to your file-reading tool.\n- targetLine: 1-based start line; 0 means the entry has no anchor and covers the whole file.\n- note: hints when there are special entries or invalid input.\n- distribution: hit counts per book over ALL matches (global; independent of range), sorted descending; empty when there are no matches.",
         "inputSchema": {
           "type": "object",
           "properties": {

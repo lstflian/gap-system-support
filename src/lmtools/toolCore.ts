@@ -55,6 +55,8 @@ export interface SearchResultEntry {
     display: string;
     /** Type name (type code mapped), omitted when the entry has no type code. */
     type?: string;
+    /** Book short name; same as the books filter parameter and list_gap_books. */
+    book: string;
     /** Absolute file path, joined on the current platform with the same function the help panel uses. */
     absPath: string;
     /** 1-based start line; 0 means no anchor was located, so read the whole file (line 1 to totalLines). */
@@ -403,6 +405,7 @@ export function searchHelpTool(
         const result: SearchResultEntry = {
             index,
             display: entry.display,
+            book: entry.book,
             absPath,
             targetLine: 0,
             totalLines: 0,
