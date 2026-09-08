@@ -460,6 +460,30 @@
             "relativePath"
           ]
         }
+      },
+      {
+        "name": "check_gap_syntax",
+        "displayName": "Check GAP Syntax",
+        "icon": "$(check)",
+        "userDescription": "Statically check a GAP source file for syntax errors",
+        "toolReferenceName": "gapCheckSyntax",
+        "canBeReferencedInPrompt": true,
+        "tags": [
+          "code-analysis"
+        ],
+        "modelDescription": "Statically checks GAP source files for syntax errors using tree-sitter-gap.\n\nUse this tool after creating or modifying a GAP source file, before running it.\n\nThe parser reports locations after error recovery, so they may not point to the root cause. A `Missing \"X\"` entry means the parser required `X` here but it is absent (e.g. a forgotten `;`); an `Unexpected syntax` entry often follows an unclosed construct near the reported location. If a reported location does not appear to explain the error, inspect the surrounding code context.\n\nThis tool does not execute GAP code or perform logic checks.\n\nInput: { \"filePath\": string } — filePath must be the absolute path of the GAP source file to check.\n\nResponse: { \"syntaxValid\": boolean, \"diagnostics\": [ { \"severity\": \"error\", \"line\": int, \"column\": int, \"message\": string } ] }\n\n- line and column are 1-based positions of the diagnostic range start.\n- diagnostics is empty when syntaxValid is true.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "filePath": {
+              "type": "string",
+              "description": "Absolute path of the GAP source file to check. Relative paths are not accepted."
+            }
+          },
+          "required": [
+            "filePath"
+          ]
+        }
       }
     ]
   },

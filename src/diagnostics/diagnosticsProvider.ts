@@ -111,13 +111,18 @@ function buildSnippet(code: string, startIndex: number, endIndex: number): strin
     return collapsed.slice(0, SNIPPET_MAX) + '…';
 }
 
+/** Build the diagnostic message for a raw entry. */
+export function errorEntryMessage(entry: ErrorEntry): string {
+    return entry.kind === 'missing' ? `Missing "${entry.token}"` : `Unexpected syntax: ${entry.snippet}`;
+}
+
 /** Convert raw entries to VS Code diagnostics. */
 export function entriesToDiagnostics(document: vscode.TextDocument, entries: ErrorEntry[]): vscode.Diagnostic[] {
     return entries.map((entry) => {
         const start = document.positionAt(entry.startIndex);
         const end = document.positionAt(entry.endIndex);
         const range = new vscode.Range(start, end);
-        const message = entry.kind === 'missing' ? `Missing "${entry.token}"` : `Unexpected syntax: ${entry.snippet}`;
+        const message = errorEntryMessage(entry);
         const diagnostic = new vscode.Diagnostic(range, message, vscode.DiagnosticSeverity.Error);
         diagnostic.source = 'gap';
         return diagnostic;

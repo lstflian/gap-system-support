@@ -6,6 +6,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { collectErrorEntries, errorEntryMessage } from '../diagnostics/diagnosticsProvider';
+import { isParserReady, parseGapCode } from '../parser/gapParser';
 import { HelpEntry } from '../help/indexData';
 import { searchHelp } from '../help/searchEngine';
 import { resolveHelpPath } from '../path';
@@ -132,6 +134,12 @@ function countNewlines(text: string, end: number): number {
 /** 1-based line number of the position in the text. */
 function lineNumberAt(text: string, index: number): number {
     return countNewlines(text, index) + 1;
+}
+
+/** 1-based column number of the position in the text. */
+function columnAt(text: string, index: number): number {
+    const lineStart = text.lastIndexOf('\n', index - 1) + 1;
+    return index - lineStart + 1;
 }
 
 /** Total line count of the text. */
@@ -448,4 +456,52 @@ export function searchHelpTool(
         distribution,
     };
     return output;
+}
+
+export interface CheckSyntaxInput {
+    /** Absolute path of the GAP source file to check. */
+    filePath: string;
+}
+
+export interface SyntaxDiagnostic {
+    severity: 'error';
+    /** 1-based line number of the diagnostic range start. */
+    line: number;
+    /** 1-based column number of the diagnostic range start. */
+    column: number;
+    message: string;
+}
+
+export interface CheckSyntaxOutput {
+    syntaxValid: boolean;
+    diagnostics: SyntaxDiagnostic[];
+}
+
+/**
+ * Run a static syntax check on GAP source text.
+ * Reuses the shared parser and the existing ERROR/MISSING diagnostic scan.
+ */
+export function checkSyntaxText(code: string): CheckSyntaxOutput {
+    if (!isParserReady()) {
+        throw new ToolError('The GAP parser is not ready yet; try again later.');
+    }
+    const tree = parseGapCode(code);
+    try {
+        const root = tree.rootNode;
+        if (!root.hasError) {
+            return { syntaxValid: true, diagnostics: [] };
+        }
+        const entries = collectErrorEntries(root, code);
+        return {
+            syntaxValid: false,
+            diagnostics: entries.map((entry): SyntaxDiagnostic => ({
+                severity: 'error',
+                line: lineNumberAt(code, entry.startIndex),
+                column: columnAt(code, entry.startIndex),
+                message: errorEntryMessage(entry),
+            })),
+        };
+    } finally {
+        tree.delete();
+    }
 }
