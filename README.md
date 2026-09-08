@@ -4,7 +4,7 @@
 
 English | [简体中文](README.zh-cn.md)
 
-This extension provides intelligent code editing powered by [tree-sitter-gap](https://github.com/gap-system/tree-sitter-gap), GAP code running, a help system, and language model tools for GAP help in VS Code, so that GAP users can write, read, and run GAP code and look up GAP documentation at any time. The file extensions recognized as GAP are `.g`, `.gi`, `.gd`, and `.gap`.
+This extension provides intelligent code editing powered by [tree-sitter-gap](https://github.com/gap-system/tree-sitter-gap), GAP code running, a help system, and language model tools for GAP in VS Code, so that GAP users can write, read, and run GAP code and look up GAP documentation at any time. The file extensions recognized as GAP are `.g`, `.gi`, `.gd`, and `.gap`.
 
 > GAP is a system for computational discrete algebra, with particular emphasis on Computational Group Theory. GAP provides a programming language, a library of thousands of functions implementing algebraic algorithms written in the GAP language as well as large data libraries of algebraic objects. For more information, see the [GAP official website](https://www.gap-system.org/).
 
@@ -14,15 +14,12 @@ This extension provides intelligent code editing powered by [tree-sitter-gap](ht
 - **Code completion**: provides completion for GAP constants, keywords, statement structures, and GAP functions (including functions from other GAP files loaded via `Read`).
 - **Hover hints**: hovering over a function name shows a help link for GAP functions; for user defined functions it shows the definition line and the `##` comments.
 - **Go to Definition**: native VS Code definition navigation for user defined functions.
-  - Go to Definition (`F12`)
-  - Peek Definition (`Alt+F12`)
-  - `Ctrl` / `Cmd` + Click
 - **Running GAP code**: runs the current GAP file in the VS Code integrated terminal, with configurable GAP command line options.
 - **Help system**: built-in GAP help system with two search modes (switchable at any time in the settings or the Quick Pick search box), with results filterable by book.
   - **prefix**: same behavior as `?topic` in GAP
   - **substring**: same behavior as `??topic` in GAP
 - **Documentation viewer**: search results are displayed in a webview panel.
-- **Language model tools**: GAP help tools that agents can automatically invoke in chat to look up and cite the GAP documentation.
+- **Language model tools**: GAP help lookup and syntax checking tools that agents can automatically invoke in chat.
 
 ## Getting Started
 
@@ -65,11 +62,7 @@ Set the following settings in the walkthroughs on the Welcome page or in the VS 
 
 ### 1. Language Model Tools
 
-#### Extension Tools
-
-<img src="./images/lmtools.png" alt="Language model tools demo" />
-
-#### Tool Usage Examples
+Tool Usage Examples
 
 <img src="./images/allsubgroups.png" alt="Language model tools demo" />
 
@@ -79,7 +72,7 @@ Set the following settings in the walkthroughs on the Welcome page or in the VS 
 
 ### 3. Help System
 
-#### Same behavior as `?topic` and `??topic` in GAP, and the demo shows `AllSmallGroups` for prefix search.
+Same behavior as `?topic` and `??topic` in GAP, and the demo shows `AllSmallGroups` for prefix search.
 
 <img src="./images/help.gif" alt="Help search system demo" />
 
@@ -92,6 +85,15 @@ Set the following settings in the walkthroughs on the Welcome page or in the VS 
 > for a multi-root workspace, cwd is set to the workspace root folder that contains the GAP file (for nested roots, the innermost root folder is returned);
 > if the GAP file is not in any workspace, no cwd is specified and the terminal uses the VS Code default directory.
 > See the [VS Code API](https://code.visualstudio.com/api/references/vscode-api#workspace.getWorkspaceFolder) for more information.
+
+## Language Model Tools
+
+| Tool | Purpose |
+| --- | --- |
+| `search_gap_help` | Searches the GAP help index and returns matched entries with their file locations |
+| `list_gap_books` | Lists all GAP help book short names |
+| `gap_resolve_link` | Resolves a relative link in a GAP help file to its absolute path and target line |
+| `check_gap_syntax` | Statically checks a GAP source file for syntax errors using tree-sitter-gap |
 
 ## Settings
 

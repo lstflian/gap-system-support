@@ -4,7 +4,7 @@
 
 [English](README.md) | 简体中文
 
-在 VS Code 中为 GAP 提供基于 [tree-sitter-gap](https://github.com/gap-system/tree-sitter-gap) 的智能代码编辑、GAP 代码运行和帮助系统，并额外提供用于帮助查询的语言模型工具，让 GAP 用户能便捷地编写、阅读和运行 GAP 代码，并随时查询 GAP 帮助文档。扩展可识别的 GAP 文件扩展名为：`.g`、`.gi`、`.gd`、`.gap`。
+在 VS Code 中为 GAP 提供基于 [tree-sitter-gap](https://github.com/gap-system/tree-sitter-gap) 的智能代码编辑、GAP 代码运行和帮助系统，并额外提供针对 GAP 的语言模型工具，让 GAP 用户能便捷地编写、阅读和运行 GAP 代码，并随时查询 GAP 帮助文档。扩展可识别的 GAP 文件扩展名为：`.g`、`.gi`、`.gd`、`.gap`。
 
 > GAP 是一个面向计算离散代数的系统，尤其侧重于计算群论。它提供了一门编程语言和数千个用该语言编写的代数算法函数，并附带大型代数对象数据库。更多信息可见 [GAP 官方网站](https://www.gap-system.org/)。
 
@@ -14,15 +14,12 @@
 - **代码补全**：提供 GAP 常量、关键字、语句结构和 GAP 函数的补全（包括通过 `Read` 加载的其他 GAP 文件中的函数）。
 - **悬停提示**：将鼠标悬停在函数名上时，GAP 函数会显示帮助链接；自定义函数则显示定义行和 `##` 注释。
 - **转到定义**：为自定义函数提供 VS Code 原生的定义跳转。
-  - 转到定义（`F12`）
-  - 速览定义（`Alt+F12`）
-  - `Ctrl` / `Cmd` + 点击
 - **运行 GAP 代码**：在 VS Code 集成终端中运行当前 GAP 文件，并支持配置 GAP 命令行选项。
 - **帮助系统**：内置 GAP 帮助搜索，支持两种搜索模式（可在设置或 Quick Pick 搜索框中随时切换），并可按书籍（books）过滤结果。
   - **prefix**：对应 GAP 中的 `?topic`
   - **substring**：对应 GAP 中的 `??topic`
 - **帮助文档浏览**：搜索结果会在 Webview 面板中展示。
-- **语言模型工具**：为对话中的 agents 提供 GAP 帮助工具，使其能自动检索并引用 GAP 文档。
+- **语言模型工具**：为对话中的 agents 提供 GAP 帮助查询与语法检查工具。
 
 ## 快速开始
 
@@ -65,11 +62,7 @@ source ~/.bashrc
 
 ### 1. 语言模型工具
 
-#### 扩展工具
-
-<img src="./images/lmtools.png" alt="语言模型工具演示" />
-
-#### 工具使用示例
+工具使用示例
 
 <img src="./images/allsubgroups.png" alt="语言模型工具演示" />
 
@@ -79,7 +72,7 @@ source ~/.bashrc
 
 ### 3. 帮助系统
 
-#### 与 GAP 中的 `?topic` 和 `??topic` 行为一致，例如在 VS Code 中以前缀模式搜索 `AllSmallGroups` 与在 GAP 中输入 `?AllSmallGroups` 会得到相同的结果。
+与 GAP 中的 `?topic` 和 `??topic` 行为一致，例如在 VS Code 中以前缀模式搜索 `AllSmallGroups` 与在 GAP 中输入 `?AllSmallGroups` 会得到相同的结果。
 
 <img src="./images/help.gif" alt="帮助查询系统演示" />
 
@@ -92,6 +85,15 @@ source ~/.bashrc
 > 对于多根工作区，cwd 会被设置为包含该 GAP 文件的工作区根目录（嵌套根则返回最深层的根目录）；
 > 如果 GAP 文件不在任何工作区中，则不指定 cwd，终端使用 VS Code 默认目录。
 > 更多信息可见 [VS Code API](https://code.visualstudio.com/api/references/vscode-api#workspace.getWorkspaceFolder)。
+
+## 语言模型工具
+
+| 工具 | 用途 |
+| --- | --- |
+| `search_gap_help` | 搜索 GAP 帮助索引并返回匹配条目的文件位置 |
+| `list_gap_books` | 列出所有 GAP 帮助书籍（books）的简称 |
+| `gap_resolve_link` | 将 GAP 帮助文件中的相对链接解析为绝对路径和目标行 |
+| `check_gap_syntax` | 使用 tree-sitter-gap 静态检查 GAP 源文件的语法错误 |
 
 ## 设置项
 

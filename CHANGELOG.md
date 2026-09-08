@@ -1,3 +1,6 @@
+## 0.3.5
+1. Add GAP syntax checking tool and integrate with diagnostics
+
 ## 0.3.4
 
 1. Add Go to Definition and Peek Definition support through VS Code's DefinitionProvider API
