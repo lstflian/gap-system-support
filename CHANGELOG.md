@@ -1,5 +1,9 @@
 ## 0.3.5
+
 1. Add GAP syntax checking tool and integrate with diagnostics
+2. Add the book short name to each `search_gap_help` result entry
+3. Add GAP installation instructions to the welcome page walkthrough
+4. Update READMEs to list all four language model tools
 
 ## 0.3.4
 
