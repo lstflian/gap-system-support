@@ -4,7 +4,7 @@
 
 English | [简体中文](README.zh-cn.md)
 
-This extension provides intelligent code editing powered by [tree-sitter-gap](https://github.com/gap-system/tree-sitter-gap), GAP code running, a help system, and language model tools for GAP in VS Code, so that GAP users can write, read, and run GAP code and look up GAP documentation at any time. The file extensions recognized as GAP are `.g`, `.gi`, `.gd`, and `.gap`.
+This extension provides intelligent code editing powered by [tree-sitter-gap](https://github.com/gap-system/tree-sitter-gap), GAP code running, a help system, language model tools, and MCP support for GAP in VS Code, so that GAP users can write, read, and run GAP code and look up GAP documentation at any time. The file extensions recognized as GAP are `.g`, `.gi`, `.gd`, and `.gap`.
 
 > GAP is a system for computational discrete algebra, with particular emphasis on Computational Group Theory. GAP provides a programming language, a library of thousands of functions implementing algebraic algorithms written in the GAP language as well as large data libraries of algebraic objects. For more information, see the [GAP official website](https://www.gap-system.org/).
 

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.1
+
+1. Add independent, live user/workspace switches for native language model tools (enabled by default) and MCP (disabled by default)
+2. Expose the same four tool implementations through an authenticated, loopback-only MCP server using stable VS Code provider APIs and the official MCP SDK
+3. Add automatic MCP startup in trusted workspaces, a command to copy MCP connection configuration, and cleanup when disabled or the window closes
+4. Keep startup lightweight and initialize GAP language features and the shared parser only when needed
+5. Publish authenticated MCP definitions for Agent Host synchronization and add optional fixed ports with explicit collision errors
+6. Persist the MCP access token in SecretStorage across restarts for all workspaces in a VS Code profile, with an explicit token reset command
+
 ## 0.4.0
 
 1. Expand Go to Definition across lexical symbols, qualified record/component paths, GAP declarations, bindings, installations, and multiple method implementations

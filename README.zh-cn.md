@@ -4,7 +4,7 @@
 
 [English](README.md) | 简体中文
 
-在 VS Code 中为 GAP 提供基于 [tree-sitter-gap](https://github.com/gap-system/tree-sitter-gap) 的智能代码编辑、GAP 代码运行和帮助系统，并额外提供针对 GAP 的语言模型工具，让 GAP 用户能便捷地编写、阅读和运行 GAP 代码，并随时查询 GAP 帮助文档。扩展可识别的 GAP 文件扩展名为：`.g`、`.gi`、`.gd`、`.gap`。
+在 VS Code 中为 GAP 提供基于 [tree-sitter-gap](https://github.com/gap-system/tree-sitter-gap) 的智能代码编辑、GAP 代码运行和帮助系统，并额外提供针对 GAP 的语言模型工具和 MCP 支持，让 GAP 用户能便捷地编写、阅读和运行 GAP 代码，并随时查询 GAP 帮助文档。扩展可识别的 GAP 文件扩展名为：`.g`、`.gi`、`.gd`、`.gap`。
 
 > GAP 是一个面向计算离散代数的系统，尤其侧重于计算群论。它提供了一门编程语言和数千个用该语言编写的代数算法函数，并附带大型代数对象数据库。更多信息可见 [GAP 官方网站](https://www.gap-system.org/)。
 
