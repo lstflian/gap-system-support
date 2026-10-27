@@ -12,6 +12,11 @@ export function getErrorMessage(err: unknown): string {
     return String(err);
 }
 
+/** Reason text for a path that the terminal quotes cannot protect. */
+function unsafeShellPath(file: string): string {
+    return `the path contains a character that the terminal would interpret (" “ ” „ $ \` ! % or a control character), rename it and try again: ${file}`;
+}
+
 /** All message texts, grouped by feature. */
 export const Messages = {
     parser: {
@@ -51,6 +56,8 @@ export const Messages = {
         invalidFormat: 'invalid data format',
         generationAlreadyRunning: 'GAP: data generation is already running',
         generationFailed: 'GAP: data generation failed',
+        generationUnsafePath: (file: string) =>
+            `GAP: data generation failed, ${unsafeShellPath(file)}`,
         generationDone: (count: number) => `GAP: completion data generated (${count} functions)`,
         generationRunningWait: 'GAP: data generation is running, please wait',
         resetCompleted: 'GAP: reset completed',
@@ -85,5 +92,7 @@ export const Messages = {
         rebuildFailed: (reason: string) => `GAP: rebuild help index failed: ${reason}`,
         runFileOnlyGap: 'GAP: this command only works on GAP files.',
         runFileSaveFirst: 'GAP: please save the file before running.',
+        runFileUnsafePath: (file: string) => `GAP: cannot run the file, ${unsafeShellPath(file)}`,
+        unsafeShellPath: (file: string) => unsafeShellPath(file),
     },
 } as const;

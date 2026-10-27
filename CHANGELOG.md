@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+1. Reconcile concurrent first-start credentials across windows and reject obsolete Profile credentials after token reset
+2. Refuse to send a file path to the terminal when it contains characters that shells still interpret inside double quotes (`"` `“` `”` `„` `$` `` ` `` `!` `%` or control characters)
+3. Fix the terminal hanging in Bash when the workspace folder is a drive root such as `D:\`
+4. Switch drives with `cd /d` in a reused cmd terminal when the next workspace folder is on another drive
+
 ## 0.4.1
 
 1. Add independent, live user/workspace switches for native language model tools (enabled by default) and MCP (disabled by default)

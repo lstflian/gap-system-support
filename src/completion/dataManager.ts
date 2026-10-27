@@ -131,6 +131,11 @@ export async function generateData(context: vscode.ExtensionContext): Promise<bo
         }
 
         const scriptUri = vscode.Uri.joinPath(context.extensionUri, 'scripts', 'gapFunctions', 'collect-all-functions.g');
+        const scriptPath = toShellPath(scriptUri.fsPath, scriptUri);
+        if (!scriptPath) {
+            notifyError(Messages.completionData.generationUnsafePath(scriptUri.fsPath));
+            return false;
+        }
         const terminal = vscode.window.createTerminal({
             name: 'GAP Completion Data',
             cwd: getGlobalRoot(context),
@@ -139,7 +144,7 @@ export async function generateData(context: vscode.ExtensionContext): Promise<bo
 
         // Register the close listener, then send the command.
         const closed = waitTerminalClose(terminal, GENERATION_TIMEOUT_MS);
-        terminal.sendText(`gap --nointeract ${toShellPath(scriptUri.fsPath, scriptUri)}`);
+        terminal.sendText(`gap --nointeract ${scriptPath}`);
         terminal.sendText('exit');
 
         const item = vscode.window.createStatusBarItem(

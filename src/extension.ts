@@ -13,7 +13,7 @@ import { GAPCompletionProvider } from './completion/completionProvider';
 import { GAPHoverProvider } from './hover/hoverProvider';
 import { GAPDefinitionProvider } from './definition/definitionProvider';
 import { GAPReferenceProvider } from './references/referenceProvider';
-import { toShellPath, resolveHelpPath } from './path';
+import { toShellPath, resolveHelpPath, shellCdCommand } from './path';
 import { searchHelp } from './help/searchEngine';
 import { showLiveSearchPicker } from './help/searchPicker';
 import { showHelpPanel, refreshCurrentPage } from './help/helpPanel';
@@ -129,6 +129,10 @@ function runConvertScript(scriptPath: string, dataDir: string): void {
  * Resolve once the terminal closes.
  */
 async function runExportScript(scriptUri: vscode.Uri, dataDir: string, timeoutMs: number): Promise<void> {
+    const scriptPath = toShellPath(scriptUri.fsPath, scriptUri);
+    if (!scriptPath) {
+        throw new Error(Messages.extension.unsafeShellPath(scriptUri.fsPath));
+    }
     const terminal = vscode.window.createTerminal({
         name: 'GAP Help Index',
         cwd: dataDir,
@@ -138,7 +142,7 @@ async function runExportScript(scriptUri: vscode.Uri, dataDir: string, timeoutMs
         await tryValueAsync(async () => {
             // Register the close listener, then send the command.
             const closed = waitTerminalClose(terminal, timeoutMs);
-            terminal.sendText(`gap -q --nointeract ${toShellPath(scriptUri.fsPath, scriptUri)}`);
+            terminal.sendText(`gap -q --nointeract ${scriptPath}`);
             terminal.sendText('exit');
             await closed;
         }, () => {
@@ -619,7 +623,12 @@ function registerGapCommands(
 
             const runArguments = getSelectedFlags(context);
 
-            const command = `gap ${runArguments.join(' ')} ${toShellPath(doc.uri.fsPath, doc.uri)}`.trim();
+            const filePath = toShellPath(doc.uri.fsPath, doc.uri);
+            if (!filePath) {
+                notifyWarning(Messages.extension.runFileUnsafePath(doc.uri.fsPath));
+                return;
+            }
+            const command = `gap ${runArguments.join(' ')} ${filePath}`.trim();
 
             const cwd = vscode.workspace.getWorkspaceFolder(doc.uri)?.uri;
             const cwdKey = cwd?.toString();
@@ -627,7 +636,12 @@ function registerGapCommands(
             if (runMode === 'reuse' && runTerminal) {
                 // Change to the file's root when it differs from the last run.
                 if (cwd && cwdKey !== lastRunRoot) {
-                    runTerminal.sendText(`cd ${toShellPath(cwd.fsPath, cwd)}`);
+                    const cwdPath = toShellPath(cwd.fsPath, cwd);
+                    if (!cwdPath) {
+                        notifyWarning(Messages.extension.runFileUnsafePath(cwd.fsPath));
+                        return;
+                    }
+                    runTerminal.sendText(`${shellCdCommand()} ${cwdPath}`);
                     lastRunRoot = cwdKey;
                 }
                 runTerminal.sendText(command);
