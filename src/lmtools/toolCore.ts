@@ -17,10 +17,11 @@ import { tryValue } from '../shared/guarded';
 export class ToolError extends Error {}
 
 /** Wrap a tool body: ToolError becomes the result message, other errors rethrow. */
-export function toolInvoke<T>(fn: () => T): vscode.LanguageModelToolResult {
+export async function toolInvoke<T>(fn: () => T | Promise<T>): Promise<vscode.LanguageModelToolResult> {
     try {
+        const output = await fn();
         return new vscode.LanguageModelToolResult([
-            new vscode.LanguageModelTextPart(JSON.stringify(fn(), null, 2)),
+            new vscode.LanguageModelTextPart(JSON.stringify(output, null, 2)),
         ]);
     } catch (err) {
         if (err instanceof ToolError) {
@@ -30,6 +31,10 @@ export function toolInvoke<T>(fn: () => T): vscode.LanguageModelToolResult {
         }
         throw err;
     }
+}
+
+export function throwIfToolCancelled(token: vscode.CancellationToken): void {
+    if (token.isCancellationRequested) throw new vscode.CancellationError();
 }
 
 /** Run fn, converting any error into a ToolError with the given message. */

@@ -34,7 +34,9 @@ import { tryValue, tryValueAsync, onErrorAsync, tryLog } from './shared/guarded'
 import { getErrorMessage, Messages } from './shared/messages';
 import { notifyError, notifyInfo, notifyWarning } from './shared/notify';
 import { SEMANTIC_CONTENT_LIMIT, SEMANTIC_GLOBAL_CACHE_MAX_BYTES } from './limits';
-import { registerLmTools } from './lmtools';
+import { LmToolsController } from './lmtools';
+import { createToolRegistry } from './lmtools/registry';
+import { McpController } from './mcp';
 
 interface GAPFlag {
     flag: string;
@@ -62,6 +64,10 @@ let runTerminal: vscode.Terminal | null = null;
 let lastRunRoot: string | undefined;
 // Guard against concurrent help index rebuilds.
 let rebuildHelpRunning = false;
+let lmToolsController: LmToolsController | undefined;
+let mcpController: McpController | undefined;
+let languageActivation: Promise<boolean> | undefined;
+let shuttingDown = false;
 
 /** Get the word under the cursor. */
 function getSelectedWord(): string | undefined {
@@ -197,9 +203,33 @@ async function doRebuildHelpIndex(context: vscode.ExtensionContext): Promise<voi
 }
 
 export async function activate(context: vscode.ExtensionContext) {
+    shuttingDown = false;
+    languageActivation = undefined;
+    const registry = createToolRegistry(context);
+    lmToolsController = new LmToolsController(registry);
+    mcpController = new McpController(registry, context);
+    context.subscriptions.push(lmToolsController, mcpController);
+    const ensureGapFeatures = (): Promise<boolean> => {
+        if (shuttingDown) return Promise.resolve(false);
+        languageActivation ??= initializeGapFeatures(context).catch(error => {
+            console.error('[GAP] language feature initialization failed:', error);
+            void notifyError(Messages.extension.activationFailed(getErrorMessage(error)));
+            return false;
+        });
+        return languageActivation;
+    };
+    registerGapCommands(context, ensureGapFeatures);
+    context.subscriptions.push(vscode.workspace.onDidOpenTextDocument(document => {
+        if (document.languageId === 'gap') void ensureGapFeatures();
+    }));
+    await mcpController.whenIdle();
+    if (vscode.workspace.textDocuments.some(document => document.languageId === 'gap')) {
+        await ensureGapFeatures();
+    }
+}
+
+async function initializeGapFeatures(context: vscode.ExtensionContext): Promise<boolean> {
     console.log('[GAP] extension activate start');
-    // Register the agent tools before the parser init, which can fail and return early.
-    registerLmTools(context);
     const parserReady = await tryValueAsync(
         () => initGapParser(context).then(() => true),
         (err) => {
@@ -208,7 +238,7 @@ export async function activate(context: vscode.ExtensionContext) {
             return false;
         },
     );
-    if (!parserReady) return;
+    if (!parserReady || shuttingDown) return false;
 
     tryLog(() => ensureData(context), '[GAP] completion data load failed: ');
 
@@ -364,12 +394,40 @@ export async function activate(context: vscode.ExtensionContext) {
             diagnosticsProvider.onDocumentClosed(doc.uri);
         }),
     );
+
+    for (const doc of vscode.workspace.textDocuments) {
+        diagnosticsProvider.checkNow(doc);
+    }
+    console.log('[GAP] extension activated, semantic highlighting and folding ready');
+    if (!context.globalState.get<boolean>('gap.welcomeShown')) {
+        context.globalState.update('gap.welcomeShown', true);
+        vscode.commands.executeCommand(
+            'workbench.action.openWalkthrough',
+            'flianlee.gap-system-support#gap-support.gettingStarted',
+        );
+    }
+    return true;
+}
+
+function registerGapCommands(
+    context: vscode.ExtensionContext,
+    ensureGapFeatures: () => Promise<boolean>,
+): void {
+    function registerCommand<A extends unknown[]>(
+        name: string,
+        callback: (...args: A) => unknown,
+    ): vscode.Disposable {
+        return vscode.commands.registerCommand(name, async (...args: A) => {
+            if (await ensureGapFeatures()) return callback(...args);
+        });
+    }
+
     // Register the completion data commands.
     context.subscriptions.push(
-        vscode.commands.registerCommand('gap.generateCompletionData', () => generateData(context)),
+        registerCommand('gap.generateCompletionData', () => generateData(context)),
     );
     context.subscriptions.push(
-        vscode.commands.registerCommand('gap.resetCompletionData', () => resetData(context)),
+        registerCommand('gap.resetCompletionData', () => resetData(context)),
     );
 
     /**
@@ -407,15 +465,15 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Live search through the GAP help index.
     context.subscriptions.push(
-        vscode.commands.registerCommand('gap.searchHelp', () => openHelpSearch(getSelectedWord() || '')),
+        registerCommand('gap.searchHelp', () => openHelpSearch(getSelectedWord() || '')),
     );
     // Internal command behind hover links: search a term from an argument.
     context.subscriptions.push(
-        vscode.commands.registerCommand('gap.searchHelpTerm', (term: string) => openHelpSearch(term || '')),
+        registerCommand('gap.searchHelpTerm', (term: string) => openHelpSearch(term || '')),
     );
     // Internal command behind the Go to Definition hover link.
     context.subscriptions.push(
-        vscode.commands.registerCommand('gap.goToDefinition', async (filePath: string, row: number) => {
+        registerCommand('gap.goToDefinition', async (filePath: string, row: number) => {
             await tryValueAsync(async () => {
                 const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(filePath));
                 const editor = await vscode.window.showTextDocument(doc);
@@ -430,7 +488,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Open the GAP Reference Manual in the help panel.
     context.subscriptions.push(
-        vscode.commands.registerCommand('gap.openReference', () => {
+        registerCommand('gap.openReference', () => {
             const paths = getHelpPaths();
             if (!paths) return;
             const file = resolveHelpPath('/doc/ref/chap0.html', paths.docPath, paths.pkgPath);
@@ -454,7 +512,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Open the README in the browser.
     context.subscriptions.push(
-        vscode.commands.registerCommand('gap.openReadme', () => {
+        registerCommand('gap.openReadme', () => {
             vscode.env.openExternal(vscode.Uri.parse(
                 'https://github.com/lstflian/gap-system-support/blob/main/README.md'));
         }),
@@ -462,17 +520,17 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Open the doc/pkg path settings (used by the walkthrough buttons).
     context.subscriptions.push(
-        vscode.commands.registerCommand('gap.openDocPathSetting', () => {
+        registerCommand('gap.openDocPathSetting', () => {
             vscode.commands.executeCommand('workbench.action.openSettings', 'gap.docPath');
         }),
-        vscode.commands.registerCommand('gap.openPkgPathSetting', () => {
+        registerCommand('gap.openPkgPathSetting', () => {
             vscode.commands.executeCommand('workbench.action.openSettings', 'gap.pkgPath');
         }),
     );
 
     // Rebuild the help index with the local GAP.
     context.subscriptions.push(
-        vscode.commands.registerCommand('gap.rebuildHelpIndex', async () => {
+        registerCommand('gap.rebuildHelpIndex', async () => {
             if (rebuildHelpRunning) {
                 notifyInfo(Messages.extension.rebuildAlreadyRunning);
                 return;
@@ -503,7 +561,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Configure the GAP command line options.
     context.subscriptions.push(
-        vscode.commands.registerCommand('gap.configureFlags', async () => {
+        registerCommand('gap.configureFlags', async () => {
             const currentFlags = getSelectedFlags(context);
             const picker = vscode.window.createQuickPick<vscode.QuickPickItem>();
             picker.canSelectMany = true;
@@ -533,7 +591,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Run the current GAP file in a terminal.
     context.subscriptions.push(
-        vscode.commands.registerCommand('gap.runFile', async (uri?: vscode.Uri) => {
+        registerCommand('gap.runFile', async (uri?: vscode.Uri) => {
             // Use the URI passed by the menu.
             // Otherwise use the active editor.
             const doc = uri
@@ -593,23 +651,17 @@ export async function activate(context: vscode.ExtensionContext) {
         })
     );
 
-    // Sweep GAP documents that were already open when the extension activated.
-    for (const doc of vscode.workspace.textDocuments) {
-        diagnosticsProvider.checkNow(doc);
-    }
-
-    console.log('[GAP] extension activated, semantic highlighting and folding ready');
-
-    // Open the walkthrough once after the first install.
-    if (!context.globalState.get<boolean>('gap.welcomeShown')) {
-        context.globalState.update('gap.welcomeShown', true);
-        vscode.commands.executeCommand(
-            'workbench.action.openWalkthrough',
-            'flianlee.gap-system-support#gap-support.gettingStarted',
-        );
-    }
 }
 
-export function deactivate(): void {
-    disposeAll();
+export async function deactivate(): Promise<void> {
+    shuttingDown = true;
+    lmToolsController?.dispose();
+    try {
+        await mcpController?.stop();
+        await languageActivation;
+    } finally {
+        disposeAll();
+        lmToolsController = undefined;
+        mcpController = undefined;
+    }
 }

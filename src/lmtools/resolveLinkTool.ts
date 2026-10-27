@@ -12,11 +12,14 @@ export class ResolveLinkTool implements vscode.LanguageModelTool<ResolveLinkInpu
         options: vscode.LanguageModelToolInvocationOptions<ResolveLinkInput>,
         _token: vscode.CancellationToken,
     ): Promise<vscode.LanguageModelToolResult> {
-        return toolInvoke(() => resolveLinkOutput(options.input));
+        return toolInvoke(() => this.execute(options.input));
     }
 
     prepareInvocation(options: vscode.LanguageModelToolInvocationPrepareOptions<ResolveLinkInput>): vscode.PreparedToolInvocation {
         return { invocationMessage: `Resolving GAP help link '${options.input.relativePath}'` };
     }
-}
 
+    execute(input: ResolveLinkInput): ResolveLinkOutput {
+        return resolveLinkOutput(input);
+    }
+}

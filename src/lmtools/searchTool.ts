@@ -14,14 +14,14 @@ export class SearchHelpTool implements vscode.LanguageModelTool<SearchInput> {
         options: vscode.LanguageModelToolInvocationOptions<SearchInput>,
         _token: vscode.CancellationToken,
     ): Promise<vscode.LanguageModelToolResult> {
-        return toolInvoke(() => this.runSearch(options.input));
+        return toolInvoke(() => this.execute(options.input));
     }
 
     prepareInvocation(options: vscode.LanguageModelToolInvocationPrepareOptions<SearchInput>): vscode.PreparedToolInvocation {
         return { invocationMessage: `Searching the GAP help index for '${options.input.topic}'` };
     }
 
-    private runSearch(input: SearchInput): SearchOutput {
+    execute(input: SearchInput): SearchOutput {
         const config = vscode.workspace.getConfiguration('gap');
         const docPath = (config.get<string>('docPath') || '').trim();
         const pkgPath = (config.get<string>('pkgPath') || '').trim();

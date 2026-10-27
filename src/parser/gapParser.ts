@@ -10,6 +10,8 @@ import { Messages } from '../shared/messages';
 
 let gapParser: Parser | null = null;
 let gapLanguage: Language | null = null;
+let initialization: Promise<void> | undefined;
+let parserGeneration = 0;
 
 /** One cached document state. */
 interface DocState {
@@ -82,23 +84,30 @@ function cloneRange(range: TreeRange): TreeRangeSnapshot {
 }
 
 /** Initialize the GAP language WASM parser. */
-export async function initGapParser(context: vscode.ExtensionContext): Promise<void> {
-    if (gapParser) return;
-
-    await onErrorAsync(async () => {
+export function initGapParser(context: vscode.ExtensionContext): Promise<void> {
+    if (gapParser) return Promise.resolve();
+    if (initialization) return initialization;
+    const generation = parserGeneration;
+    const pending = onErrorAsync(async () => {
         const wasmPath = vscode.Uri.joinPath(context.extensionUri, 'wasm', 'tree-sitter-gap.wasm').fsPath;
 
         await Parser.init();
-        gapLanguage = await Parser.Language.load(wasmPath);
+        const language = await Parser.Language.load(wasmPath);
+        if (generation !== parserGeneration) throw new vscode.CancellationError();
+        gapLanguage = language;
         gapParser = new Parser();
         gapParser.setLanguage(gapLanguage);
     }, () => {
         gapParser?.delete();
         gapParser = null;
         gapLanguage = null;
+    }).then(() => {
+        console.log('[GAP] parser initialized');
+    }).finally(() => {
+        if (initialization === pending) initialization = undefined;
     });
-
-    console.log('[GAP] parser initialized');
+    initialization = pending;
+    return pending;
 }
 
 /** Return the loaded GAP language object. */
@@ -357,6 +366,7 @@ export function getDocumentTree(document: vscode.TextDocument, code?: string): T
 
 /** Release all cached trees and the parser on deactivation. */
 export function disposeAll(): void {
+    parserGeneration++;
     for (const state of docs.values()) {
         state.tree?.delete();
     }

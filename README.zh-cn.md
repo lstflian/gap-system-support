@@ -20,7 +20,7 @@
   - **prefix**：对应 GAP 中的 `?topic`
   - **substring**：对应 GAP 中的 `??topic`
 - **帮助文档浏览**：搜索结果会在 Webview 面板中展示。
-- **语言模型工具**：为对话中的 agents 提供 GAP 帮助查询与语法检查工具。
+- **语言模型工具与 MCP**：为对话中的 agents 提供 GAP 帮助查询与语法检查工具。
 
 ## 快速开始
 
@@ -59,35 +59,7 @@ source ~/.bashrc
   - Windows: `C:\Program Files\GAP-4.16.1\runtime\opt\gap-4.16.1\pkg`
   - Linux/macOS: `/opt/gap-4.16.1/pkg`
 
-## 功能演示
-
-### 1. 语言模型工具
-
-工具使用示例
-
-<img src="./images/allsubgroups.png" alt="语言模型工具演示" />
-
-### 2. 补全、悬停、定义与引用导航
-
-<img src="./images/completion-hover-go.gif" alt="代码编辑演示" />
-
-### 3. 帮助系统
-
-与 GAP 中的 `?topic` 和 `??topic` 行为一致，例如在 VS Code 中以前缀模式搜索 `AllSmallGroups` 与在 GAP 中输入 `?AllSmallGroups` 会得到相同的结果。
-
-<img src="./images/help.gif" alt="帮助查询系统演示" />
-
-### 4. GAP 运行及命令行选项配置
-
-<img src="./images/run.gif" alt="GAP 运行及命令行选项配置演示" />
-
-> 说明：运行 GAP 文件时，终端的 cwd 通过 `vscode.workspace.getWorkspaceFolder(doc.uri)` 函数获取。
-> 对于单根工作区，cwd 会被设置为工作区根目录；
-> 对于多根工作区，cwd 会被设置为包含该 GAP 文件的工作区根目录（嵌套根则返回最深层的根目录）；
-> 如果 GAP 文件不在任何工作区中，则不指定 cwd，终端使用 VS Code 默认目录。
-> 更多信息可见 [VS Code API](https://code.visualstudio.com/api/references/vscode-api#workspace.getWorkspaceFolder)。
-
-## 语言模型工具
+## 语言模型工具与 MCP
 
 | 工具 | 用途 |
 | --- | --- |
@@ -95,6 +67,13 @@ source ~/.bashrc
 | `list_gap_books` | 列出所有 GAP 帮助书籍（books）的简称 |
 | `gap_resolve_link` | 将 GAP 帮助文件中的相对链接解析为绝对路径和目标行 |
 | `check_gap_syntax` | 使用 tree-sitter-gap 静态检查 GAP 源文件的语法错误 |
+
+两种入口提供相同的四个工具，开关互不影响。
+
+- **语言模型工具**：供 VS Code 内的 agent 调用，由 `gap.tools.enabled` 控制，默认开启。
+- **MCP 服务**：供 VS Code 和外部 MCP 客户端调用，由 `gap.mcp.enabled` 控制，默认关闭。
+
+在受信任工作区开启 MCP 后，可运行 **GAP: Copy MCP Connection Configuration** 获取外部客户端的连接配置。
 
 ## 设置项
 
@@ -108,6 +87,9 @@ source ~/.bashrc
 | `gap.terminalRoot` | `""` | Windows 盘符对应的 Unix 根目录。示例：`/` 会把 `C:\project\file.g` 转成 `/c/project/file.g`；留空时 WSL 默认使用 `/mnt/` |
 | `gap.searchMode` | `prefix` | 搜索模式，`prefix` 对应 `?topic`，`substring` 对应 `??topic` |
 | `gap.diagnostics` | `true` | 在问题面板显示 GAP 解析器产生的语法错误诊断 |
+| `gap.tools.enabled` | `true` | 提供原生 VS Code 语言模型工具，与 MCP 开关独立 |
+| `gap.mcp.enabled` | `false` | 在受信任工作区自动启动带认证的本机 MCP 服务，与原生工具开关独立 |
+| `gap.mcp.port` | `0` | MCP 端口；`0` 自动分配，指定固定端口被占用时明确报错，支持用户和工作区设置 |
 
 ## 命令
 
@@ -122,8 +104,10 @@ source ~/.bashrc
 | `GAP: Open GAP Reference Manual` | 打开 GAP 参考手册 |
 | `GAP: Generate Completion Data` | 重新生成补全数据 |
 | `GAP: Reset Completion Data` | 恢复默认补全数据 |
+| `GAP: Copy MCP Connection Configuration` | 复制正在运行的 MCP 服务地址和私有认证 header |
+| `GAP: Reset MCP Access Token` | 更换当前 VS Code Profile 下所有工作区共享的持久化令牌 |
 
-这些命令也会出现在 GAP 文件的编辑器上下文菜单（右键菜单）中，其中 `GAP: Search GAP Help` 和 `GAP: Run GAP File` 位于菜单顶层，其余命令聚合在 **More GAP Commands** 子菜单中。
+运行、帮助和补全数据命令也会出现在 GAP 文件的编辑器上下文菜单（右键菜单）中，其中 `GAP: Search GAP Help` 和 `GAP: Run GAP File` 位于菜单顶层，其余命令聚合在 **More GAP Commands** 子菜单中。MCP 连接配置和令牌重置命令仅在命令面板中提供。
 
 ## 开发
 

@@ -2,6 +2,25 @@
 
 This project incorporates components from the projects listed below. The original copyright notices and the licenses under which these components are received are set forth below.
 
+## Model Context Protocol TypeScript SDK
+
+The MCP interface uses the server, Node.js adapter, and core packages from the
+[Model Context Protocol TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk).
+The packages declare Apache-2.0 licensing, with legacy MIT contributions covered
+as described in their license notices. Complete license texts and copyright
+notices are distributed unchanged with the installed extension:
+
+- [@modelcontextprotocol/server LICENSE](node_modules/@modelcontextprotocol/server/LICENSE)
+- [@modelcontextprotocol/node LICENSE](node_modules/@modelcontextprotocol/node/LICENSE)
+- [@modelcontextprotocol/core LICENSE](node_modules/@modelcontextprotocol/core/LICENSE)
+
+The SDK's HTTP and schema-validation dependencies are also distributed with their
+original MIT license texts and copyright notices:
+
+- [@hono/node-server LICENSE](node_modules/@hono/node-server/LICENSE)
+- [hono LICENSE](node_modules/hono/LICENSE)
+- [zod LICENSE](node_modules/zod/LICENSE)
+
 ## tree-sitter-gap
 
 The query files and parser are from tree-sitter-gap. See https://github.com/gap-system/tree-sitter-gap.

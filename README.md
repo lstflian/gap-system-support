@@ -20,7 +20,7 @@ This extension provides intelligent code editing powered by [tree-sitter-gap](ht
   - **prefix**: same behavior as `?topic` in GAP
   - **substring**: same behavior as `??topic` in GAP
 - **Documentation viewer**: search results are displayed in a webview panel.
-- **Language model tools**: GAP help lookup and syntax checking tools that agents can automatically invoke in chat.
+- **Language model tools and MCP**: GAP help lookup and syntax checking tools that agents can automatically invoke in chat.
 
 ## Getting Started
 
@@ -59,35 +59,7 @@ Set the following settings in the walkthroughs on the Welcome page or in the VS 
   - Windows: `C:\Program Files\GAP-4.16.1\runtime\opt\gap-4.16.1\pkg`
   - Linux/macOS: `/opt/gap-4.16.1/pkg`
 
-## Feature Demos
-
-### 1. Language Model Tools
-
-Tool Usage Examples
-
-<img src="./images/allsubgroups.png" alt="Language model tools demo" />
-
-### 2. Completion, Hover, Definitions, and References
-
-<img src="./images/completion-hover-go.gif" alt="Completion, hover, and Go to definition demo" />
-
-### 3. Help System
-
-Same behavior as `?topic` and `??topic` in GAP, and the demo shows `AllSmallGroups` for prefix search.
-
-<img src="./images/help.gif" alt="Help search system demo" />
-
-### 4. Running GAP and Configuring Command Line Options
-
-<img src="./images/run.gif" alt="Running GAP and configuring command line options demo" />
-
-> Note: `vscode.workspace.getWorkspaceFolder(doc.uri)` determines the terminal cwd when running a GAP file.
-> For a single-root workspace, cwd is set to the workspace root folder;
-> for a multi-root workspace, cwd is set to the workspace root folder that contains the GAP file (for nested roots, the innermost root folder is returned);
-> if the GAP file is not in any workspace, no cwd is specified and the terminal uses the VS Code default directory.
-> See the [VS Code API](https://code.visualstudio.com/api/references/vscode-api#workspace.getWorkspaceFolder) for more information.
-
-## Language Model Tools
+## Language Model Tools and MCP
 
 | Tool | Purpose |
 | --- | --- |
@@ -95,6 +67,15 @@ Same behavior as `?topic` and `??topic` in GAP, and the demo shows `AllSmallGrou
 | `list_gap_books` | Lists all GAP help book short names |
 | `gap_resolve_link` | Resolves a relative link in a GAP help file to its absolute path and target line |
 | `check_gap_syntax` | Statically checks a GAP source file for syntax errors using tree-sitter-gap |
+
+Both interfaces provide the same four tools and can be enabled or disabled independently.
+
+- **Language model tools**: available to agents in VS Code, controlled by
+  `gap.tools.enabled` and enabled by default.
+- **MCP server**: available to VS Code and external MCP clients, controlled by
+  `gap.mcp.enabled` and disabled by default.
+
+After enabling MCP in a trusted workspace, run **GAP: Copy MCP Connection Configuration** to obtain the connection configuration for external clients.
 
 ## Settings
 
@@ -108,6 +89,9 @@ Same behavior as `?topic` and `??topic` in GAP, and the demo shows `AllSmallGrou
 | `gap.terminalRoot` | `""` | Unix root for Windows drive letters. Example: `/` turns `C:\project\file.g` into `/c/project/file.g`; leave empty to use the WSL default `/mnt/` |
 | `gap.searchMode` | `prefix` | Search mode: `prefix` corresponds to `?topic`, `substring` corresponds to `??topic` |
 | `gap.diagnostics` | `true` | Show syntax error diagnostics (missing/expected tokens, unexpected syntax) from the GAP parser in the Problems panel |
+| `gap.tools.enabled` | `true` | Provide native VS Code language model tools; independent of MCP |
+| `gap.mcp.enabled` | `false` | Automatically start the authenticated local MCP server in trusted workspaces; independent of native tools |
+| `gap.mcp.port` | `0` | MCP port: `0` chooses an available port; a fixed port fails explicitly if occupied. User and workspace settings are supported |
 
 ## Commands
 
@@ -122,8 +106,10 @@ Press `Ctrl+Shift+P` or `F1` to open the Command Palette and use the following c
 | `GAP: Open GAP Reference Manual` | Open the GAP Reference Manual |
 | `GAP: Generate Completion Data` | Regenerate the completion data |
 | `GAP: Reset Completion Data` | Restore the default completion data |
+| `GAP: Copy MCP Connection Configuration` | Copy the running MCP server's URL and private authorization header |
+| `GAP: Reset MCP Access Token` | Replace the persistent token for all workspaces in this VS Code profile |
 
-These commands are also available in the editor context menu (right-click menu) of GAP files, where `GAP: Search GAP Help` and `GAP: Run GAP File` are at the top level, while the remaining commands are grouped in the **More GAP Commands** submenu.
+The editing, help, and completion data commands are also available in the editor context menu (right-click menu) of GAP files, where `GAP: Search GAP Help` and `GAP: Run GAP File` are at the top level, while the remaining commands are grouped in the **More GAP Commands** submenu. The MCP connection and token reset commands are available from the Command Palette only.
 
 ## Development
 

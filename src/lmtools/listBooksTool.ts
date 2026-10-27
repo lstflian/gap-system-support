@@ -13,14 +13,14 @@ export class ListBooksTool implements vscode.LanguageModelTool<Record<string, ne
         _options: vscode.LanguageModelToolInvocationOptions<Record<string, never>>,
         _token: vscode.CancellationToken,
     ): Promise<vscode.LanguageModelToolResult> {
-        return toolInvoke(() => this.listBooks());
+        return toolInvoke(() => this.execute(_options.input));
     }
 
     prepareInvocation(_options: vscode.LanguageModelToolInvocationPrepareOptions<Record<string, never>>): vscode.PreparedToolInvocation {
         return { invocationMessage: 'Listing the GAP help books' };
     }
 
-    private listBooks(): { books: string[] } {
+    execute(_input: Record<string, never>): { books: string[] } {
         toolTry(
             () => ensureHelpIndex(this.context),
             err => `The GAP help index could not be loaded: ${(err as Error).message}`,

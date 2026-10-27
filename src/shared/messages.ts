@@ -24,6 +24,28 @@ export const Messages = {
     loader: {
         failedToLoad: (name: string, reason: string) => `GAP: Failed to load ${name}: ${reason}`,
     },
+    tools: {
+        disabled: 'GAP: Native language model tools are disabled.',
+        invalidManifest: 'GAP: The tool definitions in the extension manifest are invalid or do not match the implementations.',
+    },
+    mcp: {
+        disabled: 'GAP: Enable "gap.mcp.enabled" to use the MCP server.',
+        untrusted: 'GAP: The MCP server is unavailable until this workspace is trusted.',
+        startFailed: (reason: string) => `GAP: Failed to start the MCP server: ${reason}`,
+        stopFailed: (reason: string) => `GAP: Failed to stop the MCP server: ${reason}`,
+        serverFailed: (reason: string) => `GAP: The MCP server failed: ${reason}`,
+        unavailable: 'GAP: The MCP server is unavailable. Check the extension log, then toggle "gap.mcp.enabled" to retry.',
+        configurationCopied: 'GAP: MCP connection configuration copied. It contains a private access token.',
+        copyFailed: (reason: string) => `GAP: Failed to copy MCP connection configuration: ${reason}`,
+        invalidCredentialStorage: 'GAP: The saved MCP credential is invalid. Run "GAP: Reset MCP Access Token" to replace it.',
+        tokenReset: 'GAP: MCP access token reset for this VS Code profile. Previous credentials no longer authorize its servers; copy updated connection configuration for external clients.',
+        resetTokenFailed: (reason: string) => `GAP: Failed to reset the MCP access token: ${reason}`,
+        requestFailed: 'GAP: The MCP request could not be completed.',
+        stopped: 'GAP: The MCP server has stopped.',
+        invalidPort: 'GAP: "gap.mcp.port" must be an integer between 0 and 65535; use 0 for automatic port allocation.',
+        portInUse: (port: number) =>
+            `MCP port ${port} is already in use. Choose another "gap.mcp.port" or use 0 for automatic port allocation.`,
+    },
     completionData: {
         generatedEmpty: 'generated data is empty',
         invalidFormat: 'invalid data format',
@@ -45,6 +67,7 @@ export const Messages = {
         docPathMissing: 'GAP: Please set "gap.docPath" to the doc/ folder of your GAP installation.',
         pkgPathMissing: 'GAP: Please set "gap.pkgPath" to the pkg/ folder of your GAP installation.',
         parserLoadFailed: 'GAP: failed to load the tree-sitter-gap parser. Check that wasm/tree-sitter-gap.wasm exists.',
+        activationFailed: (reason: string) => `GAP: Failed to initialize language features: ${reason}`,
         convertScriptFailed: (reason: string) => `failed to run convert_export.js: ${reason}`,
         convertScriptStatusFailed: (status: number | null, output: string) =>
             `convert_export.js failed with status ${status}: ${output}`,

@@ -34,6 +34,9 @@
     "documentation"
   ],
   "main": "./out/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "contributes": {
     "configurationDefaults": {
       "[gap]": {
@@ -168,6 +171,16 @@
       {
         "command": "gap.openPkgPathSetting",
         "title": "Open Pkg Path Setting",
+        "category": "GAP"
+      },
+      {
+        "command": "gap.copyMcpConfiguration",
+        "title": "Copy MCP Connection Configuration",
+        "category": "GAP"
+      },
+      {
+        "command": "gap.resetMcpToken",
+        "title": "Reset MCP Access Token",
         "category": "GAP"
       }
     ],
@@ -369,12 +382,43 @@
           "default": true,
           "order": 8,
           "description": "Show syntax error diagnostics from the GAP parser in the Problems panel."
+        },
+        "gap.tools.enabled": {
+          "type": "boolean",
+          "default": true,
+          "scope": "window",
+          "order": 9,
+          "markdownDescription": "Provide the native VS Code language model tools. Changes take effect immediately. Independent of `#gap.mcp.enabled#`; workspace settings can override user settings."
+        },
+        "gap.mcp.enabled": {
+          "type": "boolean",
+          "default": false,
+          "scope": "window",
+          "order": 10,
+          "markdownDescription": "Automatically start an authenticated, loopback-only MCP server in trusted workspaces, including windows without GAP files. Changes take effect immediately. Independent of `#gap.tools.enabled#`; workspace settings can override user settings. The server stops when this window closes."
+        },
+        "gap.mcp.port": {
+          "type": "integer",
+          "default": 0,
+          "minimum": 0,
+          "maximum": 65535,
+          "scope": "window",
+          "order": 11,
+          "markdownDescription": "MCP server port. Use `0` to let the operating system choose an available port (recommended for multiple windows), or specify a fixed port for external clients. Changing this setting restarts an enabled server without changing its persistent access token. A port already in use causes an explicit error; no alternative port is chosen."
         }
       }
     },
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "gap.mcp",
+        "label": "GAP System Support",
+        "when": "config.gap.mcp.enabled && isWorkspaceTrusted"
+      }
+    ],
     "languageModelTools": [
       {
         "name": "search_gap_help",
+        "when": "config.gap.tools.enabled",
         "displayName": "Search GAP Help",
         "icon": "$(search)",
         "userDescription": "Search the GAP help index and get line locations",
@@ -423,6 +467,7 @@
       },
       {
         "name": "list_gap_books",
+        "when": "config.gap.tools.enabled",
         "displayName": "List GAP Help Books",
         "icon": "$(book)",
         "userDescription": "List all GAP books",
@@ -439,6 +484,7 @@
       },
       {
         "name": "gap_resolve_link",
+        "when": "config.gap.tools.enabled",
         "displayName": "Resolve GAP Help Link",
         "icon": "$(link)",
         "userDescription": "Resolve a relative GAP help link to its absolute path and target line",
@@ -472,6 +518,7 @@
       },
       {
         "name": "check_gap_syntax",
+        "when": "config.gap.tools.enabled",
         "displayName": "Check GAP Syntax",
         "icon": "$(check)",
         "userDescription": "Statically check a GAP source file for syntax errors",
@@ -504,9 +551,12 @@
     "test": "node test/run-all.js"
   },
   "dependencies": {
+    "@modelcontextprotocol/node": "^2.1.2",
+    "@modelcontextprotocol/server": "^2.4.0",
     "web-tree-sitter": "^0.24.6"
   },
   "devDependencies": {
+    "@modelcontextprotocol/client": "^2.4.0",
     "@types/node": "^20.0.0",
     "@types/vscode": "1.125.0",
     "typescript": "^5.4.0"

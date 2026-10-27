@@ -55,6 +55,10 @@ const unitTests = [
     path.join('..', 'hover', 'hover.test.js'),
     path.join('..', 'definition', 'definition.test.js'),
     path.join('..', 'references', 'references.test.js'),
+    path.join('..', 'lmtools', 'tools.test.js'),
+    path.join('..', 'mcp', 'credentials.test.js'),
+    path.join('..', 'mcp', 'mcp.test.js'),
+    path.join('..', 'mcp', 'bootstrap.test.js'),
 ];
 for (const file of unitTests) {
     try {
