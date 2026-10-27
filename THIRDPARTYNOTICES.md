@@ -23,7 +23,7 @@ original MIT license texts and copyright notices:
 
 ## tree-sitter-gap
 
-The query files and parser are from tree-sitter-gap. See https://github.com/gap-system/tree-sitter-gap.
+The query files and parser are from tree-sitter-gap. See [https://github.com/gap-system/tree-sitter-gap](https://github.com/gap-system/tree-sitter-gap).
 tree-sitter-gap is licensed under the MIT License:
 
 The MIT License (MIT)
@@ -52,5 +52,5 @@ SOFTWARE.
 
 The GAP logo used in this extension is (c) Max Horn and a trademark of the
 GAP project. It is licensed under the Creative Commons Attribution-ShareAlike
-4.0 International License. See https://github.com/gap-system/gap-logo for the
-source. License: https://creativecommons.org/licenses/by-sa/4.0/
+4.0 International License. See [https://github.com/gap-system/gap-logo](https://github.com/gap-system/gap-logo) for the
+source. License: [https://creativecommons.org/licenses/by-sa/4.0/](https://creativecommons.org/licenses/by-sa/4.0/)

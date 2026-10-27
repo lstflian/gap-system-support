@@ -6,6 +6,7 @@
 2. Refuse to send a file path to the terminal when it contains characters that shells still interpret inside double quotes (`"` `“` `”` `„` `$` `` ` `` `!` `%` or control characters)
 3. Fix the terminal hanging in Bash when the workspace folder is a drive root such as `D:\`
 4. Switch drives with `cd /d` in a reused cmd terminal when the next workspace folder is on another drive
+5. Stop a cmd run terminal from running a `gap.bat` or `gap.exe` found in the workspace folder instead of the installed GAP
 
 ## 0.4.1
 

@@ -650,8 +650,10 @@ function registerGapCommands(
                 const name = runMode === 'reuse'
                     ? 'GAP'
                     : `GAP: ${doc.fileName.split(/[/\\]/).pop()}`;
+                // Stop cmd from running a gap.bat or gap.exe found in the workspace folder.
+                const env = { NoDefaultCurrentDirectoryInExePath: '1' };
                 const terminal = vscode.window.createTerminal(
-                    cwd ? { name, cwd } : { name }
+                    cwd ? { name, cwd, env } : { name, env }
                 );
 
                 terminal.show();
