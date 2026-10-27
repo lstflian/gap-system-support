@@ -9,12 +9,22 @@ export function isMcpToken(value: unknown): value is string {
     return typeof value === 'string' && /^[0-9a-f]{64}$/.test(value);
 }
 
+export interface McpCredential {
+    key: string;
+    token: string;
+}
+
 export class McpCredentials {
     private pending = Promise.resolve();
 
     constructor(private readonly context: Pick<vscode.ExtensionContext, 'globalState' | 'secrets'>) {}
 
     handlesChange(key: string): boolean {
+        // A secret notification can arrive before the corresponding Profile state.
+        return key.startsWith(TOKEN_KEY_PREFIX);
+    }
+
+    isCurrent(key: string): boolean {
         return key === this.context.globalState.get<unknown>(PROFILE_TOKEN_KEY);
     }
 
@@ -38,24 +48,34 @@ export class McpCredentials {
         return result;
     }
 
-    getToken(): Promise<string> {
+    getCredential(): Promise<McpCredential> {
         return this.enqueue(async () => {
             // SecretStorage is extension-wide; the non-secret profile marker keeps profiles separate.
-            const key = await this.storageKey();
-            let token = await this.context.secrets.get(key);
-            if (token === undefined) {
-                await this.context.secrets.store(key, randomBytes(32).toString('hex'));
-                token = await this.context.secrets.get(key);
+            for (;;) {
+                const key = await this.storageKey();
+                let token = await this.context.secrets.get(key);
+                if (!this.isCurrent(key)) continue;
+                if (token === undefined) {
+                    await this.context.secrets.store(key, randomBytes(32).toString('hex'));
+                    token = await this.context.secrets.get(key);
+                }
+                if (!this.isCurrent(key)) continue;
+                if (!isMcpToken(token)) throw new Error(Messages.mcp.invalidCredentialStorage);
+                return { key, token };
             }
-            if (!isMcpToken(token)) throw new Error(Messages.mcp.invalidCredentialStorage);
-            return token;
         });
+    }
+
+    getToken(): Promise<string> {
+        return this.getCredential().then(credential => credential.token);
     }
 
     resetToken(): Promise<void> {
         return this.enqueue(async () => {
-            const key = await this.storageKey();
+            // Switching the Profile marker also revokes credentials created by a concurrent first start.
+            const key = TOKEN_KEY_PREFIX + randomUUID();
             await this.context.secrets.store(key, randomBytes(32).toString('hex'));
+            await this.context.globalState.update(PROFILE_TOKEN_KEY, key);
         });
     }
 }

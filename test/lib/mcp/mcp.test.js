@@ -496,8 +496,7 @@ async function main() {
             peerReset.headers.Authorization === reset.headers.Authorization);
         check('peer reset invalidates the previously active credential', 401,
             (await request(peerReset.url, reset.headers)).status);
-        const [profileCredentialKey] = (await fixture.context.secrets.keys())
-            .filter(key => key.startsWith('gap.mcp.token.'));
+        const profileCredentialKey = fixture.context.globalState.get('gap.mcp.tokenKey');
         const registrationsBeforeDuplicate = state.providerRegistrations;
         await fixture.context.secrets.store(profileCredentialKey, await fixture.context.secrets.get(profileCredentialKey));
         await mcp.whenIdle();
@@ -535,7 +534,7 @@ async function main() {
         check('failed reset retains the existing valid service', true,
             afterFailure.headers.Authorization === current.headers.Authorization);
         check('failed reset does not bypass authentication', 401, (await request(afterFailure.url)).status);
-        const [credentialKey] = (await fixture.context.secrets.keys()).filter(key => key.startsWith('gap.mcp.token.'));
+        const credentialKey = fixture.context.globalState.get('gap.mcp.tokenKey');
         assert(credentialKey);
         try {
             console.error = (...args) => loggedStorageErrors.push(args);

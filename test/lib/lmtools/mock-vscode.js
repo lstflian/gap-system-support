@@ -116,6 +116,36 @@ class SecretStorage {
     }
 }
 
+function createProfileState() {
+    let stored = new Map();
+    const windows = [];
+    const notifications = [];
+    return {
+        createWindow() {
+            const cache = new Map(stored);
+            windows.push(cache);
+            return {
+                get: (key, fallback) => cache.has(key) ? cache.get(key) : fallback,
+                async update(key, value) {
+                    if (value === undefined) cache.delete(key);
+                    else cache.set(key, value);
+                    stored = new Map(cache);
+                    const snapshot = new Map(stored);
+                    notifications.push(() => {
+                        for (const window of windows) {
+                            window.clear();
+                            for (const [key, value] of snapshot) window.set(key, value);
+                        }
+                    });
+                },
+            };
+        },
+        flush() {
+            for (const notification of notifications.splice(0)) notification();
+        },
+    };
+}
+
 const user = new Map();
 const workspace = new Map();
 const configuration = new EventEmitter();
@@ -310,5 +340,5 @@ installMock();
 
 module.exports = {
     vscodeMock, state, setConfiguration, createContext, grantTrust,
-    opened, closed, changed, saved, CancellationTokenSource, Disposable, SecretStorage, createFixture,
+    opened, closed, changed, saved, CancellationTokenSource, Disposable, SecretStorage, createProfileState, createFixture,
 };

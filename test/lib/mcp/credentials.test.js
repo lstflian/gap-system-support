@@ -3,7 +3,7 @@
 const assert = require('assert/strict');
 const path = require('path');
 const os = require('os');
-const { createContext, SecretStorage } = require('../lmtools/mock-vscode');
+const { createContext, SecretStorage, createProfileState } = require('../lmtools/mock-vscode');
 const { check, section, summary } = require('../help/helpers');
 const { McpCredentials, isMcpToken } = require('../../../out/mcp/credentials');
 
@@ -44,10 +44,11 @@ async function main() {
     check('explicit reset replaces the saved token', false, reset === initial);
     check('same-profile instances observe the new token', true, await reopened.getToken() === reset);
     check('reset does not change a different profile token', true, await otherProfile.getToken() === otherToken);
-    check('another profile does not handle this profile secret changes', false, otherProfile.handlesChange(key));
+    check('profile token notifications are revalidated even with stale Profile state', true, otherProfile.handlesChange(key));
 
     section('3. Invalid saved credentials are not silently replaced');
-    await secrets.store(key, 'invalid');
+    let activeKey = context.globalState.get('gap.mcp.tokenKey');
+    await secrets.store(activeKey, 'invalid');
     const writes = secrets.writeCalls;
     await assert.rejects(() => credentials.getToken(), /saved MCP credential is invalid/);
     check('invalid secret did not cause an automatic token change', writes, secrets.writeCalls);
@@ -71,17 +72,86 @@ async function main() {
         secrets.store = store;
     }
     check('failed reset preserves the previous credential', true, await credentials.getToken() === saved);
-    await secrets.delete(key);
+    activeKey = context.globalState.get('gap.mcp.tokenKey');
+    await secrets.delete(activeKey);
     secrets.store = async () => { throw new Error('test secret create failure'); };
     try {
         await assert.rejects(() => credentials.getToken(), /test secret create failure/);
     } finally {
         secrets.store = store;
     }
-    check('creation failure never returns an unstored temporary token', undefined, await secrets.get(key));
+    check('creation failure never returns an unstored temporary token', undefined, await secrets.get(activeKey));
     check('a later retry creates a valid saved token', true, isMcpToken(await credentials.getToken()));
     for (const invalid of [undefined, '', 'Bearer token', 'x'.repeat(64), '0'.repeat(63), '0'.repeat(65)]) {
         assert.equal(isMcpToken(invalid), false);
+    }
+
+    section('5. Concurrent windows converge after delayed Profile updates');
+    const profile = createProfileState();
+    const sharedSecrets = new SecretStorage();
+    const windowA = { secrets: sharedSecrets, globalState: profile.createWindow() };
+    const windowB = { secrets: sharedSecrets, globalState: profile.createWindow() };
+    const credentialsA = new McpCredentials(windowA);
+    const credentialsB = new McpCredentials(windowB);
+    const initialCredentials = await Promise.all([credentialsA.getCredential(), credentialsB.getCredential()]);
+    profile.flush();
+    const converged = await Promise.all([credentialsA.getCredential(), credentialsB.getCredential()]);
+    check('independent window caches adopt one authoritative Profile key', true,
+        converged[0].key === converged[1].key);
+    check('converged windows use the same persistent token', true,
+        converged[0].token === converged[1].token);
+    check('obsolete first-start snapshots fail the synchronous currentness guard', true,
+        initialCredentials.every(credential => credential.key === converged[0].key || !credentialsA.isCurrent(credential.key)));
+
+    section('6. Reset before Profile propagation replaces every first-start namespace');
+    const delayedProfile = createProfileState();
+    const delayedSecrets = new SecretStorage();
+    const oldWindowA = { secrets: delayedSecrets, globalState: delayedProfile.createWindow() };
+    const oldWindowB = { secrets: delayedSecrets, globalState: delayedProfile.createWindow() };
+    const oldA = new McpCredentials(oldWindowA);
+    const oldB = new McpCredentials(oldWindowB);
+    const beforeReset = await Promise.all([oldA.getCredential(), oldB.getCredential()]);
+    await oldB.resetToken();
+    const replacement = await oldB.getCredential();
+    check('reset publishes a fresh namespace, not one of the concurrent initial namespaces', true,
+        beforeReset.every(credential => credential.key !== replacement.key));
+    delayedProfile.flush();
+    const afterReset = await Promise.all([oldA.getCredential(), oldB.getCredential()]);
+    check('a delayed window rejects all old namespace snapshots', true,
+        beforeReset.every(credential => !oldA.isCurrent(credential.key)));
+    check('both delayed windows read the explicitly reset credential', true,
+        afterReset.every(credential => credential.key === replacement.key && credential.token === replacement.token));
+
+    section('7. A Profile change during a secret read cannot return an obsolete snapshot');
+    const read = delayedSecrets.get;
+    let reading;
+    let release;
+    const readEntered = new Promise(resolve => { reading = resolve; });
+    const gate = new Promise(resolve => { release = resolve; });
+    let blocked = false;
+    delayedSecrets.get = async function (key) {
+        if (key === replacement.key && !blocked) {
+            blocked = true;
+            const oldValue = await read.call(this, key);
+            reading();
+            await gate;
+            return oldValue;
+        }
+        return read.call(this, key);
+    };
+    try {
+        const pending = oldA.getCredential();
+        await readEntered;
+        await oldB.resetToken();
+        const latest = await oldB.getCredential();
+        delayedProfile.flush();
+        release();
+        const result = await pending;
+        check('an in-flight read retries against the latest Profile namespace', true,
+            result.key === latest.key && result.token === latest.token);
+    } finally {
+        release();
+        delayedSecrets.get = read;
     }
     summary();
 }

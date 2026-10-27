@@ -57,6 +57,7 @@ const unitTests = [
     path.join('..', 'references', 'references.test.js'),
     path.join('..', 'lmtools', 'tools.test.js'),
     path.join('..', 'mcp', 'credentials.test.js'),
+    path.join('..', 'mcp', 'cross-window.test.js'),
     path.join('..', 'mcp', 'mcp.test.js'),
     path.join('..', 'mcp', 'bootstrap.test.js'),
 ];
