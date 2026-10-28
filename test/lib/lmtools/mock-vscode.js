@@ -253,6 +253,7 @@ Object.assign(vscodeMock, {
         },
     },
     env: {
+        shell: process.platform === 'win32' ? (process.env.ComSpec || 'C:\\Windows\\System32\\cmd.exe') : '/bin/sh',
         clipboard: { async writeText(value) { state.clipboard = value; } },
         async openExternal() { return true; },
     },
@@ -302,6 +303,17 @@ function grantTrust() {
 
 function createFixture() {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'gap-tools-'));
+    const previousPath = process.env.PATH;
+    const bin = path.join(root, 'bin');
+    const fakeGap = path.join(__dirname, 'fake-gap.js');
+    fs.mkdirSync(bin);
+    if (process.platform === 'win32') {
+        fs.writeFileSync(path.join(bin, 'gap.cmd'), `@echo off\r\n"${process.execPath}" "${fakeGap}" %*\r\n`);
+    } else {
+        const quote = value => `'${value.replace(/'/g, "'\\''")}'`;
+        fs.writeFileSync(path.join(bin, 'gap'), `#!/bin/sh\nexec ${quote(process.execPath)} ${quote(fakeGap)} "$@"\n`, { mode: 0o755 });
+    }
+    process.env.PATH = bin + path.delimiter + (previousPath || '');
     const context = createContext(path.join(root, 'storage'));
     const index = path.join(context.globalStorageUri.fsPath, 'data', 'helpIndex');
     const docPath = path.join(root, 'doc');
@@ -331,8 +343,13 @@ function createFixture() {
             list_gap_books: {},
             gap_resolve_link: { filePath: helpFile, relativePath: '../tut/chap1.html', anchor: 'Tutorial' },
             check_gap_syntax: { filePath: sourceFile },
+            run_gap_file: { filePath: sourceFile, outputPath: path.join(root, 'logs', 'run.txt') },
         },
-        cleanup() { fs.rmSync(root, { recursive: true, force: true }); },
+        cleanup() {
+            if (previousPath === undefined) delete process.env.PATH;
+            else process.env.PATH = previousPath;
+            fs.rmSync(root, { recursive: true, force: true });
+        },
     };
 }
 

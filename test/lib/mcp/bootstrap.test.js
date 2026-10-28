@@ -22,7 +22,7 @@ async function main() {
     try {
         section('1. Startup without GAP files stays lightweight by default');
         await extension.activate(fixture.context);
-        check('native tool implementations are available', 4, state.tools.size);
+        check('native tool implementations are available', 5, state.tools.size);
         check('no MCP provider by default', 0, state.providers.size);
         check('startup did not initialize WASM', false, parser.isParserReady());
         check('startup did not load a help index', 0, help.getHelpState().entries.length);

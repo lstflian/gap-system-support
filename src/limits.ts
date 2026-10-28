@@ -57,5 +57,9 @@ export const PARSER_MAX_PENDING_EDITS = 1000;
 /** Maximum MCP HTTP request body size in bytes, matching the SDK default. */
 export const MCP_MAX_REQUEST_BYTES = 4 * 1024 * 1024;
 
+/** Retained legacy HTTP sessions; running calls are never expired as idle. */
+export const MCP_MAX_LEGACY_SESSIONS = 64;
+export const MCP_LEGACY_SESSION_IDLE_MS = 30 * 60 * 1000;
+
 /** Recheck the window-local Profile marker; VS Code Mementos have no public change event. */
 export const MCP_CREDENTIAL_CHECK_INTERVAL_MS = 1000;

@@ -67,8 +67,9 @@ Set the following settings in the walkthroughs on the Welcome page or in the VS 
 | `list_gap_books` | Lists all GAP help book short names |
 | `gap_resolve_link` | Resolves a relative link in a GAP help file to its absolute path and target line |
 | `check_gap_syntax` | Statically checks a GAP source file for syntax errors using tree-sitter-gap |
+| `run_gap_file` | Runs one GAP file and redirects its output to a specified file |
 
-Both interfaces provide the same four tools and can be enabled or disabled independently.
+Both interfaces provide the same five tools and can be enabled or disabled independently.
 
 - **Language model tools**: available to agents in VS Code, controlled by
   `gap.tools.enabled` and enabled by default.

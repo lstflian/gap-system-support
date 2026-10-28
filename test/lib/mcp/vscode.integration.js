@@ -49,7 +49,7 @@ exports.run = async function run() {
         await extension.activate();
         const parser = require(path.join(root, 'out', 'parser', 'gapParser'));
         const nativeCount = () => vscode.lm.tools.filter(tool => names.has(tool.name)).length;
-        await waitFor(() => nativeCount() === 4, 'Default native tools were not discovered');
+        await waitFor(() => nativeCount() === 5, 'Default native tools were not discovered');
         assert.equal(parser.isParserReady(), false);
         assert.equal(!!require.cache[require.resolve(path.join(root, 'out', 'mcp', 'server'))], false);
         checks.push('default native discovery and lightweight activation');
@@ -81,7 +81,7 @@ exports.run = async function run() {
         await client.connect(new StreamableHTTPClientTransport(new URL(definition.url), {
             requestInit: { headers: definition.headers },
         }));
-        assert.equal((await client.listTools()).tools.length, 4);
+        assert.equal((await client.listTools()).tools.length, 5);
         assert((await client.callTool({ name: 'list_gap_books', arguments: {} })).structuredContent.books.length > 0);
         checks.push('workspace MCP enable and independent native disable');
 
@@ -99,16 +99,16 @@ exports.run = async function run() {
         checks.push('workbench-owned MCP startup, discovery and invocation with native tools disabled');
 
         await config.update('tools.enabled', true, vscode.ConfigurationTarget.Workspace);
-        await waitFor(() => nativeCount() === 4, 'Native tools did not reappear');
+        await waitFor(() => nativeCount() === 5, 'Native tools did not reappear');
         assert(JSON.parse((await vscode.lm.invokeTool('list_gap_books', {
             input: {}, toolInvocationToken: undefined,
         })).content[0].value).books.length > 0);
-        assert.equal((await client.listTools()).tools.length, 4);
+        assert.equal((await client.listTools()).tools.length, 5);
         checks.push('both tool surfaces enabled together');
 
         await config.update('mcp.enabled', false, vscode.ConfigurationTarget.Workspace);
         await waitFor(async () => !await portIsOpen(definition.url), 'MCP port remained open after disabling');
-        assert.equal(nativeCount(), 4);
+        assert.equal(nativeCount(), 5);
         await client.close();
         client = undefined;
         checks.push('MCP disable closes the socket without disabling native tools');
@@ -125,7 +125,7 @@ exports.run = async function run() {
 
         await config.update('tools.enabled', undefined, vscode.ConfigurationTarget.Workspace);
         await config.update('mcp.enabled', undefined, vscode.ConfigurationTarget.Workspace);
-        await waitFor(() => nativeCount() === 4, 'Removing workspace override did not restore the default');
+        await waitFor(() => nativeCount() === 5, 'Removing workspace override did not restore the default');
         assert(JSON.parse((await vscode.lm.invokeTool('list_gap_books', {
             input: {}, toolInvocationToken: undefined,
         })).content[0].value).books.length > 0);

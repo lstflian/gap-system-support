@@ -32,6 +32,29 @@ export const Messages = {
     tools: {
         disabled: 'GAP: Native language model tools are disabled.',
         invalidManifest: 'GAP: The tool definitions in the extension manifest are invalid or do not match the implementations.',
+        runUntrusted: 'GAP: Running GAP files requires a trusted workspace.',
+        runClosed: 'GAP: The GAP file runner has stopped.',
+        runPathRequired: (name: string) => `${name} must be a non-empty absolute file path without null characters.`,
+        runInputNotFile: 'GAP: filePath must refer to a readable file.',
+        runOutputNotFile: 'GAP: outputPath must refer to a file, not a directory or another special file.',
+        runSameFile: 'GAP: outputPath must not refer to the GAP source file.',
+        runOutputBusy: 'GAP: Another invocation is already writing to outputPath.',
+        runSaveFailed: (file: string) => `GAP: Could not save the modified document: ${file}`,
+        runSourceChanged: (file: string) =>
+            `GAP: filePath no longer refers to the saved document after saving. Retry with the document's path: ${file}`,
+        runNotFound: 'GAP: Could not find an executable GAP launcher on PATH.',
+        runLauncherFailed: 'GAP: GAP did not confirm startup. Check PATH and the output file for launcher errors.',
+        runInvalidProtocol: 'GAP: The shell returned an invalid GAP launcher response.',
+        runInvalidShellArgs: 'GAP: The selected WSL terminal profile must use an argument array without an embedded command.',
+        runWslCancelFailed: 'GAP: Could not obtain the WSL process group to confirm cancellation.',
+        runInterrupted: (signal: string) => `GAP: The GAP process was interrupted (${signal}); it did not finish normally.`,
+        runFailed: (reason: string) => `GAP: Could not run the GAP file: ${reason}`,
+        runInvocation: (file: string, output: string) => `Running GAP file '${file}' with output redirected to '${output}'`,
+        runConfirmationTitle: 'Run GAP file and overwrite output?',
+        runConfirmation: (file: string, output: string) =>
+            `Save any unsaved changes to '${file}', execute it with GAP --nointeract, and overwrite '${output}'. ` +
+            'GAP code can modify files and perform other actions. There is no fixed runtime limit; cancel to stop it. ' +
+            'You can read the output file while it runs. Completion does not mean the GAP program succeeded.',
     },
     mcp: {
         disabled: 'GAP: Enable "gap.mcp.enabled" to use the MCP server.',
@@ -50,6 +73,9 @@ export const Messages = {
         invalidPort: 'GAP: "gap.mcp.port" must be an integer between 0 and 65535; use 0 for automatic port allocation.',
         portInUse: (port: number) =>
             `MCP port ${port} is already in use. Choose another "gap.mcp.port" or use 0 for automatic port allocation.`,
+        runNeedsSession: 'GAP: Initialize an MCP session before running GAP files so cancellation can be routed to this invocation.',
+        sessionMissing: 'GAP: This MCP session has expired or stopped. Initialize a new connection.',
+        sessionCapacity: 'GAP: The MCP session limit has been reached. Close an existing connection and retry.',
     },
     completionData: {
         generatedEmpty: 'generated data is empty',

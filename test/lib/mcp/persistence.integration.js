@@ -32,7 +32,7 @@ exports.run = async function run() {
         await client.connect(new StreamableHTTPClientTransport(new URL(definition.url), {
             requestInit: { headers: definition.headers },
         }));
-        assert.equal((await client.listTools()).tools.length, 4);
+        assert.equal((await client.listTools()).tools.length, 5);
         assert((await client.callTool({ name: 'list_gap_books', arguments: {} })).structuredContent.books.length > 0);
         fs.writeFileSync(resultPath, JSON.stringify({
             success: true,

@@ -67,14 +67,14 @@ async function main() {
     try {
         section('1. Defaults and all four independent switch combinations');
         await mcp.whenIdle();
-        check('native tools default to four', 4, state.tools.size);
+        check('native tools default to five', 5, state.tools.size);
         check('MCP has no default provider', 0, state.providers.size);
         check('disabled MCP does not load its SDK implementation', false,
             !!require.cache[require.resolve('../../../out/mcp/server')]);
         for (const [tools, enabled] of [[false, true], [true, true], [false, false], [true, false]]) {
             setConfiguration({ 'gap.tools.enabled': tools, 'gap.mcp.enabled': enabled });
             await mcp.whenIdle();
-            check(`native count for ${tools}/${enabled}`, tools ? 4 : 0, state.tools.size);
+            check(`native count for ${tools}/${enabled}`, tools ? 5 : 0, state.tools.size);
             check(`MCP count for ${tools}/${enabled}`, enabled ? 1 : 0, state.providers.size);
             if (enabled) {
                 const config = await configuration();
@@ -86,14 +86,14 @@ async function main() {
                 }));
                 const projectedClient = await connect(projected);
                 try {
-                    check('serialized Agent Host configuration connects without resolveMcpServerDefinition', 4,
+                    check('serialized Agent Host configuration connects without resolveMcpServerDefinition', 5,
                         (await projectedClient.listTools()).tools.length);
                 } finally {
                     await projectedClient.close();
                 }
                 const client = await connect(config);
                 try {
-                    check(`MCP tools remain available for native=${tools}`, 4, (await client.listTools()).tools.length);
+                    check(`MCP tools remain available for native=${tools}`, 5, (await client.listTools()).tools.length);
                     check(`MCP book lookup for native=${tools}`, { books: ['Reference', 'Tutorial'] },
                         (await client.callTool({ name: 'list_gap_books', arguments: {} })).structuredContent);
                 } finally {
@@ -102,7 +102,7 @@ async function main() {
             }
         }
 
-        section('2. Real legacy and modern clients reuse the same four implementations');
+        section('2. Real legacy and modern clients reuse the same five implementations');
         setConfiguration({ 'gap.mcp.enabled': true });
         await mcp.whenIdle();
         const config = await configuration();
@@ -138,6 +138,10 @@ async function main() {
                 const tool = listed.find(value => value.name === contribution.name);
                 check(`${modern ? 'modern' : 'legacy'} ${tool.name} schema`, contribution.inputSchema, tool.inputSchema);
                 check(`${tool.name} MCP description`, contribution.modelDescription, tool.description);
+                check(`${tool.name} side-effect annotations`, contribution.name === 'run_gap_file'
+                    ? { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true }
+                    : { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+                tool.annotations);
                 const expected = await entries.get(tool.name).tool.execute(fixture.inputs[tool.name], token.token);
                 const result = await client.callTool({ name: tool.name, arguments: fixture.inputs[tool.name] });
                 check(`${tool.name} structured MCP result`, expected, result.structuredContent);
@@ -345,7 +349,7 @@ async function main() {
         check('failed startup publishes no provider', 0, state.providers.size);
         check('failed startup is reported to the user', true, state.messages.at(-1).message.includes('test bind failure'));
         check('failed startup is logged', true, errors.some(args => args.some(value => value?.message === 'test bind failure')));
-        check('native tools are not unregistered by MCP failure', 4, state.tools.size);
+        check('native tools are not unregistered by MCP failure', 5, state.tools.size);
         check('native tool still executes after MCP failure', { books: ['Reference', 'Tutorial'] },
             JSON.parse((await state.tools.get('list_gap_books').invoke({ input: {} }, token.token)).content[0].value));
         setConfiguration({ 'gap.mcp.enabled': false });
@@ -412,7 +416,7 @@ async function main() {
             check('port conflict has an actionable notification', true,
                 state.messages.at(-1).message.includes(`MCP port ${fixedPort} is already in use`));
             check('port conflict is logged explicitly', true, logged.length > 0);
-            check('port conflict leaves native tools available', 4, state.tools.size);
+            check('port conflict leaves native tools available', 5, state.tools.size);
         } finally {
             await new Promise((resolve, reject) => occupied.close(error => error ? reject(error) : resolve()));
         }
@@ -424,7 +428,7 @@ async function main() {
         check('configured fixed port is used exactly', String(fixedPort), new URL(fixed.url).port);
         const fixedClient = await connect(fixed);
         try {
-            check('external clients can use the published fixed-port configuration', 4, (await fixedClient.listTools()).tools.length);
+            check('external clients can use the published fixed-port configuration', 5, (await fixedClient.listTools()).tools.length);
         } finally {
             await fixedClient.close();
         }
@@ -466,7 +470,7 @@ async function main() {
         }
         const automaticClient = await connect(automatic);
         try {
-            check('returning to automatic allocation remains connectable', 4, (await automaticClient.listTools()).tools.length);
+            check('returning to automatic allocation remains connectable', 5, (await automaticClient.listTools()).tools.length);
         } finally {
             await automaticClient.close();
         }
@@ -488,7 +492,7 @@ async function main() {
         check('reset immediately rejects previously copied credentials', 401,
             (await request(reset.url, copiedBeforeReset.headers)).status);
         check('the replacement credential is accepted', 405, (await request(reset.url, reset.headers)).status);
-        check('reset leaves native tools available', 4, state.tools.size);
+        check('reset leaves native tools available', 5, state.tools.size);
         await new McpCredentials(fixture.context).resetToken();
         await mcp.whenIdle();
         const peerReset = await configuration(false);
@@ -549,11 +553,11 @@ async function main() {
         await vscode.commands.executeCommand('gap.resetMcpToken');
         await mcp.whenIdle();
         const recovered = await configuration(false);
-        check('reset recovers an invalid credential without disabling native tools', [1, 4],
+        check('reset recovers an invalid credential without disabling native tools', [1, 5],
             [state.providers.size, state.tools.size]);
         const recoveredClient = await connect(recovered);
         try {
-            check('recovered persistent credentials authorize actual tools', 4,
+            check('recovered persistent credentials authorize actual tools', 5,
                 (await recoveredClient.listTools()).tools.length);
         } finally {
             await recoveredClient.close();
@@ -565,6 +569,7 @@ async function main() {
         native.dispose();
         await mcp.stop();
         token.dispose();
+        await registry.close();
         parser.disposeAll();
         fixture.cleanup();
     }

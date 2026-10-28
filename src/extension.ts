@@ -13,7 +13,7 @@ import { GAPCompletionProvider } from './completion/completionProvider';
 import { GAPHoverProvider } from './hover/hoverProvider';
 import { GAPDefinitionProvider } from './definition/definitionProvider';
 import { GAPReferenceProvider } from './references/referenceProvider';
-import { toShellPath, resolveHelpPath, shellCdCommand } from './path';
+import { toShellPath, resolveHelpPath, shellCdCommand, getRunCwd } from './path';
 import { searchHelp } from './help/searchEngine';
 import { showLiveSearchPicker } from './help/searchPicker';
 import { showHelpPanel, refreshCurrentPage } from './help/helpPanel';
@@ -35,7 +35,7 @@ import { getErrorMessage, Messages } from './shared/messages';
 import { notifyError, notifyInfo, notifyWarning } from './shared/notify';
 import { SEMANTIC_CONTENT_LIMIT, SEMANTIC_GLOBAL_CACHE_MAX_BYTES } from './limits';
 import { LmToolsController } from './lmtools';
-import { createToolRegistry } from './lmtools/registry';
+import { createToolRegistry, ToolRegistry } from './lmtools/registry';
 import { McpController } from './mcp';
 
 interface GAPFlag {
@@ -66,6 +66,7 @@ let lastRunRoot: string | undefined;
 let rebuildHelpRunning = false;
 let lmToolsController: LmToolsController | undefined;
 let mcpController: McpController | undefined;
+let toolRegistry: ToolRegistry | undefined;
 let languageActivation: Promise<boolean> | undefined;
 let shuttingDown = false;
 
@@ -209,10 +210,10 @@ async function doRebuildHelpIndex(context: vscode.ExtensionContext): Promise<voi
 export async function activate(context: vscode.ExtensionContext) {
     shuttingDown = false;
     languageActivation = undefined;
-    const registry = createToolRegistry(context);
+    const registry = toolRegistry = createToolRegistry(context);
     lmToolsController = new LmToolsController(registry);
     mcpController = new McpController(registry, context);
-    context.subscriptions.push(lmToolsController, mcpController);
+    context.subscriptions.push(registry, lmToolsController, mcpController);
     const ensureGapFeatures = (): Promise<boolean> => {
         if (shuttingDown) return Promise.resolve(false);
         languageActivation ??= initializeGapFeatures(context).catch(error => {
@@ -630,7 +631,7 @@ function registerGapCommands(
             }
             const command = `gap ${runArguments.join(' ')} ${filePath}`.trim();
 
-            const cwd = vscode.workspace.getWorkspaceFolder(doc.uri)?.uri;
+            const cwd = getRunCwd(doc.uri);
             const cwdKey = cwd?.toString();
 
             if (runMode === 'reuse' && runTerminal) {
@@ -676,8 +677,13 @@ export async function deactivate(): Promise<void> {
         await mcpController?.stop();
         await languageActivation;
     } finally {
-        disposeAll();
-        lmToolsController = undefined;
-        mcpController = undefined;
+        try {
+            await toolRegistry?.close();
+        } finally {
+            disposeAll();
+            lmToolsController = undefined;
+            mcpController = undefined;
+            toolRegistry = undefined;
+        }
     }
 }

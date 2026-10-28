@@ -3,6 +3,7 @@ import { SearchHelpTool } from './searchTool';
 import { ListBooksTool } from './listBooksTool';
 import { ResolveLinkTool } from './resolveLinkTool';
 import { CheckSyntaxTool } from './checkSyntaxTool';
+import { RunFileTool } from './runFileTool';
 import { Messages } from '../shared/messages';
 
 export interface ToolMetadata {
@@ -14,12 +15,19 @@ export interface ToolMetadata {
 
 export interface ToolEntry<I extends object, O extends object> {
     metadata: ToolMetadata;
+    annotations?: {
+        readOnlyHint: boolean;
+        destructiveHint: boolean;
+        idempotentHint: boolean;
+        openWorldHint: boolean;
+    };
     tool: vscode.LanguageModelTool<I> & { execute(input: I, token: vscode.CancellationToken): O | Promise<O> };
 }
 
-export interface ToolRegistry {
+export interface ToolRegistry extends vscode.Disposable {
     readonly version: string;
     forEach(visitor: <I extends object, O extends object>(entry: ToolEntry<I, O>) => void): void;
+    close(): Promise<void>;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -49,16 +57,24 @@ export function createToolRegistry(context: vscode.ExtensionContext): ToolRegist
     function entry<I extends object, O extends object>(
         name: string,
         tool: ToolEntry<I, O>['tool'],
+        annotations?: ToolEntry<I, O>['annotations'],
     ): ToolEntry<I, O> {
         const definition = metadata.get(name);
         if (!definition) throw new Error(Messages.tools.invalidManifest);
         metadata.delete(name);
-        return { metadata: definition, tool };
+        return { metadata: definition, tool, annotations };
     }
     const search = entry('search_gap_help', new SearchHelpTool(context));
     const books = entry('list_gap_books', new ListBooksTool(context));
     const resolve = entry('gap_resolve_link', new ResolveLinkTool(context));
     const syntax = entry('check_gap_syntax', new CheckSyntaxTool(context));
+    const runTool = new RunFileTool();
+    const run = entry('run_gap_file', runTool, {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: false,
+        openWorldHint: true,
+    });
     if (metadata.size) throw new Error(Messages.tools.invalidManifest);
     return {
         version: manifest.version,
@@ -67,6 +83,9 @@ export function createToolRegistry(context: vscode.ExtensionContext): ToolRegist
             visitor(books);
             visitor(resolve);
             visitor(syntax);
+            visitor(run);
         },
+        dispose: () => runTool.dispose(),
+        close: () => runTool.close(),
     };
 }

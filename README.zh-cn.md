@@ -67,8 +67,9 @@ source ~/.bashrc
 | `list_gap_books` | 列出所有 GAP 帮助书籍（books）的简称 |
 | `gap_resolve_link` | 将 GAP 帮助文件中的相对链接解析为绝对路径和目标行 |
 | `check_gap_syntax` | 使用 tree-sitter-gap 静态检查 GAP 源文件的语法错误 |
+| `run_gap_file` | 运行一个 GAP 文件，并将输出重定向到指定文件 |
 
-两种入口提供相同的四个工具，开关互不影响。
+两种入口提供相同的五个工具，开关互不影响。
 
 - **语言模型工具**：供 VS Code 内的 agent 调用，由 `gap.tools.enabled` 控制，默认开启。
 - **MCP 服务**：供 VS Code 和外部 MCP 客户端调用，由 `gap.mcp.enabled` 控制，默认关闭。

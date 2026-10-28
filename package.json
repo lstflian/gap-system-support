@@ -527,7 +527,7 @@
         "tags": [
           "code-analysis"
         ],
-        "modelDescription": "Statically checks GAP source files for syntax errors using tree-sitter-gap.\n\nUse this tool after creating or modifying a GAP source file, before running it.\n\nThe parser reports locations after error recovery, so they may not point to the root cause. A `Missing \"X\"` entry means the parser required `X` here but it is absent (e.g. a forgotten `;`); an `Unexpected syntax` entry often follows an unclosed construct near the reported location. If a reported location does not appear to explain the error, inspect the surrounding code context.\n\nThis tool does not execute GAP code or perform logic checks.\n\nInput: { \"filePath\": string } — filePath must be the absolute path of the GAP source file to check.\n\nResponse: { \"syntaxValid\": boolean, \"diagnostics\": [ { \"severity\": \"error\", \"line\": int, \"column\": int, \"message\": string } ] }\n\n- line and column are 1-based positions of the diagnostic range start.\n- diagnostics is empty when syntaxValid is true.",
+        "modelDescription": "Statically checks GAP source files for syntax errors using tree-sitter-gap.\n\nUse this tool after creating or modifying a GAP source file, before running it.\n\nThe parser reports locations after error recovery, so they may not point to the root cause. A `Missing \"X\"` entry means the parser required `X` here but it is absent (e.g. a forgotten `;`); an `Unexpected syntax` entry often follows an unclosed construct near the reported location. If a reported location does not appear to explain the error, inspect the surrounding code context.\n\nThis tool provides preliminary static syntax checking only. It does not execute GAP code or perform semantic or logic checks, and is not a complete GAP interpreter validation or runtime diagnostic. `syntaxValid: true` means only that tree-sitter-gap reported no syntax errors; it does not guarantee that GAP itself will parse or execute the file without errors. Undefined variables, type errors, missing packages, and environment-dependent failures may still occur.\n\nInput: { \"filePath\": string } — filePath must be the absolute path of the GAP source file to check.\n\nResponse: { \"syntaxValid\": boolean, \"diagnostics\": [ { \"severity\": \"error\", \"line\": int, \"column\": int, \"message\": string } ] }\n\n- line and column are 1-based positions of the diagnostic range start.\n- diagnostics is empty when syntaxValid is true.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -539,6 +539,37 @@
           "required": [
             "filePath"
           ]
+        }
+      },
+      {
+        "name": "run_gap_file",
+        "when": "config.gap.tools.enabled && isWorkspaceTrusted",
+        "displayName": "Run GAP File",
+        "icon": "$(play)",
+        "userDescription": "Run one GAP file and redirect its output to a file",
+        "toolReferenceName": "gapRunFile",
+        "canBeReferencedInPrompt": true,
+        "tags": [
+          "code-execution"
+        ],
+        "modelDescription": "Runs exactly one GAP source file with GAP --nointeract in an independent process, in a trusted workspace. GAP must be available on PATH in the extension host or the selected Windows WSL/bash environment. Does not inherit the interactive run command's GAP flags or reuse its terminal. Saves unsaved changes if the file is open in the editor. Uses the file's workspace root as cwd; if it has no workspace root, no cwd is explicitly set.\n\nInput: { \"filePath\": string, \"outputPath\": string } — both must be absolute file paths. Creates missing output parent directories and OVERWRITES an existing output file. Standard output and standard error are continuously redirected to outputPath while GAP runs, not collected until the end. You can independently read your specified outputPath while this invocation is pending to inspect live output; this tool does not return the log.\n\nThere is NO fixed runtime timeout: the invocation waits until the process exits or it is cancelled. Cancellation stops this invocation's process tree. Each invocation runs only one file; different output files may run concurrently, but concurrent writes to the same output file are rejected.\n\nResponse on normal process completion: { \"completed\": true }. Completion does NOT mean the GAP program succeeded. GAP-internal errors and nonzero exit codes are not interpreted as program success or failure; inspect outputPath yourself. Invalid paths, save/write/startup failures, or interruption are reported as tool errors rather than normal completion.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "filePath": {
+              "type": "string",
+              "description": "Absolute path of the single GAP source file to execute. Saves unsaved changes if this file is open."
+            },
+            "outputPath": {
+              "type": "string",
+              "description": "Absolute path of the output file. Overwrites it, creates missing parent directories, and writes stdout/stderr live. Read this path independently while execution is pending."
+            }
+          },
+          "required": [
+            "filePath",
+            "outputPath"
+          ],
+          "additionalProperties": false
         }
       }
     ]

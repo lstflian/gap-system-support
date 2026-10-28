@@ -7,7 +7,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 
 /** Return whether the terminal shell is bash on Windows or WSL. */
-function isBashOnWindows(): boolean {
+export function isBashOnWindows(): boolean {
     if (os.platform() !== 'win32') return false;
     const shell = vscode.env.shell.toLowerCase();
     return (shell.includes('bash') && shell.includes('windows')) || shell.includes('wsl');
@@ -42,11 +42,8 @@ function toCustomRoot(path: string, root: string): string {
 // ! (bash and zsh history), % (cmd) and control characters such as newline.
 const UNSAFE_SHELL_CHARS = /["\u201C\u201D\u201E$`!%\x00-\x1F\x7F]/;
 
-/**
- * Return the file path as a quoted string for the terminal.
- * Return undefined when the path holds a character that the quotes cannot protect.
- */
-export function toShellPath(fsPath: string, uri?: vscode.Uri): string | undefined {
+/** Convert to the configured GAP runtime's path syntax, without shell quoting. */
+export function toRuntimePath(fsPath: string, uri?: vscode.Uri): string {
     const root = vscode.workspace.getConfiguration('gap', uri).get<string>('terminalRoot');
     let path = fsPath;
     if (root) {
@@ -56,10 +53,24 @@ export function toShellPath(fsPath: string, uri?: vscode.Uri): string | undefine
         // Use the default WSL root.
         path = toWslPath(fsPath);
     }
+    return path;
+}
+
+export function quoteShellPath(path: string): string | undefined {
     if (UNSAFE_SHELL_CHARS.test(path)) return undefined;
     // Double the trailing backslashes of a drive root such as D:\,
     // otherwise bash reads the last one as an escaped closing quote.
     return `"${path.replace(/\\+$/, '$&$&')}"`;
+}
+
+/** Return the file path as a safely quoted terminal argument. */
+export function toShellPath(fsPath: string, uri?: vscode.Uri): string | undefined {
+    return quoteShellPath(toRuntimePath(fsPath, uri));
+}
+
+/** Match the run command's choice of workspace root, including multi-root workspaces. */
+export function getRunCwd(uri: vscode.Uri): vscode.Uri | undefined {
+    return vscode.workspace.getWorkspaceFolder(uri)?.uri;
 }
 
 /**

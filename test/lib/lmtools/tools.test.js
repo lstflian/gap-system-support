@@ -26,8 +26,10 @@ async function main() {
             manifest.contributes.configuration.properties['gap.mcp.enabled'].scope,
         ]);
         check('all native contributions have a condition', true,
-            manifest.contributes.languageModelTools.every(tool => tool.when === 'config.gap.tools.enabled'));
-        check('four shared implementations', 4, entries.size);
+            manifest.contributes.languageModelTools.every(tool => tool.when.includes('config.gap.tools.enabled')));
+        check('five shared implementations', 5, entries.size);
+        check('running requires trust in the contribution condition', 'config.gap.tools.enabled && isWorkspaceTrusted',
+            entries.get('run_gap_file') && manifest.contributes.languageModelTools.find(tool => tool.name === 'run_gap_file').when);
         for (const contribution of manifest.contributes.languageModelTools) {
             const metadata = entries.get(contribution.name).metadata;
             check(`${contribution.name} uses manifest schema`, contribution.inputSchema, metadata.inputSchema);
@@ -40,7 +42,7 @@ async function main() {
 
         section('2. Registration, single-flight parser initialization and results');
         controller = new LmToolsController(registry);
-        check('four native tools registered', 4, state.tools.size);
+        check('five native tools registered', 5, state.tools.size);
         const first = parser.initGapParser(fixture.context);
         check('concurrent parser initialization shares one promise', true, first === parser.initGapParser(fixture.context));
         await first;
@@ -72,9 +74,9 @@ async function main() {
         await assert.rejects(() => stale.invoke({ input: {} }, token.token), /disabled/);
         assert.throws(() => stale.prepareInvocation({ input: {} }, token.token), /disabled/);
         setConfiguration({ 'gap.tools.enabled': true });
-        check('re-enabling registers all four tools', 4, state.tools.size);
+        check('re-enabling registers all five tools', 5, state.tools.size);
         setConfiguration({ 'gap.tools.enabled': true });
-        check('identical config events do not duplicate registrations', registrationCount + 4, state.toolRegistrations);
+        check('identical config events do not duplicate registrations', registrationCount + 5, state.toolRegistrations);
         await assert.rejects(() => stale.invoke({ input: {} }, token.token), /disabled/);
         const cancelled = new CancellationTokenSource();
         cancelled.cancel();
@@ -124,6 +126,7 @@ async function main() {
     } finally {
         controller?.dispose();
         token.dispose();
+        await registry.close();
         parser.disposeAll();
         fixture.cleanup();
     }
