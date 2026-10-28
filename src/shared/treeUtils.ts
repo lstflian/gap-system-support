@@ -2,7 +2,7 @@
  * Shared syntax tree utilities.
  */
 
-import type { SyntaxNode } from 'web-tree-sitter';
+import type { Node as SyntaxNode } from 'web-tree-sitter';
 
 /** Check whether the node or any ancestor up to source_file is an ERROR node. */
 export function hasErrorAncestor(node: SyntaxNode): boolean {

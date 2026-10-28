@@ -1,6 +1,6 @@
 /** Shared gating for function and GAP symbol names. */
 
-import type { SyntaxNode } from 'web-tree-sitter';
+import type { Node as SyntaxNode } from 'web-tree-sitter';
 
 const DECLARATION_CALLS = new Set([
     'DeclareGlobalFunction',

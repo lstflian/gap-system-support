@@ -3,7 +3,7 @@
  */
 
 import * as vscode from 'vscode';
-import Parser, { type Language, type Tree, type Edit, type Point, type Range as TreeRange } from 'web-tree-sitter';
+import { Parser, Language, type Tree, type Edit, type Point, type Range as TreeRange } from 'web-tree-sitter';
 import { PARSER_MAX_DOCS, PARSER_MAX_IDLE_MS, PARSER_MAX_PENDING_EDITS, PARSER_MAX_TOTAL_TEXT } from '../limits';
 import { onError, onErrorAsync } from '../shared/guarded';
 import { Messages } from '../shared/messages';
@@ -92,7 +92,7 @@ export function initGapParser(context: vscode.ExtensionContext): Promise<void> {
         const wasmPath = vscode.Uri.joinPath(context.extensionUri, 'wasm', 'tree-sitter-gap.wasm').fsPath;
 
         await Parser.init();
-        const language = await Parser.Language.load(wasmPath);
+        const language = await Language.load(wasmPath);
         if (generation !== parserGeneration) throw new vscode.CancellationError();
         gapLanguage = language;
         gapParser = new Parser();
@@ -118,12 +118,17 @@ export function getGapLanguage(): Language {
     return gapLanguage;
 }
 
-/** Stateless full parse. */
-export function parseGapCode(code: string): Tree {
+/** Parse GAP code, optionally reusing an edited tree. */
+export function parseGapCode(code: string, oldTree?: Tree): Tree {
     if (!gapParser) {
         throw new Error(Messages.parser.parserNotInitialized);
     }
-    return gapParser.parse(code);
+    const tree = gapParser.parse(code, oldTree);
+    if (!tree) {
+        gapParser.reset();
+        throw new Error(Messages.parser.parseFailed);
+    }
+    return tree;
 }
 
 /** Return whether the parser is ready. */
@@ -306,11 +311,8 @@ export function getDocumentTreeSnapshot(document: vscode.TextDocument, code?: st
         const oldHasError = oldTree.rootNode.hasError;
         let newTree: Tree | null = null;
         const result = onError((): { tree: Tree; change: DocumentTreeChange } => {
-            if (!gapParser) {
-                throw new Error(Messages.parser.parserNotInitialized);
-            }
             for (const edit of pendingEdits) oldTree.edit(edit);
-            newTree = gapParser.parse(newText, oldTree);
+            newTree = parseGapCode(newText, oldTree);
             const changedRanges = oldTree.getChangedRanges(newTree).map(cloneRange);
             const generation = nextGeneration();
             const change: DocumentTreeChange = {

@@ -9,7 +9,7 @@ import { ReadChainFileCache, resolveReadBaseDir, resolveReadTarget } from '../sh
 import { LruCache } from '../shared/lruCache';
 import { LazyQuery } from '../shared/lazyQuery';
 import { recordEntryLookupName } from '../shared/functionName';
-import type { QueryMatch, SyntaxNode, Tree } from 'web-tree-sitter';
+import type { QueryMatch, Node as SyntaxNode, Tree } from 'web-tree-sitter';
 import { HOVER_DOCUMENT_CACHE_MAX_ENTRIES, READ_CONTENT_LIMIT } from '../limits';
 
 const WORKSPACE_SYMBOL_CACHE_MS = 5000;
@@ -650,7 +650,9 @@ export class GAPDefinitionResolver {
                     }
                 }
             }
-            for (const child of node.namedChildren) collectRecordFields(child);
+            for (const child of node.namedChildren) {
+                if (child) collectRecordFields(child);
+            }
         };
         collectRecordFields(rootNode);
 
@@ -758,14 +760,14 @@ export class GAPDefinitionResolver {
                     let nameNode: SyntaxNode | null = null;
                     if (role === 'declaration' &&
                         firstArgument.type === 'string') {
-                        nameNode = firstArgument.namedChildren.find(child => child.type === 'string_content') ?? null;
+                        nameNode = firstArgument.namedChildren.find(child => child?.type === 'string_content') ?? null;
                     } else if (role === 'implementation') {
                         if ((functionName === 'BindGlobal' ||
                             functionName === 'BindConstant' ||
                             functionName === 'BindThreadLocalConstructor') &&
                             firstArgument.type === 'string') {
                             nameNode = firstArgument.namedChildren.find(
-                                child => child.type === 'string_content',
+                                child => child?.type === 'string_content',
                             ) ?? null;
                         } else {
                             nameNode = firstArgument.type === 'identifier'
@@ -797,7 +799,9 @@ export class GAPDefinitionResolver {
                     }
                 }
             }
-            for (const child of node.namedChildren) visit(child);
+            for (const child of node.namedChildren) {
+                if (child) visit(child);
+            }
         };
 
         visit(rootNode);

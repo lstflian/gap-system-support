@@ -2,7 +2,7 @@
  * Builds the scope table and token entries from combined query matches.
  */
 
-import type { QueryMatch, SyntaxNode } from 'web-tree-sitter';
+import type { QueryMatch, Node as SyntaxNode } from 'web-tree-sitter';
 import { posOuter, byteKey } from '../shared/keys';
 import { CAPTURE_MAP, isDefinitionLikeCapture } from './captureMap';
 import type { TokenMapping } from './captureMap';
@@ -63,8 +63,8 @@ function singlePassCollect(
             if (rawMapping && isDefinitionLikeCapture(name)) {
                 const bkey = byteKey(node.startIndex, node.endIndex);
                 const existingIdx = finalIndex.get(bkey);
-                if (!existingIdx || match.pattern > existingIdx.pattern) {
-                    finalIndex.set(bkey, { pattern: match.pattern, mapping: rawMapping, captureName: name });
+                if (!existingIdx || match.patternIndex > existingIdx.pattern) {
+                    finalIndex.set(bkey, { pattern: match.patternIndex, mapping: rawMapping, captureName: name });
                 }
             }
 
@@ -80,10 +80,10 @@ function singlePassCollect(
             const ok = posOuter(sl, sc);
 
             if (!rawMapping) {
-                putNullToken(nullMap, ok, match.pattern, node, sl, sc, el, ec, name);
+                putNullToken(nullMap, ok, match.patternIndex, node, sl, sc, el, ec, name);
                 continue;
             }
-            putToken(tokenMap, ok, match.pattern, node, sl, sc, el, ec, rawMapping, name);
+            putToken(tokenMap, ok, match.patternIndex, node, sl, sc, el, ec, rawMapping, name);
         }
     }
 
@@ -260,10 +260,10 @@ function collectViewportTokens(
 
             if (!rawMapping) {
                 if (!includeNullTokens) continue;
-                putNullToken(nullMap, ok, match.pattern, node, sl, sc, el, ec, name);
+                putNullToken(nullMap, ok, match.patternIndex, node, sl, sc, el, ec, name);
                 continue;
             }
-            putToken(tokenMap, ok, match.pattern, node, sl, sc, el, ec, rawMapping, name);
+            putToken(tokenMap, ok, match.patternIndex, node, sl, sc, el, ec, rawMapping, name);
         }
     }
 

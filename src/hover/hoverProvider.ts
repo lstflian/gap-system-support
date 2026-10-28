@@ -13,7 +13,7 @@ import { resolveHelpPath } from '../path';
 import { BUILTIN_FUNCTION_NAMES } from '../completion/builtinNames';
 import { LruCache } from '../shared/lruCache';
 import { HOVER_HELP_DESCRIPTION_CACHE_MAX_ENTRIES } from '../limits';
-import type { SyntaxNode } from 'web-tree-sitter';
+import type { Node as SyntaxNode } from 'web-tree-sitter';
 import * as fs from 'fs';
 
 const FALLBACK_FORMS = [
@@ -86,7 +86,7 @@ function syntaxNodeAt(root: SyntaxNode, offset: number): SyntaxNode[] {
     return [
         root.descendantForIndex(clamped),
         root.descendantForIndex(Math.max(0, clamped - 1)),
-    ];
+    ].filter((node): node is SyntaxNode => node !== null);
 }
 
 function keywordNodeAt(root: SyntaxNode, offset: number): SyntaxNode | null {
@@ -120,7 +120,7 @@ function selectorExpression(node: SyntaxNode): SyntaxNode {
     while (current.parent &&
         (current.parent.type === 'record_selector' ||
             current.parent.type === 'component_selector') &&
-        current.parent.namedChildren.some(child => child.id === current.id)) {
+        current.parent.namedChildren.some(child => child?.id === current.id)) {
         current = current.parent;
     }
     return current;

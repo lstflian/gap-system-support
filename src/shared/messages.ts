@@ -22,6 +22,7 @@ export const Messages = {
     parser: {
         languageNotLoaded: 'GAP language is not loaded. Call initGapParser() first.',
         parserNotInitialized: 'GAP parser is not initialized. Call initGapParser() first.',
+        parseFailed: 'GAP parser did not produce a syntax tree.',
     },
     terminal: {
         timeout: 'timeout',

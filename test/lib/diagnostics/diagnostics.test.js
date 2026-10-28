@@ -14,6 +14,7 @@ const {
     collectErrorEntries,
     computeMissingStart,
 } = require('../../../out/diagnostics/diagnosticsProvider');
+const { checkSyntaxText } = require('../../../out/lmtools/toolCore');
 
 /** Parse code and collect error entries. */
 function errorsOf(code) {
@@ -49,6 +50,13 @@ async function main() {
         'while true do\n  break;\nod;',
         'repeat\n  x := 1;\nuntil x = 1;',
         '# just a comment\n',
+        'x := (2^3)^4;',
+        'x := 2^(3^4);',
+        'x := [1, ~];',
+        'x := rec(a := ~);',
+        '\\od := 1;',
+        'f := function(x)\n  while x > 0 do\n    if x = 1 then break; fi;\n    x := x - 1;\n    continue;\n  od;\n  return x;\nend;',
+        's := "中文😀";\r\nx := [1,2];\r\n',
     ];
     for (const code of clean) {
         const es = errorsOf(code);
@@ -96,12 +104,49 @@ async function main() {
     check('multiple sibling ERROR nodes are all reported', true,
         es.filter(e => e.kind === 'unexpected').length >= 2);
 
-    section('6. Nested ERRORs collapse to the outer node');
+    section('6. Nested ERRORs preserve distinct ranges');
 
-    // Only the outermost ERROR is reported; nested ones share the same root cause.
+    // Recovery can place distinct ERROR nodes inside another ERROR.
     es = errorsOf('if x\n  y := 1;\nfi;\n');
-    check('missing then collapsed: no nested duplicate unexpected', true,
-        es.filter(e => e.kind === 'unexpected').length <= 1);
+    check('outer and nested ERROR ranges are both reported', [[0, 13], [7, 10]],
+        es.filter(e => e.kind === 'unexpected').map(e => [e.startIndex, e.endIndex]));
+
+    // The scanner can wrap an invalid character in two identical ERROR ranges.
+    es = errorsOf('[1]!![1];\n');
+    check('same-range ERROR nodes produce one diagnostic', [[3, 4]],
+        es.filter(e => e.kind === 'unexpected').map(e => [e.startIndex, e.endIndex]));
+
+    const errorTree = parseGapCode('if x then');
+    try {
+        es = collectErrorEntries(errorTree.rootNode.firstNamedChild, 'if x then');
+        check('an ERROR passed as the root is reported', [[0, 9]],
+            es.filter(e => e.kind === 'unexpected').map(e => [e.startIndex, e.endIndex]));
+    } finally {
+        errorTree.delete();
+    }
+
+    section('7. Missing tokens inside ERROR nodes');
+
+    // Current upstream recovers this local declaration with nested ERRORs,
+    // rather than the MISSING semicolon produced by the previous WASM.
+    es = errorsOf('f := function()\nlocal x\nx := ;\n');
+    check('upstream local recovery preserves both ERROR ranges', [[0, 30], [24, 28]],
+        es.filter(e => e.kind === 'unexpected').map(e => [e.startIndex, e.endIndex]));
+    check('local recovery does not invent a missing semicolon', false, hasMissing(es, ';'));
+
+    const nestedMissing = [
+        ['if x > 0 then\ny := [1,2]\nelse\ny := rec(a:=1);\n;\n', ';'],
+        ['if true then\n  x := ;\n  y := ;\n', 'identifier'],
+        ['if x > 0 then\ny := [1,2;\nelse\ny := rec(a:=1);\n;\n', ']'],
+    ];
+    for (const [code, token] of nestedMissing) {
+        es = errorsOf(code);
+        check(`outer ERROR remains visible with missing ${token}`, true, hasUnexpected(es));
+        check(`missing ${token} inside ERROR is reported`, true, hasMissing(es, token));
+        const result = checkSyntaxText(code);
+        check(`shared syntax tool reports missing ${token}`, true,
+            !result.syntaxValid && result.diagnostics.some(d => d.message === `Missing "${token}"`));
+    }
 
     section('8. computeMissingStart offsets');
 

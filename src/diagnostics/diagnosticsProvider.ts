@@ -3,7 +3,7 @@
  */
 
 import * as vscode from 'vscode';
-import { type SyntaxNode } from 'web-tree-sitter';
+import { type Node as SyntaxNode } from 'web-tree-sitter';
 import { getDocumentTreeSnapshot, isParserReady } from '../parser/gapParser';
 import { tryValue } from '../shared/guarded';
 
@@ -23,33 +23,34 @@ export interface ErrorEntry {
     snippet: string;
 }
 
-/** Walk the tree, collecting `isError` and `isMissing` nodes. */
+/** Collect parser errors, collapsing only ERROR nodes with identical ranges. */
 export function collectErrorEntries(rootNode: SyntaxNode, code: string): ErrorEntry[] {
     const entries: ErrorEntry[] = [];
-    visit(rootNode, code, entries);
+    visit(rootNode, code, entries, new Set<string>());
     return entries;
 }
 
-function visit(node: SyntaxNode, code: string, entries: ErrorEntry[]): void {
+function visit(node: SyntaxNode, code: string, entries: ErrorEntry[], unexpectedRanges: Set<string>): void {
+    if (!node.hasError) {
+        return; // Clean subtree, pruned.
+    }
+    if (node.isMissing) {
+        entries.push(missingEntry(node, code));
+        return; // Missing nodes are leaves.
+    }
+    if (node.isError) {
+        const key = `${node.startIndex}:${node.endIndex}`;
+        if (!unexpectedRanges.has(key)) {
+            unexpectedRanges.add(key);
+            entries.push(unexpectedEntry(node, code));
+        }
+        // Recovery can leave distinct ERRORs and MISSING tokens inside this node.
+    }
     for (let i = 0; i < node.childCount; i++) {
         const child = node.child(i);
-        if (!child) {
-            continue;
+        if (child) {
+            visit(child, code, entries, unexpectedRanges);
         }
-        if (!child.hasError) {
-            continue; // Clean subtree, pruned.
-        }
-        if (child.isMissing) {
-            entries.push(missingEntry(child, code));
-            // Missing nodes are leaves by construction, nothing below.
-            continue;
-        }
-        if (child.isError) {
-            entries.push(unexpectedEntry(child, code));
-            // Do not descend: nested ERRORs share the same root cause.
-            continue;
-        }
-        visit(child, code, entries);
     }
 }
 

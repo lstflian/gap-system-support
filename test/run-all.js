@@ -51,6 +51,7 @@ for (let i = 0; i < gapFiles.length; i++) {
 const unitTests = [
     'search.test.js',
     'chooser.test.js',
+    path.join('..', 'parser', 'parser.test.js'),
     path.join('..', 'diagnostics', 'diagnostics.test.js'),
     path.join('..', 'hover', 'hover.test.js'),
     path.join('..', 'definition', 'definition.test.js'),

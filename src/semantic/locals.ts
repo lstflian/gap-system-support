@@ -2,7 +2,7 @@
  * Locals scope table: definitions, scopes and reference resolution.
  */
 
-import type { SyntaxNode } from 'web-tree-sitter';
+import type { Node as SyntaxNode } from 'web-tree-sitter';
 import { byteKey } from '../shared/keys';
 import type { TokenMapping } from './captureMap';
 

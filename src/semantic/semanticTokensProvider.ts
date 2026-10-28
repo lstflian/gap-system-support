@@ -5,7 +5,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { parseGapCode, getDocumentTreeSnapshot, isParserReady } from '../parser/gapParser';
-import type { SyntaxNode } from 'web-tree-sitter';
+import type { Node as SyntaxNode } from 'web-tree-sitter';
 import { legend } from './captureMap';
 import { collectTokenEntries, collectTokenEntriesInRangeCached, buildCollectGlobal, filterViewportMatches, filterTokenEntriesInRange } from './collect';
 import type { CollectGlobal } from './collect';

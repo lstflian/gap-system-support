@@ -3,7 +3,7 @@
  * Keeps a lightweight topology and merges only dirty top levels after edits.
  */
 
-import type { Edit, QueryMatch, SyntaxNode } from 'web-tree-sitter';
+import type { Edit, QueryMatch, Node as SyntaxNode } from 'web-tree-sitter';
 import type { DocumentTreeChange } from '../parser/gapParser';
 import { CAPTURE_MAP, isDefinitionLikeCapture } from './captureMap';
 import type { TokenMapping } from './captureMap';
@@ -194,10 +194,10 @@ function buildIndexParts(matches: QueryMatch[]): IndexParts {
 
             const key = byteKey(range.startIndex, range.endIndex);
             const existing = mappingByRange.get(key);
-            if (!existing || match.pattern > existing.pattern) {
+            if (!existing || match.patternIndex > existing.pattern) {
                 mappingByRange.set(key, {
                     ...range,
-                    pattern: match.pattern,
+                    pattern: match.patternIndex,
                     mapping,
                     captureName: name,
                 });
@@ -656,8 +656,8 @@ function topLevelNodeAt(rootNode: SyntaxNode, index: number): SyntaxNode | null 
     let current: SyntaxNode | null = rootNode.namedDescendantForIndex(
         Math.min(Math.max(0, index), rootNode.endIndex - 1),
     );
-    while (current.parent && current.parent.type !== 'source_file') current = current.parent;
-    return current.parent?.type === 'source_file' ? current : null;
+    while (current?.parent && current.parent.type !== 'source_file') current = current.parent;
+    return current?.parent?.type === 'source_file' ? current : null;
 }
 
 function partsForTopLevel(index: GlobalCaptureIndex, topLevel: TopLevelRange): IndexParts {

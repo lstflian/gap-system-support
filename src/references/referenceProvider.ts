@@ -1,7 +1,7 @@
 /** Provide native Find All References and Peek References for GAP symbols. */
 
 import * as vscode from 'vscode';
-import type { SyntaxNode } from 'web-tree-sitter';
+import type { Node as SyntaxNode } from 'web-tree-sitter';
 import { getDocumentTree, isParserReady } from '../parser/gapParser';
 import { GAPDefinitionResolver } from '../hover/definitionResolver';
 import type { ResolvedDefinition } from '../hover/definitionResolver';
@@ -205,7 +205,9 @@ export class GAPReferenceProvider implements vscode.ReferenceProvider {
                     else symbols.set(name, [node]);
                 }
             }
-            for (const child of node.namedChildren) visit(child);
+            for (const child of node.namedChildren) {
+                if (child) visit(child);
+            }
         };
         visit(tree.rootNode);
         this.symbolIndexCache.set(key, { version: document.version, symbols });

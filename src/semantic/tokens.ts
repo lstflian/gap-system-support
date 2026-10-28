@@ -2,7 +2,7 @@
  * Token structures and the overlap split helpers.
  */
 
-import type { SyntaxNode } from 'web-tree-sitter';
+import type { Node as SyntaxNode } from 'web-tree-sitter';
 import type { TokenMapping } from './captureMap';
 
 /** One final token entry, already split into segments on one line. */

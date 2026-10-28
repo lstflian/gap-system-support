@@ -2,7 +2,7 @@
  * Lazy syntax query: stores the query text, compiles on first use.
  */
 
-import type { Query } from 'web-tree-sitter';
+import { Query } from 'web-tree-sitter';
 import { getGapLanguage } from '../parser/gapParser';
 
 export class LazyQuery {
@@ -17,7 +17,7 @@ export class LazyQuery {
     /** Get the compiled query, compiling it on first use. */
     get(): Query {
         if (!this.query) {
-            this.query = getGapLanguage().query(this.queryText);
+            this.query = new Query(getGapLanguage(), this.queryText);
         }
         return this.query;
     }

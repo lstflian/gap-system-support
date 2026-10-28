@@ -6,7 +6,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { getDocumentTree, isParserReady } from '../parser/gapParser';
-import type { QueryMatch, SyntaxNode, Tree } from 'web-tree-sitter';
+import type { QueryMatch, Node as SyntaxNode, Tree } from 'web-tree-sitter';
 import { byteKey } from '../shared/keys';
 import { hasErrorAncestor } from '../shared/treeUtils';
 import { LruCache } from '../shared/lruCache';
