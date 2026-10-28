@@ -26,32 +26,34 @@ export interface ErrorEntry {
 /** Collect parser errors, collapsing only ERROR nodes with identical ranges. */
 export function collectErrorEntries(rootNode: SyntaxNode, code: string): ErrorEntry[] {
     const entries: ErrorEntry[] = [];
-    visit(rootNode, code, entries, new Set<string>());
+    const unexpectedRanges = new Set<string>();
+    const pending = [rootNode];
+    while (pending.length > 0) {
+        const node = pending.pop()!;
+        if (!node.hasError) {
+            continue; // Clean subtree, pruned.
+        }
+        if (node.isMissing) {
+            entries.push(missingEntry(node, code));
+            continue; // Missing nodes are leaves.
+        }
+        if (node.isError) {
+            const key = `${node.startIndex}:${node.endIndex}`;
+            if (!unexpectedRanges.has(key)) {
+                unexpectedRanges.add(key);
+                entries.push(unexpectedEntry(node, code));
+            }
+            // Recovery can leave distinct ERRORs and MISSING tokens inside this node.
+        }
+        // Reverse push preserves parent-first, left-to-right diagnostic order.
+        for (let i = node.childCount - 1; i >= 0; i--) {
+            const child = node.child(i);
+            if (child?.hasError) {
+                pending.push(child);
+            }
+        }
+    }
     return entries;
-}
-
-function visit(node: SyntaxNode, code: string, entries: ErrorEntry[], unexpectedRanges: Set<string>): void {
-    if (!node.hasError) {
-        return; // Clean subtree, pruned.
-    }
-    if (node.isMissing) {
-        entries.push(missingEntry(node, code));
-        return; // Missing nodes are leaves.
-    }
-    if (node.isError) {
-        const key = `${node.startIndex}:${node.endIndex}`;
-        if (!unexpectedRanges.has(key)) {
-            unexpectedRanges.add(key);
-            entries.push(unexpectedEntry(node, code));
-        }
-        // Recovery can leave distinct ERRORs and MISSING tokens inside this node.
-    }
-    for (let i = 0; i < node.childCount; i++) {
-        const child = node.child(i);
-        if (child) {
-            visit(child, code, entries, unexpectedRanges);
-        }
-    }
 }
 
 /** Build the entry for a MISSING node with zero width. */

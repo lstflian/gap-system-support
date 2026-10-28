@@ -1,18 +1,19 @@
 /**
- * Diagnostics tests: the compiled parser and the collector functions
- * never touch the vscode API, the mock only satisfies the import.
+ * Diagnostics tests use the real parser and a small VS Code API mock.
  */
 
 const path = require('path');
-const { installMock } = require('../highlight/mock-vscode');
+const { Query } = require('web-tree-sitter');
+const { installMock, vscodeMock } = require('../highlight/mock-vscode');
 const { check, section, summary } = require('../help/helpers');
 
 installMock();
 
-const { initGapParser, parseGapCode } = require('../../../out/parser/gapParser');
+const { initGapParser, parseGapCode, getGapLanguage, onDocumentClosed } = require('../../../out/parser/gapParser');
 const {
     collectErrorEntries,
     computeMissingStart,
+    GAPDiagnosticsProvider,
 } = require('../../../out/diagnostics/diagnosticsProvider');
 const { checkSyntaxText } = require('../../../out/lmtools/toolCore');
 
@@ -160,6 +161,83 @@ async function main() {
     // Top-level `local` is invalid in GAP: the parser must produce an ERROR.
     es = errorsOf('local a, b;\n');
     check('top-level local is an ERROR', true, hasUnexpected(es));
+
+    section('10. Deep error trees preserve every parser error without recursion');
+
+    const deepCases = [
+        ['expression', 'if x\ny := (1+)' + '+x'.repeat(10000) + ';\nfi;\n'],
+        ['list', 'if x\ny := ' + '['.repeat(10000) + '(1+)' + ']'.repeat(10000) + ';\nfi;\n'],
+    ];
+    const errors = new Query(getGapLanguage(), '(ERROR) @unexpected (MISSING) @missing');
+    try {
+        for (const [name, code] of deepCases) {
+            const tree = parseGapCode(code);
+            try {
+                // The native query engine supplies an independent error-node baseline.
+                const expected = errors.captures(tree.rootNode).map(({ name, node }) => [
+                    name, name === 'missing' ? node.type : '',
+                    name === 'missing' ? null : node.startIndex, node.endIndex,
+                ]);
+                check(`deep ${name} contains multiple parser errors`, true, expected.length > 1);
+                const entries = collectErrorEntries(tree.rootNode, code);
+                check(`deep ${name} preserves all ERROR/MISSING nodes`,
+                    expected.map(e => JSON.stringify(e)).sort(),
+                    entries.map(e => JSON.stringify([
+                        e.kind, e.token, e.kind === 'missing' ? null : e.startIndex, e.endIndex,
+                    ])).sort());
+                const result = checkSyntaxText(code);
+                check(`shared syntax tool handles deep ${name}`, [false, expected.length],
+                    [result.syntaxValid, result.diagnostics.length]);
+            } finally {
+                tree.delete();
+            }
+        }
+    } finally {
+        errors.delete();
+    }
+
+    section('11. Editor publishes diagnostics for deep error trees');
+
+    let published;
+    let deleted = 0;
+    vscodeMock.workspace = { getConfiguration: () => ({ get: () => true }) };
+    vscodeMock.languages = {
+        createDiagnosticCollection: () => ({
+            set(_uri, diagnostics) { published = diagnostics; },
+            delete() { deleted++; },
+            clear() {},
+            dispose() {},
+        }),
+    };
+    vscodeMock.DiagnosticSeverity = { Error: 0 };
+    vscodeMock.Diagnostic = class {
+        constructor(range, message, severity) {
+            Object.assign(this, { range, message, severity });
+        }
+    };
+    const provider = new GAPDiagnosticsProvider();
+    try {
+        for (const [name, code] of deepCases) {
+            const uri = vscodeMock.Uri.file(path.join(__dirname, `deep-${name}.g`));
+            const document = {
+                uri, languageId: 'gap', version: 1, getText: () => code,
+                positionAt(offset) {
+                    const lines = code.slice(0, offset).split('\n');
+                    return new vscodeMock.Position(lines.length - 1, lines[lines.length - 1].length);
+                },
+            };
+            try {
+                published = undefined;
+                provider.checkNow(document);
+                check(`editor publishes every deep ${name} diagnostic`, 3, published?.length);
+                check(`editor does not retract deep ${name} diagnostics`, 0, deleted);
+            } finally {
+                onDocumentClosed(uri);
+            }
+        }
+    } finally {
+        provider.dispose();
+    }
 
     summary();
 }
