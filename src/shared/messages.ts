@@ -53,7 +53,8 @@ export const Messages = {
         runInvocation: (file: string, output: string) => `Running GAP file '${file}' with output redirected to '${output}'`,
         runConfirmationTitle: 'Run GAP file and overwrite output?',
         runConfirmation: (file: string, output: string) =>
-            `Save any unsaved changes to '${file}', execute it with GAP --nointeract, and overwrite '${output}'. ` +
+            `Save any unsaved changes to '${file}', execute it with GAP --nointeract -b (banner suppressed), ` +
+            `and overwrite '${output}'. ` +
             'GAP code can modify files and perform other actions. There is no fixed runtime limit; cancel to stop it. ' +
             'You can read the output file while it runs. Completion does not mean the GAP program succeeded.',
     },

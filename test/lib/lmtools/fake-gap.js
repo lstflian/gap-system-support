@@ -6,8 +6,9 @@ const { spawn } = require('child_process');
 const args = process.argv.slice(2);
 const bootstrap = fs.readFileSync(0, 'utf8');
 const ready = bootstrap.match(/^Print\("(GAP_RUN_READY_[a-f0-9]{32})"\);\n$/)?.[1];
-if (args[1] !== '*stdin*' || !ready) throw new Error('Missing GAP startup bootstrap');
-const source = fs.readFileSync(args[2], 'utf8');
+const stdinIndex = args.indexOf('*stdin*');
+if (stdinIndex === -1 || !ready) throw new Error('Missing GAP startup bootstrap');
+const source = fs.readFileSync(args[stdinIndex + 1], 'utf8');
 const settings = JSON.parse(source.match(/^# runner: (.+)$/m)?.[1] || '{}');
 if (settings.startupExitCode !== undefined) {
     process.stdout.write('launcher output before startup\n');

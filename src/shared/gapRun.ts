@@ -21,6 +21,9 @@ export interface GapLaunch {
     protocol?: { marker: string; wsl?: WslTarget };
 }
 
+/** Non-interactive run options; -b suppresses the banner so it never reaches the output file. */
+const GAP_RUN_OPTIONS = ['--nointeract', '-b'];
+
 function isMissing(error: unknown): boolean {
     return error instanceof Error && 'code' in error && (error.code === 'ENOENT' || error.code === 'ENOTDIR');
 }
@@ -68,14 +71,14 @@ async function findGap(cwd: string | undefined): Promise<string> {
 
 export function nativeGapLaunch(executable: string, filePath: string, platform: NodeJS.Platform): GapLaunch {
     if (platform !== 'win32' || !/\.(bat|cmd)$/i.test(executable)) {
-        return { executable, args: ['--nointeract', '*stdin*', filePath] };
+        return { executable, args: [...GAP_RUN_OPTIONS, '*stdin*', filePath] };
     }
     const launcher = quoteShellPath(executable);
     const file = quoteShellPath(filePath);
     if (!launcher || !file) throw new Error(Messages.extension.unsafeShellPath(!launcher ? executable : filePath));
     return {
         executable: process.env.ComSpec || path.win32.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'cmd.exe'),
-        args: ['/d', '/v:off', '/s', '/c', `"${launcher} --nointeract "*stdin*" ${file}"`],
+        args: ['/d', '/v:off', '/s', '/c', `"${launcher} ${GAP_RUN_OPTIONS.join(' ')} "*stdin*" ${file}"`],
         windowsVerbatimArguments: true,
     };
 }
@@ -89,7 +92,7 @@ export function shellGapLaunch(
 ): GapLaunch {
     const command = [
         cwd ? `cd ${posixQuote(cwd)} || exit 1;` : '',
-        `exec gap --nointeract '*stdin*' ${posixQuote(filePath)} 1>&3 3>&-`,
+        `exec gap ${GAP_RUN_OPTIONS.join(' ')} '*stdin*' ${posixQuote(filePath)} 1>&3 3>&-`,
     ].join(' ');
     // Keep the output pipe across shell startup so only GAP can confirm that it started.
     const script = `exec 3>&1; printf '${marker}:pid:%s\\n' "$$" >&3; ` +

@@ -2,7 +2,7 @@
   "name": "gap-system-support",
   "displayName": "GAP System Support",
   "description": "Intelligent code editing powered by tree-sitter-gap, GAP code running, a help system, language model tools, and MCP support",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "publisher": "flianlee",
   "author": "Songtai Li",
   "license": "SEE LICENSE IN LICENSE",
@@ -546,13 +546,13 @@
         "when": "config.gap.tools.enabled && isWorkspaceTrusted",
         "displayName": "Run GAP File",
         "icon": "$(play)",
-        "userDescription": "Run one GAP file and redirect its output to a file",
+        "userDescription": "Run one GAP file non-interactively with the banner suppressed and redirect its output to a file",
         "toolReferenceName": "gapRunFile",
         "canBeReferencedInPrompt": true,
         "tags": [
           "code-execution"
         ],
-        "modelDescription": "Runs exactly one GAP source file with GAP --nointeract in an independent process, in a trusted workspace. GAP must be available on PATH in the extension host or the selected Windows WSL/bash environment. Does not inherit the interactive run command's GAP flags or reuse its terminal. Saves unsaved changes if the file is open in the editor. Uses the file's workspace root as cwd; if it has no workspace root, no cwd is explicitly set.\n\nInput: { \"filePath\": string, \"outputPath\": string } — both must be absolute file paths. Creates missing output parent directories and OVERWRITES an existing output file. Standard output and standard error are continuously redirected to outputPath while GAP runs, not collected until the end. You can independently read your specified outputPath while this invocation is pending to inspect live output; this tool does not return the log.\n\nThere is NO fixed runtime timeout: the invocation waits until the process exits or it is cancelled. Cancellation stops this invocation's process tree. Each invocation runs only one file; different output files may run concurrently, but concurrent writes to the same output file are rejected.\n\nResponse on normal process completion: { \"completed\": true }. Completion does NOT mean the GAP program succeeded. GAP-internal errors and nonzero exit codes are not interpreted as program success or failure; inspect outputPath yourself. Invalid paths, save/write/startup failures, or interruption are reported as tool errors rather than normal completion.",
+        "modelDescription": "Runs exactly one GAP source file with GAP --nointeract -b in an independent process, in a trusted workspace. --nointeract disables the REPL and break loop, and -b suppresses the GAP banner so it does not appear in the output. GAP must be available on PATH in the extension host or the selected Windows WSL/bash environment. Does not inherit the interactive run command's GAP flags or reuse its terminal. Saves unsaved changes if the file is open in the editor. Uses the file's workspace root as cwd; if it has no workspace root, no cwd is explicitly set.\n\nInput: { \"filePath\": string, \"outputPath\": string } — both must be absolute file paths. Creates missing output parent directories and OVERWRITES an existing output file. Standard output and standard error are continuously redirected to outputPath while GAP runs, not collected until the end. You can independently read your specified outputPath while this invocation is pending to inspect live output; this tool does not return the log.\n\nThere is NO fixed runtime timeout: the invocation waits until the process exits or it is cancelled. Cancellation stops this invocation's process tree. Each invocation runs only one file; different output files may run concurrently, but concurrent writes to the same output file are rejected.\n\nResponse on normal process completion: { \"completed\": true }. Completion does NOT mean the GAP program succeeded. GAP-internal errors and nonzero exit codes are not interpreted as program success or failure; inspect outputPath yourself. Invalid paths, save/write/startup failures, or interruption are reported as tool errors rather than normal completion.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -569,7 +569,9 @@
             "filePath",
             "outputPath"
           ],
-          "additionalProperties": false
+          "additionalProperties": {
+            "not": {}
+          }
         }
       }
     ]

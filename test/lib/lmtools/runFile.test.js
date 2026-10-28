@@ -113,7 +113,7 @@ async function main() {
         assert.deepEqual(result, { completed: true });
         assert.equal(saved, 1);
         const info = await record(output);
-        assert.deepEqual(info.args, ['--nointeract', '*stdin*', file]);
+        assert.deepEqual(info.args, ['--nointeract', '-b', '*stdin*', file]);
         assert.equal(info.cwd.toLowerCase(), folderB.uri.fsPath.toLowerCase());
         assert(log(output).includes('GAP internal error'));
         assert(log(output).includes('finished\n'));
@@ -459,13 +459,13 @@ async function main() {
         console.log('10. Native launch and Windows/POSIX/WSL path and quoting matrix');
         for (const platform of ['linux', 'darwin']) {
             assert.deepEqual(nativeGapLaunch('/usr/bin/gap', '/a space/test.g', platform),
-                { executable: '/usr/bin/gap', args: ['--nointeract', '*stdin*', '/a space/test.g'] });
+                { executable: '/usr/bin/gap', args: ['--nointeract', '-b', '*stdin*', '/a space/test.g'] });
         }
         const nativeFile = 'D:\\a space\\$special!%.g';
-        assert.deepEqual(nativeGapLaunch('C:\\GAP\\gap.exe', nativeFile, 'win32').args, ['--nointeract', '*stdin*', nativeFile]);
+        assert.deepEqual(nativeGapLaunch('C:\\GAP\\gap.exe', nativeFile, 'win32').args, ['--nointeract', '-b', '*stdin*', nativeFile]);
         const batch = nativeGapLaunch('C:\\GAP install\\gap.cmd', 'D:\\a space\\test.g', 'win32');
         assert.equal(batch.windowsVerbatimArguments, true);
-        assert.deepEqual(batch.args, ['/d', '/v:off', '/s', '/c', '""C:\\GAP install\\gap.cmd" --nointeract "*stdin*" "D:\\a space\\test.g""']);
+        assert.deepEqual(batch.args, ['/d', '/v:off', '/s', '/c', '""C:\\GAP install\\gap.cmd" --nointeract -b "*stdin*" "D:\\a space\\test.g""']);
         assert.throws(() => nativeGapLaunch('C:\\GAP\\gap.bat', nativeFile, 'win32'), /terminal would interpret/);
         const wsl = shellGapLaunch('wsl.exe', "/mnt/d/a'b $path.g", 'marker', { executable: 'wsl.exe', args: ['-d', 'Ubuntu'] }, '/mnt/d/root');
         assert.deepEqual(wsl.args.slice(0, 7), ['-d', 'Ubuntu', '--exec', 'setsid', 'sh', '-c', wsl.args[6]]);
@@ -473,7 +473,7 @@ async function main() {
         assert(wsl.args[6].includes('marker:pid:'));
         assert(!wsl.args[6].includes('marker:ready'));
         assert(!wsl.args[6].includes('command -v gap'));
-        assert(wsl.args[6].includes('exec gap --nointeract'));
+        assert(wsl.args[6].includes('exec gap --nointeract -b'));
         assert(wsl.args[6].includes('*stdin*'));
         const changedCwd = shellGapLaunch('wsl.exe', '/mnt/d/test.g', 'marker',
             { executable: 'wsl.exe', args: ['-d', 'Ubuntu', '--cd', '/some/old/folder'] });

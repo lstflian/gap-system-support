@@ -147,6 +147,14 @@ async function main() {
                 check(`${tool.name} structured MCP result`, expected, result.structuredContent);
                 check(`${tool.name} text MCP result`, JSON.stringify(expected, null, 2), result.content[0].text);
             }
+            for (const extra of [true, false, 0, 'text', null, {}, []]) {
+                const result = await client.callTool({
+                    name: 'run_gap_file',
+                    arguments: { ...fixture.inputs.run_gap_file, extra },
+                });
+                check(`${modern ? 'modern' : 'legacy'} run input rejects extra ${JSON.stringify(extra)}`,
+                    true, result.isError);
+            }
         }
         const client = clients[0];
         const malformed = await client.callTool({ name: 'search_gap_help', arguments: {} });
