@@ -45,8 +45,10 @@ export const Messages = {
         runSaveFailed: (file: string) => `GAP: Could not save the modified document: ${file}`,
         runSourceChanged: (file: string) =>
             `GAP: filePath no longer refers to the saved document after saving. Retry with the document's path: ${file}`,
-        runNotFound: 'GAP: Could not find an executable GAP launcher on PATH.',
-        runLauncherFailed: 'GAP: GAP did not confirm startup. Check PATH and the output file for launcher errors.',
+        runNotFound: 'GAP: Could not find an executable GAP launcher on PATH. ' +
+            'For instructions on adding GAP to PATH, see https://github.com/lstflian/gap-system-support/blob/main/README.md.',
+        runLauncherFailed: 'GAP: GAP did not confirm startup. Check PATH and the output file for launcher errors. ' +
+            'For instructions on adding GAP to PATH, see https://github.com/lstflian/gap-system-support/blob/main/README.md.',
         runInvalidProtocol: 'GAP: The shell returned an invalid GAP launcher response.',
         runInvalidShellArgs: 'GAP: The selected WSL terminal profile must use an argument array without an embedded command.',
         runWslCancelFailed: 'GAP: Could not obtain the WSL process group to confirm cancellation.',
