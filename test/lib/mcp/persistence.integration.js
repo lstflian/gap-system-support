@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const { createHash } = require('crypto');
 const vscode = require('vscode');
+const { toolOutput } = require('./helpers');
 
 exports.run = async function run() {
     const workspacePath = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
@@ -13,6 +14,8 @@ exports.run = async function run() {
     let previousClipboard;
     let copiedClipboard;
     let client;
+    const config = vscode.workspace.getConfiguration('gap');
+    const originalEnabled = config.inspect('mcp.enabled')?.globalValue;
     try {
         assert.equal(vscode.workspace.workspaceFolders?.length, 1, 'Open one isolated empty test workspace');
         assert(fs.readdirSync(workspacePath).every(name =>
@@ -21,7 +24,7 @@ exports.run = async function run() {
         const extension = vscode.extensions.getExtension('flianlee.gap-system-support');
         assert(extension);
         await extension.activate();
-        await vscode.workspace.getConfiguration('gap').update('mcp.enabled', true, vscode.ConfigurationTarget.Workspace);
+        await config.update('mcp.enabled', true, vscode.ConfigurationTarget.Global);
         previousClipboard = await vscode.env.clipboard.readText();
         await vscode.commands.executeCommand('gap.copyMcpConfiguration');
         copiedClipboard = await vscode.env.clipboard.readText();
@@ -33,7 +36,7 @@ exports.run = async function run() {
             requestInit: { headers: definition.headers },
         }));
         assert.equal((await client.listTools()).tools.length, 5);
-        assert((await client.callTool({ name: 'list_gap_books', arguments: {} })).structuredContent.books.length > 0);
+        assert(toolOutput(await client.callTool({ name: 'list_gap_books', arguments: {} })).books.length > 0);
         fs.writeFileSync(resultPath, JSON.stringify({
             success: true,
             vscodeVersion: vscode.version,
@@ -47,6 +50,7 @@ exports.run = async function run() {
         throw error;
     } finally {
         await client?.close();
+        await config.update('mcp.enabled', originalEnabled, vscode.ConfigurationTarget.Global);
         if (copiedClipboard !== undefined && await vscode.env.clipboard.readText() === copiedClipboard) {
             await vscode.env.clipboard.writeText(previousClipboard);
         }

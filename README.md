@@ -67,7 +67,7 @@ Set the following settings in the walkthroughs on the Welcome page or in the VS 
 | `list_gap_books` | Lists all GAP help book short names |
 | `gap_resolve_link` | Resolves a relative link in a GAP help file to its absolute path and target line |
 | `check_gap_syntax` | Statically checks a GAP source file for syntax errors using tree-sitter-gap |
-| `run_gap_file` | Runs one GAP file and redirects its output to a specified file |
+| `run_gap_file` | Runs one GAP file with `-q --nointeract` and redirects output to a file; optional `cwd` overrides the working directory for this invocation |
 
 Both interfaces provide the same five tools and can be enabled or disabled independently.
 
@@ -75,8 +75,6 @@ Both interfaces provide the same five tools and can be enabled or disabled indep
   `gap.tools.enabled` and enabled by default.
 - **MCP server**: available to VS Code and external MCP clients, controlled by
   `gap.mcp.enabled` and disabled by default.
-
-After enabling MCP in a trusted workspace, run **GAP: Copy MCP Connection Configuration** to obtain the connection configuration for external clients.
 
 ## Settings
 
@@ -91,8 +89,8 @@ After enabling MCP in a trusted workspace, run **GAP: Copy MCP Connection Config
 | `gap.searchMode` | `prefix` | Search mode: `prefix` corresponds to `?topic`, `substring` corresponds to `??topic` |
 | `gap.diagnostics` | `true` | Show syntax error diagnostics (missing/expected tokens, unexpected syntax) from the GAP parser in the Problems panel |
 | `gap.tools.enabled` | `true` | Provide native VS Code language model tools; independent of MCP |
-| `gap.mcp.enabled` | `false` | Automatically start the authenticated local MCP server in trusted workspaces; independent of native tools |
-| `gap.mcp.port` | `0` | MCP port: `0` chooses an available port; a fixed port fails explicitly if occupied. User and workspace settings are supported |
+| `gap.mcp.enabled` | `false` | Profile user setting: enable the shared local MCP service for trusted windows; independent of native tools |
+| `gap.mcp.port` | `0` | Profile user setting: one shared port; `0` allocates one port per service lifetime. A fixed port occupied by another service fails explicitly |
 
 ## Commands
 

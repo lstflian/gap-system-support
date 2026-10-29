@@ -13,6 +13,24 @@ export interface ToolMetadata {
     inputSchema: { type: 'object'; [key: string]: unknown };
 }
 
+export interface ToolOutputIdentity {
+    path: string;
+    sourcePath: string;
+    identity?: string;
+    sourceIdentity?: string;
+}
+
+export interface ToolOutputWriter {
+    truncate(): Promise<void>;
+    write(chunk: Buffer): Promise<void>;
+    close(): Promise<void>;
+}
+
+export interface ToolExecutionContext {
+    claimOutput?: (identity: string) => Promise<void>;
+    openOutput?: (identity: ToolOutputIdentity) => Promise<ToolOutputWriter>;
+}
+
 export interface ToolEntry<I extends object, O extends object> {
     metadata: ToolMetadata;
     annotations?: {
@@ -21,7 +39,9 @@ export interface ToolEntry<I extends object, O extends object> {
         idempotentHint: boolean;
         openWorldHint: boolean;
     };
-    tool: vscode.LanguageModelTool<I> & { execute(input: I, token: vscode.CancellationToken): O | Promise<O> };
+    tool: vscode.LanguageModelTool<I> & {
+        execute(input: I, token: vscode.CancellationToken, context?: ToolExecutionContext): O | Promise<O>;
+    };
 }
 
 export interface ToolRegistry extends vscode.Disposable {

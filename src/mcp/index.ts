@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import type { ToolRegistry } from '../lmtools/registry';
-import type { RunningMcpServer } from './server';
+import type { SharedMcpConnection } from './connection';
 import { getErrorMessage, Messages } from '../shared/messages';
 import { notifyError, notifyInfo, notifyWarning } from '../shared/notify';
 import { tryValueAsync } from '../shared/guarded';
@@ -8,7 +8,10 @@ import { McpCredentials } from './credentials';
 import { MCP_CREDENTIAL_CHECK_INTERVAL_MS } from '../limits';
 
 export class McpController implements vscode.Disposable {
-    private server: RunningMcpServer | undefined;
+    private server: SharedMcpConnection | undefined;
+    private instanceId: string | undefined;
+    private retry: ReturnType<typeof setTimeout> | undefined;
+    private retryCount = 0;
     private registration: vscode.Disposable | undefined;
     private readonly changed = new vscode.EventEmitter<void>();
     private readonly listeners: vscode.Disposable;
@@ -19,12 +22,14 @@ export class McpController implements vscode.Disposable {
     private disposed = false;
     private readonly credentials: McpCredentials;
     private credentialKey: string | undefined;
+    private attemptedCredentialKey: string | undefined;
+    private attemptedInstanceId: string | undefined;
     private credentialRefreshPending = false;
     private readonly credentialMonitor: ReturnType<typeof setInterval>;
 
     constructor(
         private readonly registry: ToolRegistry,
-        context: Pick<vscode.ExtensionContext, 'globalState' | 'secrets'>,
+        private readonly context: Pick<vscode.ExtensionContext, 'globalState' | 'secrets' | 'globalStorageUri'>,
     ) {
         this.credentials = new McpCredentials(context);
         this.listeners = vscode.Disposable.from(
@@ -42,6 +47,12 @@ export class McpController implements vscode.Disposable {
         );
         this.credentialMonitor = setInterval(() => this.checkCredential(), MCP_CREDENTIAL_CHECK_INTERVAL_MS);
         this.credentialMonitor.unref();
+        const config = vscode.workspace.getConfiguration('gap');
+        if (['mcp.enabled', 'mcp.port'].some(key => config.inspect(key)?.workspaceValue !== undefined)
+            && !context.globalState.get('gap.mcp.scopeNotice')) {
+            this.notify(() => notifyWarning('GAP: MCP settings are now shared by this Profile. Move gap.mcp.enabled and gap.mcp.port from workspace settings to user settings.'));
+            void context.globalState.update('gap.mcp.scopeNotice', true);
+        }
         this.update();
     }
 
@@ -75,8 +86,11 @@ export class McpController implements vscode.Disposable {
     }
 
     private checkCredential(): void {
-        if (this.registration && this.server && this.credentialKey && !this.credentials.isCurrent(this.credentialKey)) {
-            this.credentialChanged();
+        if (this.desired && this.attemptedCredentialKey && this.attemptedInstanceId
+            && (!this.credentials.isCurrent(this.attemptedCredentialKey)
+                || !this.credentials.isInstance(this.attemptedInstanceId))) {
+            this.retryCount = 0;
+            this.update(true);
         }
     }
 
@@ -88,7 +102,8 @@ export class McpController implements vscode.Disposable {
             if (!this.isEnabled() || generation !== this.generation) return;
             const { key, token } = await this.credentials.getCredential();
             if (this.isEnabled() && generation === this.generation
-                && (this.credentialKey !== key || this.server?.authorization !== `Bearer ${token}`)) {
+                && (this.credentialKey !== key || this.server?.authorization !== `Bearer ${token}`
+                    || (this.instanceId !== undefined && !this.credentials.isInstance(this.instanceId)))) {
                 this.update(true);
             }
         }).catch(error => this.serverFailed(error, generation)).finally(() => {
@@ -100,8 +115,14 @@ export class McpController implements vscode.Disposable {
         const desired = this.isEnabled();
         const port = vscode.workspace.getConfiguration('gap').get<number>('mcp.port', 0);
         if (!force && desired === this.desired && (!desired || port === this.desiredPort)) return;
+        if (this.retry) { clearTimeout(this.retry); this.retry = undefined; }
+        if (!force) this.retryCount = 0;
         this.desired = desired;
         this.desiredPort = port;
+        if (!desired) {
+            this.attemptedCredentialKey = undefined;
+            this.attemptedInstanceId = undefined;
+        }
         const generation = ++this.generation;
         this.withdraw();
         this.server?.stopAccepting();
@@ -109,18 +130,29 @@ export class McpController implements vscode.Disposable {
             if (generation !== this.generation) return;
             await this.closeServer();
             if (!this.isEnabled() || generation !== this.generation) return;
-            const { key, token } = await this.credentials.getCredential();
+            const { key, token, revision } = await this.credentials.getCredential();
             if (!this.isEnabled() || generation !== this.generation) return;
-            const { startMcpServer } = await import('./server');
+            const instanceId = await this.credentials.getInstanceId();
+            this.attemptedCredentialKey = key;
+            this.attemptedInstanceId = instanceId;
+            const { joinMcpService } = await import('./connection');
             if (!this.isEnabled() || generation !== this.generation) return;
             const isCurrent = (): boolean => {
                 if (!this.isEnabled() || generation !== this.generation) return false;
-                if (this.credentials.isCurrent(key)) return true;
+                if (this.credentials.isCurrent(key) && this.credentials.isInstance(instanceId)) return true;
                 this.credentialChanged();
                 return false;
             };
-            const server = await startMcpServer(this.registry, isCurrent,
-                error => this.serverFailed(error, generation), token, port);
+            let joined = false;
+            const server = await joinMcpService(this.registry, this.context.globalStorageUri.fsPath, instanceId,
+                { port, token, credentialKey: key, revision }, isCurrent,
+                () => this.changed.fire(), () => {
+                    if (joined && this.isEnabled() && generation === this.generation) {
+                        this.withdraw();
+                        this.retry = setTimeout(() => this.update(true), 500);
+                    }
+                });
+            joined = true;
             let published = false;
             try {
                 if (!isCurrent()) return;
@@ -129,24 +161,34 @@ export class McpController implements vscode.Disposable {
                     // Agent hosts can project this definition without calling resolve.
                     provideMcpServerDefinitions: () => isCurrent() && this.server === server
                         ? [new vscode.McpHttpServerDefinition('GAP', vscode.Uri.parse(server.url),
-                            { Authorization: server.authorization }, this.registry.version)]
+                            server.headers, this.registry.version)]
                         : [],
                     resolveMcpServerDefinition: (definition, token) => {
                         if (token.isCancellationRequested || !isCurrent() || this.server !== server) return;
                         definition.uri = vscode.Uri.parse(server.url);
-                        definition.headers = { Authorization: server.authorization };
+                        definition.headers = server.headers;
                         return definition;
                     },
                 };
                 this.registration = vscode.lm.registerMcpServerDefinitionProvider('gap.mcp', provider);
                 this.server = server;
+                this.instanceId = instanceId;
                 this.credentialKey = key;
+                this.retryCount = 0;
                 published = true;
                 this.changed.fire();
             } finally {
                 if (!published) await server.close();
             }
         }).catch(error => {
+            const conflict = desired && port !== 0 && getErrorMessage(error).includes(Messages.mcp.portInUse(port));
+            if (conflict && generation === this.generation && this.isEnabled() && this.retryCount < 7) {
+                const delay = Math.min(250 * (2 ** this.retryCount++), 2000);
+                this.retry = setTimeout(() => { this.retry = undefined; this.update(true); }, delay);
+                this.retry.unref();
+                return;
+            }
+            if (generation !== this.generation) return;
             console.error('[GAP MCP] lifecycle failed:', error);
             this.notify(() => notifyError(desired
                 ? Messages.mcp.startFailed(getErrorMessage(error))
@@ -230,6 +272,7 @@ export class McpController implements vscode.Disposable {
             this.generation++;
             this.listeners.dispose();
             clearInterval(this.credentialMonitor);
+            if (this.retry) clearTimeout(this.retry);
             this.withdraw();
             this.changed.dispose();
             this.server?.stopAccepting();

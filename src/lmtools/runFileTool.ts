@@ -1,15 +1,17 @@
 import * as os from 'os';
 import * as path from 'path';
-import { promises as fs, BigIntStats } from 'fs';
+import { promises as fs, BigIntStats, constants as fsConstants } from 'fs';
 import * as vscode from 'vscode';
 import { getRunCwd } from '../path';
 import { GapRunner } from '../shared/gapRun';
 import { getErrorMessage, Messages } from '../shared/messages';
 import { ToolError, throwIfToolCancelled, toolInvoke } from './toolCore';
+import type { ToolExecutionContext } from './registry';
 
 export interface RunFileInput {
     filePath: string;
     outputPath: string;
+    cwd?: string;
 }
 
 export interface RunFileOutput {
@@ -75,17 +77,17 @@ export class RunFileTool implements vscode.LanguageModelTool<RunFileInput>, vsco
     }
 
     prepareInvocation(options: vscode.LanguageModelToolInvocationPrepareOptions<RunFileInput>): vscode.PreparedToolInvocation {
-        const { filePath, outputPath } = options.input;
+        const { filePath, outputPath, cwd } = options.input;
         return {
             invocationMessage: Messages.tools.runInvocation(filePath, outputPath),
             confirmationMessages: {
                 title: Messages.tools.runConfirmationTitle,
-                message: Messages.tools.runConfirmation(filePath, outputPath),
+                message: Messages.tools.runConfirmation(filePath, outputPath, cwd),
             },
         };
     }
 
-    async execute(input: RunFileInput, token: vscode.CancellationToken): Promise<RunFileOutput> {
+    async execute(input: RunFileInput, token: vscode.CancellationToken, context?: ToolExecutionContext): Promise<RunFileOutput> {
         throwIfToolCancelled(token);
         if (this.disposed) throw new ToolError(Messages.tools.runClosed);
         if (!vscode.workspace.isTrusted) throw new ToolError(Messages.tools.runUntrusted);
@@ -94,7 +96,19 @@ export class RunFileTool implements vscode.LanguageModelTool<RunFileInput>, vsco
         const filePath = path.resolve(input.filePath);
         const outputPath = path.resolve(input.outputPath);
         const uri = vscode.Uri.file(filePath);
+        let cwd: string | undefined;
         try {
+            if (input.cwd !== undefined) {
+                if (typeof input.cwd !== 'string' || !input.cwd.trim() || input.cwd.includes('\0')
+                    || !path.isAbsolute(input.cwd)
+                    || (os.platform() === 'win32' && !/^(?:[a-z]:[\\/]|[\\/]{2})/i.test(input.cwd))) {
+                    throw new ToolError(Messages.tools.runCwdRequired);
+                }
+                cwd = path.resolve(input.cwd);
+                if (!(await fs.stat(cwd)).isDirectory()) throw new ToolError(Messages.tools.runCwdNotDirectory);
+                await fs.access(cwd, fsConstants.X_OK);
+                throwIfToolCancelled(token);
+            }
             const open = await modifiedSource(filePath, token);
             throwIfToolCancelled(token);
             if (open) {
@@ -107,7 +121,8 @@ export class RunFileTool implements vscode.LanguageModelTool<RunFileInput>, vsco
             }
             throwIfToolCancelled(token);
             if (!vscode.workspace.isTrusted) throw new ToolError(Messages.tools.runUntrusted);
-            await this.runner.run(filePath, outputPath, uri, getRunCwd(uri)?.fsPath, token);
+            const runCwd = input.cwd === undefined ? getRunCwd(uri)?.fsPath ?? os.homedir() : cwd;
+            await this.runner.run(filePath, outputPath, uri, runCwd, token, context?.claimOutput, context?.openOutput);
             throwIfToolCancelled(token);
             return { completed: true };
         } catch (error) {

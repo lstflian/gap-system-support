@@ -2,7 +2,7 @@
   "name": "gap-system-support",
   "displayName": "GAP System Support",
   "description": "Intelligent code editing powered by tree-sitter-gap, GAP code running, a help system, language model tools, and MCP support",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "publisher": "flianlee",
   "author": "Songtai Li",
   "license": "SEE LICENSE IN LICENSE",
@@ -393,18 +393,18 @@
         "gap.mcp.enabled": {
           "type": "boolean",
           "default": false,
-          "scope": "window",
+          "scope": "machine",
           "order": 10,
-          "markdownDescription": "Automatically start an authenticated, loopback-only MCP server in trusted workspaces, including windows without GAP files. Changes take effect immediately. Independent of `#gap.tools.enabled#`; workspace settings can override user settings. The server stops when this window closes."
+          "markdownDescription": "Enable the authenticated, loopback-only MCP service shared by trusted windows in this VS Code Profile. Configure in user settings; workspace overrides are ignored. Changes take effect across this Profile. Independent of `#gap.tools.enabled#`. The background service stops after the last participating window leaves."
         },
         "gap.mcp.port": {
           "type": "integer",
           "default": 0,
           "minimum": 0,
           "maximum": 65535,
-          "scope": "window",
+          "scope": "machine",
           "order": 11,
-          "markdownDescription": "MCP server port. Use `0` to let the operating system choose an available port (recommended for multiple windows), or specify a fixed port for external clients. Changing this setting restarts an enabled server without changing its persistent access token. A port already in use causes an explicit error; no alternative port is chosen."
+          "markdownDescription": "One MCP port shared by windows in this VS Code Profile. Configure once in user settings; workspace overrides are ignored. Use `0` for one automatically allocated port while the service runs, or a fixed port for a stable external URL. Other Profiles, VS Code installations and unrelated programs cannot share this port. Changing it restarts the shared listener without changing the access token. A conflicting fixed port produces an error; no alternative port is chosen."
         }
       }
     },
@@ -546,13 +546,13 @@
         "when": "config.gap.tools.enabled && isWorkspaceTrusted",
         "displayName": "Run GAP File",
         "icon": "$(play)",
-        "userDescription": "Run one GAP file non-interactively with the banner suppressed and redirect its output to a file",
+        "userDescription": "Run one GAP file in quiet, non-interactive mode with an optional working directory and redirect its output to a file",
         "toolReferenceName": "gapRunFile",
         "canBeReferencedInPrompt": true,
         "tags": [
           "code-execution"
         ],
-        "modelDescription": "Runs exactly one GAP source file with GAP --nointeract -b in an independent process, in a trusted workspace. --nointeract disables the REPL and break loop, and -b suppresses the GAP banner so it does not appear in the output. GAP must be available on PATH in the extension host or the selected Windows WSL/bash environment. Does not inherit the interactive run command's GAP flags or reuse its terminal. Saves unsaved changes if the file is open in the editor. Uses the file's workspace root as cwd; if it has no workspace root, no cwd is explicitly set.\n\nInput: { \"filePath\": string, \"outputPath\": string } — both must be absolute file paths. Creates missing output parent directories and OVERWRITES an existing output file. Standard output and standard error are continuously redirected to outputPath while GAP runs, not collected until the end. You can independently read your specified outputPath while this invocation is pending to inspect live output; this tool does not return the log.\n\nThere is NO fixed runtime timeout: the invocation waits until the process exits or it is cancelled. Cancellation stops this invocation's process tree. Each invocation runs only one file; different output files may run concurrently, but concurrent writes to the same output file are rejected.\n\nResponse on normal process completion: { \"completed\": true }. Completion does NOT mean the GAP program succeeded. GAP-internal errors and nonzero exit codes are not interpreted as program success or failure; inspect outputPath yourself. Invalid paths, save/write/startup failures, or interruption are reported as tool errors rather than normal completion.",
+        "modelDescription": "Runs exactly one GAP source file with GAP -q --nointeract in an independent process, in a trusted workspace. Saves unsaved changes if the file is open in the executing window.\n\nCreates missing output parent directories and OVERWRITES an existing output file. Standard output and standard error are continuously redirected to outputPath while GAP runs; this tool does not return the log.\n\nThere is NO fixed runtime timeout: the invocation waits until the process exits or it is cancelled. Cancellation stops this invocation's process tree. Different output files may run concurrently, but concurrent writes to the same output file are rejected.\n\nResponse on normal process completion: { \"completed\": true }. Completion does NOT mean the GAP program succeeded. GAP-internal errors and nonzero exit codes are not interpreted as program success or failure; inspect outputPath yourself. Invalid paths, save/write/startup failures, or interruption are reported as tool errors rather than normal completion.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -563,6 +563,10 @@
             "outputPath": {
               "type": "string",
               "description": "Absolute path of the output file. Overwrites it, creates missing parent directories, and writes stdout/stderr live. Read this path independently while execution is pending."
+            },
+            "cwd": {
+              "type": "string",
+              "description": "Optional absolute path to an existing directory in the extension host's filesystem. Sets the working directory for this invocation only. If omitted, uses the file's workspace root in the executing window, or the user's home directory on the extension host if the file does not belong to a workspace. Does not affect window selection. filePath and outputPath must still be absolute paths."
             }
           },
           "required": [

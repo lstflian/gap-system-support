@@ -37,6 +37,8 @@ export const Messages = {
         runClosed: 'GAP: The GAP file runner has stopped.',
         runPathRequired: (name: string) => `${name} must be a non-empty absolute file path without null characters.`,
         runInputNotFile: 'GAP: filePath must refer to a readable file.',
+        runCwdRequired: 'GAP: cwd must be an absolute directory path without null characters.',
+        runCwdNotDirectory: 'GAP: cwd must refer to an existing directory.',
         runOutputNotFile: 'GAP: outputPath must refer to a file, not a directory or another special file.',
         runSameFile: 'GAP: outputPath must not refer to the GAP source file.',
         runOutputBusy: 'GAP: Another invocation is already writing to outputPath.',
@@ -52,9 +54,10 @@ export const Messages = {
         runFailed: (reason: string) => `GAP: Could not run the GAP file: ${reason}`,
         runInvocation: (file: string, output: string) => `Running GAP file '${file}' with output redirected to '${output}'`,
         runConfirmationTitle: 'Run GAP file and overwrite output?',
-        runConfirmation: (file: string, output: string) =>
-            `Save any unsaved changes to '${file}', execute it with GAP --nointeract -b (banner suppressed), ` +
+        runConfirmation: (file: string, output: string, cwd?: string) =>
+            `Save any unsaved changes to '${file}', execute it with GAP -q --nointeract (quiet mode), ` +
             `and overwrite '${output}'. ` +
+            (cwd === undefined ? "Use the file's workspace root as cwd, if any. " : `Use '${cwd}' as cwd. `) +
             'GAP code can modify files and perform other actions. There is no fixed runtime limit; cancel to stop it. ' +
             'You can read the output file while it runs. Completion does not mean the GAP program succeeded.',
     },
@@ -70,6 +73,7 @@ export const Messages = {
         invalidCredentialStorage: 'GAP: The saved MCP credential is invalid. Run "GAP: Reset MCP Access Token" to replace it.',
         tokenReset: 'GAP: MCP access token reset for this VS Code profile. Previous credentials no longer authorize its servers; copy updated connection configuration for external clients.',
         resetTokenFailed: (reason: string) => `GAP: Failed to reset the MCP access token: ${reason}`,
+        tokenCleanupFailed: (reason: string) => `The new MCP access token was saved, but obsolete token cleanup failed: ${reason}`,
         requestFailed: 'GAP: The MCP request could not be completed.',
         stopped: 'GAP: The MCP server has stopped.',
         invalidPort: 'GAP: "gap.mcp.port" must be an integer between 0 and 65535; use 0 for automatic port allocation.',

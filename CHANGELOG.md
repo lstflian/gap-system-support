@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.3
+
+1. Share one authenticated MCP service and port per VS Code Profile until the last participating window closes
+2. Move `gap.mcp.enabled` and `gap.mcp.port` to Profile user settings, ignoring workspace overrides
+3. Route VS Code MCP calls to their originating window and external calls to the matching workspace
+4. Add optional `cwd` to `run_gap_file`, defaulting to the file's workspace root or the extension host user's home directory
+5. Use `-q --nointeract` for `run_gap_file`
+6. Return successful MCP tool results as a single JSON text item
+7. Delete replaced MCP tokens and handle concurrent resets without affecting other Profiles
+8. Keep MCP output writes exclusive across window disconnects and service restarts, including hard links
+9. Serialize MCP socket recovery and startup on macOS and Linux
+
 ## 0.4.2
 
 1. Reconcile concurrent first-start credentials across windows and reject obsolete Profile credentials after token reset

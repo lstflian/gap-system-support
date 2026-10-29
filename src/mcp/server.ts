@@ -1,17 +1,19 @@
 import * as http from 'node:http';
 import { timingSafeEqual, randomUUID } from 'node:crypto';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import * as vscode from 'vscode';
+import type * as vscode from 'vscode';
+import { CancellationSource, throwIfCancelled } from './cancellation';
 import {
     createMcpHandler, fromJsonSchema, McpServer, isInitializeRequest, isLegacyRequest,
     WebStandardStreamableHTTPServerTransport, type McpHandlerRequestOptions,
 } from '@modelcontextprotocol/server';
 import { localhostHostValidation, localhostOriginValidation, toNodeHandler } from '@modelcontextprotocol/node';
 import type { ToolEntry, ToolRegistry } from '../lmtools/registry';
-import { ToolError, throwIfToolCancelled } from '../lmtools/toolCore';
 import { getErrorMessage, Messages } from '../shared/messages';
 import { MCP_MAX_REQUEST_BYTES, MCP_MAX_LEGACY_SESSIONS, MCP_LEGACY_SESSION_IDLE_MS } from '../limits';
 import { isMcpToken } from './credentials';
+
+class ToolError extends Error {}
 
 export interface RunningMcpServer {
     readonly url: string;
@@ -20,22 +22,30 @@ export interface RunningMcpServer {
     close(): Promise<void>;
 }
 
+export interface McpExecutionOptions {
+    isCurrent?: () => Promise<boolean>;
+    resolveWindow?: (key: string | null) => string | undefined;
+    execute?: (name: string, input: object, token: vscode.CancellationToken, windowId: string | undefined) => Promise<object>;
+}
+
 export async function startMcpServer(
     registry: ToolRegistry,
     isEnabled: () => boolean,
     onError: (error: Error) => void,
     token: string,
     port = 0,
+    options: McpExecutionOptions = {},
 ): Promise<RunningMcpServer> {
     if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error(Messages.mcp.invalidPort);
     if (!isMcpToken(token)) throw new Error(Messages.mcp.invalidCredentialStorage);
     let accepting = true;
-    const invocations = new Set<vscode.CancellationTokenSource>();
+    const invocations = new Set<CancellationSource>();
     const completions = new Set<Promise<void>>();
-    const requestSignals = new AsyncLocalStorage<AbortSignal>();
+    const requestSignals = new AsyncLocalStorage<{ signal: AbortSignal; windowId?: string }>();
     interface LegacyState {
-        invocations: Set<vscode.CancellationTokenSource>;
+        invocations: Set<CancellationSource>;
         lastUsed: number;
+        windowId?: string;
     }
     interface LegacySession extends LegacyState {
         id?: string;
@@ -62,9 +72,10 @@ export async function startMcpServer(
                     openWorldHint: false,
                 },
             }, async (input, context) => {
-                const cancellation = new vscode.CancellationTokenSource();
+                const cancellation = new CancellationSource();
                 const cancel = (): void => cancellation.cancel();
-                const signals = [context.mcpReq.signal, requestSignals.getStore()];
+                const requestContext = requestSignals.getStore();
+                const signals = [context.mcpReq.signal, requestContext?.signal];
                 for (const signal of signals) {
                     signal?.addEventListener('abort', cancel, { once: true });
                     if (signal?.aborted) cancel();
@@ -77,13 +88,14 @@ export async function startMcpServer(
                 try {
                     if (!accepting || !isEnabled()) throw new ToolError(Messages.mcp.stopped);
                     if (statelessLegacy && metadata.name === 'run_gap_file') throw new ToolError(Messages.mcp.runNeedsSession);
-                    throwIfToolCancelled(cancellation.token);
-                    const output = await tool.execute(input, cancellation.token);
-                    throwIfToolCancelled(cancellation.token);
+                    throwIfCancelled(cancellation.token);
+                    const output = options.execute
+                        ? await options.execute(metadata.name, input, cancellation.token, requestContext?.windowId)
+                        : await tool.execute(input, cancellation.token);
+                    throwIfCancelled(cancellation.token);
                     if (!accepting || !isEnabled()) throw new ToolError(Messages.mcp.stopped);
                     return {
                         content: [{ type: 'text', text: JSON.stringify(output, null, 2) }],
-                        structuredContent: { ...output },
                     };
                 } catch (error) {
                     if (!(error instanceof ToolError) && !cancellation.token.isCancellationRequested) {
@@ -138,6 +150,7 @@ export async function startMcpServer(
         if (id) {
             const session = sessions.get(id);
             if (!session) return errorResponse(404, Messages.mcp.sessionMissing);
+            if (session.windowId !== requestSignals.getStore()?.windowId) return errorResponse(403, 'MCP session belongs to another window.');
             session.lastUsed = Date.now();
             return session.transport.handleRequest(request, parsed);
         }
@@ -147,7 +160,7 @@ export async function startMcpServer(
             session.invocations.size === 0 && Date.now() - session.lastUsed > MCP_LEGACY_SESSION_IDLE_MS).map(closeSession));
         if (!accepting || !isEnabled()) return errorResponse(503, Messages.mcp.stopped);
         if (legacyServers.size >= MCP_MAX_LEGACY_SESSIONS) return errorResponse(503, Messages.mcp.sessionCapacity);
-        const state: LegacyState = { invocations: new Set(), lastUsed: Date.now() };
+        const state: LegacyState = { invocations: new Set(), lastUsed: Date.now(), windowId: requestSignals.getStore()?.windowId };
         const mcp = createServer(state);
         const transport = new WebStandardStreamableHTTPServerTransport({
             sessionIdGenerator: randomUUID,
@@ -168,12 +181,21 @@ export async function startMcpServer(
         }
     };
     const nodeHandler = toNodeHandler({
-        fetch: (request, options) => requestSignals.run(request.signal, () => {
-            const pending = route(request, options);
-            requests.add(pending);
-            void pending.then(() => requests.delete(pending), () => requests.delete(pending));
-            return pending;
-        }),
+        fetch: async (request, requestOptions) => {
+            if (options.isCurrent && !await options.isCurrent()) return errorResponse(503, Messages.mcp.stopped);
+            let windowId: string | undefined;
+            try {
+                windowId = options.resolveWindow?.(request.headers.get('x-gap-window'));
+            } catch {
+                return Promise.resolve(errorResponse(403, 'The originating GAP window is no longer available.'));
+            }
+            return requestSignals.run({ signal: request.signal, windowId }, () => {
+                const pending = route(request, requestOptions);
+                requests.add(pending);
+                void pending.then(() => requests.delete(pending), () => requests.delete(pending));
+                return pending;
+            });
+        },
     }, {
         maxRequestBodySize: MCP_MAX_REQUEST_BYTES,
         onerror: error => console.error('[GAP MCP] HTTP adapter error:', error),

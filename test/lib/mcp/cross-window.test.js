@@ -6,6 +6,7 @@ const {
     vscodeMock: vscode, createProfileState, createFixture, SecretStorage, Disposable, setConfiguration,
 } = require('../lmtools/mock-vscode');
 const { check, section, summary } = require('../help/helpers');
+const { toolOutput, credentialKey } = require('./helpers');
 const { McpController } = require('../../../out/mcp');
 const { McpCredentials } = require('../../../out/mcp/credentials');
 const { createToolRegistry } = require('../../../out/lmtools/registry');
@@ -62,7 +63,7 @@ async function callBooks(definition) {
         await client.connect(new StreamableHTTPClientTransport(new URL(definition.url), {
             requestInit: { headers: definition.headers },
         }));
-        return (await client.callTool({ name: 'list_gap_books', arguments: {} })).structuredContent;
+        return toolOutput(await client.callTool({ name: 'list_gap_books', arguments: {} }));
     } finally {
         await client.close();
     }
@@ -72,8 +73,8 @@ async function main() {
     const fixture = createFixture();
     const profile = createProfileState();
     const secrets = new SecretStorage();
-    const windowA = { secrets, globalState: profile.createWindow() };
-    const windowB = { secrets, globalState: profile.createWindow() };
+    const windowA = { secrets, globalState: profile.createWindow(), globalStorageUri: fixture.context.globalStorageUri };
+    const windowB = { secrets, globalState: profile.createWindow(), globalStorageUri: fixture.context.globalStorageUri };
     const providers = new Set();
     const controllers = [];
     const originalRegisterProvider = vscode.lm.registerMcpServerDefinitionProvider;
@@ -117,7 +118,7 @@ async function main() {
         await new McpCredentials(windowB).resetToken();
         await Promise.all([a.whenIdle(), b.whenIdle()]);
         profile.flush();
-        const profileKey = windowA.globalState.get('gap.mcp.tokenKey');
+        const profileKey = credentialKey(windowA);
         const profileAuthorization = `Bearer ${await secrets.get(profileKey)}`;
         const beforeOldRequest = calls;
         for (const obsolete of initial) {
@@ -128,6 +129,8 @@ async function main() {
         await Promise.all([a.whenIdle(), b.whenIdle()]);
         const converged = await definitions(providers);
         check('both windows remain available after convergence', 2, converged.length);
+        check('same Profile converges to one actual HTTP endpoint', 1,
+            new Set(converged.map(definition => definition.url)).size);
         check('all published definitions use the authoritative Profile credential', true,
             converged.every(definition => definition.headers.Authorization === profileAuthorization));
         for (const definition of converged) {
@@ -137,7 +140,7 @@ async function main() {
 
         section('2. Reset notification arrives before the Profile cache update');
         await new McpCredentials(windowB).resetToken();
-        const resetKey = windowB.globalState.get('gap.mcp.tokenKey');
+        const resetKey = credentialKey(windowB);
         const resetAuthorization = `Bearer ${await secrets.get(resetKey)}`;
         await Promise.all([a.whenIdle(), b.whenIdle()]);
         profile.flush();
@@ -163,7 +166,7 @@ async function main() {
         await new McpCredentials(windowB).resetToken();
         await Promise.all([a.whenIdle(), b.whenIdle()]);
         profile.flush();
-        const newestAuthorization = `Bearer ${await secrets.get(windowA.globalState.get('gap.mcp.tokenKey'))}`;
+        const newestAuthorization = `Bearer ${await secrets.get(credentialKey(windowA))}`;
         await new Promise(resolve => setTimeout(resolve, 1100));
         const latest = await definitions(providers);
         check('the Profile monitor refreshes otherwise idle windows', true,
@@ -171,13 +174,15 @@ async function main() {
 
         section('4. Another Profile never adopts this Profile credential');
         const otherProfile = createProfileState();
-        const otherWindow = { secrets, globalState: otherProfile.createWindow() };
+        const otherWindow = { secrets, globalState: otherProfile.createWindow(), globalStorageUri: fixture.context.globalStorageUri };
         const other = new McpController(registry, otherWindow);
         controllers.push(other);
         await other.whenIdle();
         otherProfile.flush();
-        const otherAuthorization = `Bearer ${await secrets.get(otherWindow.globalState.get('gap.mcp.tokenKey'))}`;
+        const otherAuthorization = `Bearer ${await secrets.get(credentialKey(otherWindow))}`;
         check('another Profile has its own token', false, otherAuthorization === newestAuthorization);
+        const otherEndpoint = (await definitions(providers)).find(definition => definition.headers.Authorization === otherAuthorization);
+        check('another Profile has a separate HTTP listener', false, otherEndpoint?.url === latest[0].url);
         await new McpCredentials(windowB).resetToken();
         profile.flush();
         await Promise.all(controllers.map(controller => controller.whenIdle()));

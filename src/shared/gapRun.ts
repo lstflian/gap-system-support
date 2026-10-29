@@ -4,7 +4,9 @@ import { promises as fs, constants, BigIntStats, createWriteStream } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { pipeline } from 'stream/promises';
+import { Writable } from 'stream';
 import * as vscode from 'vscode';
+import type { ToolExecutionContext, ToolOutputWriter } from '../lmtools/registry';
 import { isBashOnWindows, quoteShellPath, toRuntimePath } from '../path';
 import { throwIfToolCancelled } from '../lmtools/toolCore';
 import { getErrorMessage, Messages } from './messages';
@@ -21,8 +23,8 @@ export interface GapLaunch {
     protocol?: { marker: string; wsl?: WslTarget };
 }
 
-/** Non-interactive run options; -b suppresses the banner so it never reaches the output file. */
-const GAP_RUN_OPTIONS = ['--nointeract', '-b'];
+/** Tool-only options; quiet mode suppresses both the banner and prompts. */
+const GAP_RUN_OPTIONS = ['-q', '--nointeract'];
 
 function isMissing(error: unknown): boolean {
     return error instanceof Error && 'code' in error && (error.code === 'ENOENT' || error.code === 'ENOTDIR');
@@ -189,12 +191,14 @@ async function terminate(
     }
 }
 
-function execute(launch: GapLaunch, fd: number, cwd: string | undefined, token: vscode.CancellationToken): Promise<void> {
+function execute(launch: GapLaunch, output: number | ToolOutputWriter, cwd: string | undefined,
+    token: vscode.CancellationToken): Promise<void> {
     throwIfToolCancelled(token);
     return new Promise((resolve, reject) => {
         const child = spawn(launch.executable, launch.args, {
             cwd,
-            stdio: ['pipe', 'pipe', fd],
+            // Remote runs never give GAP a writable handle to the output file.
+            stdio: ['pipe', 'pipe', typeof output === 'number' ? output : 'pipe'],
             detached: os.platform() !== 'win32',
             windowsHide: true,
             windowsVerbatimArguments: launch.windowsVerbatimArguments,
@@ -259,15 +263,26 @@ function execute(launch: GapLaunch, fd: number, cwd: string | undefined, token: 
         }
         const stdout = child.stdout;
         const stdin = child.stdin;
-        if (!stdout || !stdin) {
+        if (!stdout || !stdin || (typeof output !== 'number' && !child.stderr)) {
             failure = new Error(Messages.tools.runInvalidProtocol);
             stop();
         }
-        const writing = stdout ? pipeline(stdout, filterOutput, createWriteStream('', { fd, autoClose: false }))
-            .catch(error => {
-                failure = error instanceof Error ? error : new Error(getErrorMessage(error));
-                stop();
-            }) : Promise.resolve();
+        const writeFailed = (error: unknown): void => {
+            failure = error instanceof Error ? error : new Error(getErrorMessage(error));
+            stop();
+        };
+        const sink = (): Writable => new Writable({
+            write(chunk: Buffer, _encoding, callback) {
+                if (typeof output === 'number') return callback(new Error(Messages.tools.runInvalidProtocol));
+                void output.write(chunk).then(() => callback(), callback);
+            },
+        });
+        const writing = Promise.all([
+            stdout ? pipeline(stdout, filterOutput, typeof output === 'number'
+                ? createWriteStream('', { fd: output, autoClose: false }) : sink()).catch(writeFailed) : Promise.resolve(),
+            typeof output !== 'number' && child.stderr
+                ? pipeline(child.stderr, sink()).catch(writeFailed) : Promise.resolve(),
+        ]);
         stdin?.on('error', error => {
             failure = error;
             stop();
@@ -298,13 +313,14 @@ export class GapRunner implements vscode.Disposable {
     private closing: Promise<void> | undefined;
 
     async run(filePath: string, outputPath: string, uri: vscode.Uri, cwd: string | undefined,
-        token: vscode.CancellationToken): Promise<void> {
+        token: vscode.CancellationToken, claimOutput?: (identity: string) => Promise<void>,
+        openOutput?: ToolExecutionContext['openOutput']): Promise<void> {
         if (this.disposed) throw new Error(Messages.tools.runClosed);
         throwIfToolCancelled(token);
         const cancellation = new vscode.CancellationTokenSource();
         const listener = token.onCancellationRequested(() => cancellation.cancel());
         if (token.isCancellationRequested) cancellation.cancel();
-        const running = this.runFile(filePath, outputPath, uri, cwd, cancellation.token);
+        const running = this.runFile(filePath, outputPath, uri, cwd, cancellation.token, claimOutput, openOutput);
         this.active.set(cancellation, running);
         try {
             await running;
@@ -316,7 +332,8 @@ export class GapRunner implements vscode.Disposable {
     }
 
     private async runFile(filePath: string, outputPath: string, uri: vscode.Uri, cwd: string | undefined,
-        token: vscode.CancellationToken): Promise<void> {
+        token: vscode.CancellationToken, claimOutput?: (identity: string) => Promise<void>,
+        openOutput?: ToolExecutionContext['openOutput']): Promise<void> {
         const source = await fs.stat(filePath, { bigint: true });
         if (!source.isFile()) throw new Error(Messages.tools.runInputNotFile);
         await fs.access(filePath, constants.R_OK);
@@ -340,6 +357,7 @@ export class GapRunner implements vscode.Disposable {
             claimed.push(key);
         };
         let output: Awaited<ReturnType<typeof fs.open>> | undefined;
+        let remote: ToolOutputWriter | undefined;
         try {
             throwIfToolCancelled(token);
             claim(outputKey);
@@ -350,14 +368,18 @@ export class GapRunner implements vscode.Disposable {
             const identity = fileKey(actual);
             if (identity !== undefined && identity === sourceKey) throw new Error(Messages.tools.runSameFile);
             if (identity !== undefined) claim(identity);
+            if (identity !== undefined && claimOutput) await claimOutput(identity);
+            if (openOutput) remote = await openOutput({ path: outputKey, sourcePath, identity, sourceIdentity: sourceKey });
             throwIfToolCancelled(token);
-            await output.truncate(0);
-            await execute(launch, output.fd, cwd, token);
+            if (remote) await remote.truncate();
+            else await output.truncate(0);
+            await execute(launch, remote ?? output.fd, cwd, token);
         } finally {
             try {
-                await output?.close();
+                await remote?.close();
             } finally {
-                for (const key of claimed) this.outputs.delete(key);
+                try { await output?.close(); }
+                finally { for (const key of claimed) this.outputs.delete(key); }
             }
         }
     }

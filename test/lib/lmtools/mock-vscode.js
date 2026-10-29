@@ -168,14 +168,15 @@ const state = {
 };
 
 function setting(key, fallback) {
-    if (workspace.has(key)) return workspace.get(key);
+    if (manifest.contributes.configuration.properties[key]?.scope !== 'machine' && workspace.has(key)) return workspace.get(key);
     if (user.has(key)) return user.get(key);
     return manifest.contributes.configuration.properties[key]?.default ?? fallback;
 }
 
-function setConfiguration(values, target = 'workspace') {
-    const settings = target === 'user' ? user : workspace;
+function setConfiguration(values, target = 'auto') {
     for (const [key, value] of Object.entries(values)) {
+        const machine = manifest.contributes.configuration.properties[key]?.scope === 'machine';
+        const settings = target === 'user' || (target === 'auto' && machine) ? user : workspace;
         if (value === undefined) settings.delete(key);
         else settings.set(key, value);
     }
@@ -209,6 +210,7 @@ Object.assign(vscodeMock, {
         workspaceFolders: [],
         getConfiguration: section => ({
             get: (key, fallback) => setting(`${section}.${key}`, fallback),
+            inspect: key => ({ globalValue: user.get(`${section}.${key}`), workspaceValue: workspace.get(`${section}.${key}`) }),
             update: (key, value, target) => {
                 setConfiguration({ [`${section}.${key}`]: value }, target === 1 ? 'user' : 'workspace');
                 return Promise.resolve();

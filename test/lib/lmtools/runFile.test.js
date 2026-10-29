@@ -113,7 +113,7 @@ async function main() {
         assert.deepEqual(result, { completed: true });
         assert.equal(saved, 1);
         const info = await record(output);
-        assert.deepEqual(info.args, ['--nointeract', '-b', '*stdin*', file]);
+        assert.deepEqual(info.args, ['-q', '--nointeract', '*stdin*', file]);
         assert.equal(info.cwd.toLowerCase(), folderB.uri.fsPath.toLowerCase());
         assert(log(output).includes('GAP internal error'));
         assert(log(output).includes('finished\n'));
@@ -122,10 +122,53 @@ async function main() {
         const preparation = tool.prepareInvocation({ input: { filePath: file, outputPath: output } });
         assert(preparation.confirmationMessages.message.includes(output));
         assert(preparation.confirmationMessages.message.includes(file));
+        const overrideCwd = path.join(fixture.root, 'explicit cwd');
+        fs.mkdirSync(overrideCwd);
+        const overrideInput = { filePath: file, outputPath: output, cwd: overrideCwd };
+        await tool.execute(overrideInput, token.token);
+        assert.equal((await record(output)).cwd.toLowerCase(), overrideCwd.toLowerCase());
+        assert(tool.prepareInvocation({ input: overrideInput }).confirmationMessages.message.includes(overrideCwd));
+        const beforeInvalid = saved;
+        const rejectedOutput = path.join(fixture.root, 'invalid-cwd-output.txt');
+        for (const cwd of ['', '  ', null, 42, {}, 'relative', path.join(fixture.root, 'missing'), file]) {
+            await assert.rejects(() => tool.execute({ filePath: file, outputPath: rejectedOutput, cwd }, token.token));
+            assert.equal(saved, beforeInvalid, 'invalid cwd must not save the document');
+            assert.equal(fs.existsSync(rejectedOutput), false, 'invalid cwd must not create the output');
+        }
         vscode.workspace.textDocuments = [];
         vscode.workspace.getWorkspaceFolder = originalFolder;
         await tool.execute(inputs, token.token);
-        assert.equal((await record(inputs.outputPath)).cwd.toLowerCase(), process.cwd().toLowerCase());
+        assert.equal((await record(inputs.outputPath)).cwd.toLowerCase(), os.homedir().toLowerCase());
+        await tool.execute({ ...inputs, cwd: overrideCwd }, token.token);
+        assert.equal((await record(inputs.outputPath)).cwd.toLowerCase(), overrideCwd.toLowerCase());
+
+        const preserved = log(inputs.outputPath);
+        const identity = fs.statSync(inputs.outputPath, { bigint: true });
+        await assert.rejects(() => tool.execute(inputs, token.token, {
+            async claimOutput(value) {
+                assert.equal(value, `file:${identity.dev}:${identity.ino}`);
+                assert.equal(log(inputs.outputPath), preserved, 'shared identity is claimed before truncation');
+                throw new Error('test shared output conflict');
+            },
+        }), /test shared output conflict/);
+        assert.equal(log(inputs.outputPath), preserved, 'failed shared claim preserves existing output');
+        const claimCancellation = new CancellationTokenSource();
+        let enteredClaim;
+        let releaseClaim;
+        const claimEntered = new Promise(resolve => { enteredClaim = resolve; });
+        const claimGate = new Promise(resolve => { releaseClaim = resolve; });
+        const pendingClaim = tool.execute(inputs, claimCancellation.token, {
+            async claimOutput() { enteredClaim(); await claimGate; },
+        });
+        const cancelledClaim = assert.rejects(pendingClaim, /Canceled/);
+        await claimEntered;
+        claimCancellation.cancel();
+        releaseClaim();
+        await cancelledClaim;
+        claimCancellation.dispose();
+        assert.equal(log(inputs.outputPath), preserved, 'cancellation during the shared claim preserves output');
+        await tool.execute(inputs, token.token);
+        assert(log(inputs.outputPath).includes('finished\n'), 'native execution reuses output after failed/cancelled claims');
 
         console.log('1a. Only GAP confirms startup; chunked markers are removed without losing output');
         const startupFile = path.join(fixture.root, 'startup.g');
@@ -459,13 +502,13 @@ async function main() {
         console.log('10. Native launch and Windows/POSIX/WSL path and quoting matrix');
         for (const platform of ['linux', 'darwin']) {
             assert.deepEqual(nativeGapLaunch('/usr/bin/gap', '/a space/test.g', platform),
-                { executable: '/usr/bin/gap', args: ['--nointeract', '-b', '*stdin*', '/a space/test.g'] });
+                { executable: '/usr/bin/gap', args: ['-q', '--nointeract', '*stdin*', '/a space/test.g'] });
         }
         const nativeFile = 'D:\\a space\\$special!%.g';
-        assert.deepEqual(nativeGapLaunch('C:\\GAP\\gap.exe', nativeFile, 'win32').args, ['--nointeract', '-b', '*stdin*', nativeFile]);
+        assert.deepEqual(nativeGapLaunch('C:\\GAP\\gap.exe', nativeFile, 'win32').args, ['-q', '--nointeract', '*stdin*', nativeFile]);
         const batch = nativeGapLaunch('C:\\GAP install\\gap.cmd', 'D:\\a space\\test.g', 'win32');
         assert.equal(batch.windowsVerbatimArguments, true);
-        assert.deepEqual(batch.args, ['/d', '/v:off', '/s', '/c', '""C:\\GAP install\\gap.cmd" --nointeract -b "*stdin*" "D:\\a space\\test.g""']);
+        assert.deepEqual(batch.args, ['/d', '/v:off', '/s', '/c', '""C:\\GAP install\\gap.cmd" -q --nointeract "*stdin*" "D:\\a space\\test.g""']);
         assert.throws(() => nativeGapLaunch('C:\\GAP\\gap.bat', nativeFile, 'win32'), /terminal would interpret/);
         const wsl = shellGapLaunch('wsl.exe', "/mnt/d/a'b $path.g", 'marker', { executable: 'wsl.exe', args: ['-d', 'Ubuntu'] }, '/mnt/d/root');
         assert.deepEqual(wsl.args.slice(0, 7), ['-d', 'Ubuntu', '--exec', 'setsid', 'sh', '-c', wsl.args[6]]);
@@ -473,7 +516,7 @@ async function main() {
         assert(wsl.args[6].includes('marker:pid:'));
         assert(!wsl.args[6].includes('marker:ready'));
         assert(!wsl.args[6].includes('command -v gap'));
-        assert(wsl.args[6].includes('exec gap --nointeract -b'));
+        assert(wsl.args[6].includes('exec gap -q --nointeract'));
         assert(wsl.args[6].includes('*stdin*'));
         const changedCwd = shellGapLaunch('wsl.exe', '/mnt/d/test.g', 'marker',
             { executable: 'wsl.exe', args: ['-d', 'Ubuntu', '--cd', '/some/old/folder'] });

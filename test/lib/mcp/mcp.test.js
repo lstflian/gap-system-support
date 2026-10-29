@@ -7,6 +7,7 @@ const {
     vscodeMock: vscode, state, setConfiguration, createFixture, grantTrust, CancellationTokenSource,
 } = require('../lmtools/mock-vscode');
 const { check, section, summary } = require('../help/helpers');
+const { toolOutput, credentialKey: currentCredentialKey } = require('./helpers');
 const { createToolRegistry } = require('../../../out/lmtools/registry');
 const { LmToolsController } = require('../../../out/lmtools');
 const { McpController } = require('../../../out/mcp');
@@ -95,7 +96,7 @@ async function main() {
                 try {
                     check(`MCP tools remain available for native=${tools}`, 5, (await client.listTools()).tools.length);
                     check(`MCP book lookup for native=${tools}`, { books: ['Reference', 'Tutorial'] },
-                        (await client.callTool({ name: 'list_gap_books', arguments: {} })).structuredContent);
+                        toolOutput(await client.callTool({ name: 'list_gap_books', arguments: {} })));
                 } finally {
                     await client.close();
                 }
@@ -144,7 +145,7 @@ async function main() {
                 tool.annotations);
                 const expected = await entries.get(tool.name).tool.execute(fixture.inputs[tool.name], token.token);
                 const result = await client.callTool({ name: tool.name, arguments: fixture.inputs[tool.name] });
-                check(`${tool.name} structured MCP result`, expected, result.structuredContent);
+                check(`${tool.name} single MCP result`, expected, toolOutput(result));
                 check(`${tool.name} text MCP result`, JSON.stringify(expected, null, 2), result.content[0].text);
             }
             for (const extra of [true, false, 0, 'text', null, {}, []]) {
@@ -166,7 +167,7 @@ async function main() {
         vscode.workspace.textDocuments = [{ uri: vscode.Uri.file(fixture.sourceFile), getText: () => 'x := ;\n' }];
         const invalidSyntax = await client.callTool({ name: 'check_gap_syntax', arguments: fixture.inputs.check_gap_syntax });
         check('syntax errors are findings, not execution errors', [false, false],
-            [invalidSyntax.structuredContent.syntaxValid, invalidSyntax.isError === true]);
+            [toolOutput(invalidSyntax).syntaxValid, invalidSyntax.isError === true]);
         vscode.workspace.textDocuments = [];
         setConfiguration({ 'gap.docPath': '' });
         check('missing help configuration is an error result', true,
@@ -232,20 +233,24 @@ async function main() {
         await mcp.whenIdle();
         const restarted = await configuration();
         check('restarting preserves the saved profile token', true, restarted.headers.Authorization === config.headers.Authorization);
-        check('previously configured credentials remain authorized', 405, (await request(restarted.url, config.headers)).status);
+        check('previously copied external credentials remain authorized', 405,
+            (await request(restarted.url, { Authorization: config.headers.Authorization })).status);
+        check('an obsolete window binding cannot turn into an external request', 403,
+            (await request(restarted.url, config.headers)).status);
 
-        section('5. Workspace overrides, trust and idempotent updates');
+        section('5. Profile-only settings, trust and idempotent updates');
         setConfiguration({ 'gap.mcp.enabled': false }, 'user');
-        setConfiguration({ 'gap.mcp.enabled': true });
+        setConfiguration({ 'gap.mcp.enabled': true }, 'workspace');
         await mcp.whenIdle();
-        check('workspace true overrides user false', 1, state.providers.size);
-        setConfiguration({ 'gap.mcp.enabled': undefined });
+        check('workspace true cannot override user false', 0, state.providers.size);
+        setConfiguration({ 'gap.mcp.enabled': undefined }, 'workspace');
         await mcp.whenIdle();
-        check('removing workspace override restores user false', 0, state.providers.size);
+        check('removing workspace value leaves user false', 0, state.providers.size);
         setConfiguration({ 'gap.mcp.enabled': true }, 'user');
-        setConfiguration({ 'gap.mcp.enabled': false });
+        setConfiguration({ 'gap.mcp.enabled': false }, 'workspace');
         await mcp.whenIdle();
-        check('workspace false overrides user true', 0, state.providers.size);
+        check('workspace false cannot override user true', 1, state.providers.size);
+        setConfiguration({ 'gap.mcp.enabled': undefined }, 'workspace');
         vscode.workspace.isTrusted = false;
         setConfiguration({ 'gap.mcp.enabled': true });
         await mcp.whenIdle();
@@ -335,23 +340,17 @@ async function main() {
 
         section('8. Startup failure is explicit and native tools remain usable');
         setConfiguration({ 'gap.tools.enabled': true });
-        const originalCreateServer = http.createServer;
+        const connection = require('../../../out/mcp/connection');
+        const originalJoin = connection.joinMcpService;
         const originalConsoleError = console.error;
         const errors = [];
         try {
             console.error = (...args) => errors.push(args);
-            http.createServer = (...args) => {
-                const server = originalCreateServer(...args);
-                server.listen = () => {
-                    queueMicrotask(() => server.emit('error', new Error('test bind failure')));
-                    return server;
-                };
-                return server;
-            };
+            connection.joinMcpService = async () => { throw new Error('test bind failure'); };
             setConfiguration({ 'gap.mcp.enabled': true });
             await mcp.whenIdle();
         } finally {
-            http.createServer = originalCreateServer;
+            connection.joinMcpService = originalJoin;
             console.error = originalConsoleError;
         }
         check('failed startup publishes no provider', 0, state.providers.size);
@@ -370,17 +369,11 @@ async function main() {
         const listenEntered = new Promise(resolve => { enteredListen = resolve; });
         const listenGate = new Promise(resolve => { releaseListen = resolve; });
         try {
-            http.createServer = (...args) => {
-                const server = originalCreateServer(...args);
-                const listen = server.listen.bind(server);
-                server.listen = (...listenArgs) => {
-                    enteredListen();
-                    listenGate.then(() => listen(...listenArgs));
-                    return server;
-                };
-                server.once('listening', () => {
-                    candidate = `http://127.0.0.1:${server.address().port}/mcp`;
-                });
+            connection.joinMcpService = async (...args) => {
+                const server = await originalJoin(...args);
+                candidate = server.url;
+                enteredListen();
+                await listenGate;
                 return server;
             };
             setConfiguration({ 'gap.mcp.enabled': true });
@@ -390,7 +383,7 @@ async function main() {
             await mcp.whenIdle();
         } finally {
             releaseListen();
-            http.createServer = originalCreateServer;
+            connection.joinMcpService = originalJoin;
         }
         check('cancelled startup never registers a provider', 0, state.providers.size);
         assert(candidate);
@@ -402,7 +395,7 @@ async function main() {
         section('10. Optional fixed ports, live reconfiguration and explicit conflicts');
         check('port defaults to operating-system allocation', 0,
             manifest.contributes.configuration.properties['gap.mcp.port'].default);
-        check('port setting supports workspace overrides', 'window',
+        check('port setting is Profile user-only', 'machine',
             manifest.contributes.configuration.properties['gap.mcp.port'].scope);
         for (const invalid of [-1, 65536, 1.5, '54336']) {
             await assert.rejects(() => startMcpServer(registry, () => true, unexpected, randomBytes(32).toString('hex'), invalid), /must be an integer/);
@@ -416,6 +409,11 @@ async function main() {
             try {
                 console.error = (...args) => logged.push(args);
                 setConfiguration({ 'gap.mcp.port': fixedPort });
+                const deadline = Date.now() + 20000;
+                while (!state.messages.at(-1)?.message.includes(`MCP port ${fixedPort} is already in use`)
+                    && Date.now() < deadline) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
                 await mcp.whenIdle();
             } finally {
                 console.error = originalConsoleError;
@@ -460,7 +458,8 @@ async function main() {
         const fixedRestarted = await configuration(false);
         check('fixed URL survives a service restart', fixed.url, fixedRestarted.url);
         check('fixed-port restart preserves the profile credentials', true, fixed.headers.Authorization === fixedRestarted.headers.Authorization);
-        check('existing fixed-port client credentials remain valid', 405, (await request(fixedRestarted.url, fixed.headers)).status);
+        check('existing fixed-port external credentials remain valid', 405,
+            (await request(fixedRestarted.url, { Authorization: fixed.headers.Authorization })).status);
         const providerCount = state.providerRegistrations;
         setConfiguration({ 'gap.mcp.port': fixedPort });
         await mcp.whenIdle();
@@ -508,13 +507,13 @@ async function main() {
             peerReset.headers.Authorization === reset.headers.Authorization);
         check('peer reset invalidates the previously active credential', 401,
             (await request(peerReset.url, reset.headers)).status);
-        const profileCredentialKey = fixture.context.globalState.get('gap.mcp.tokenKey');
+        const profileCredentialKey = currentCredentialKey(fixture.context);
         const registrationsBeforeDuplicate = state.providerRegistrations;
         await fixture.context.secrets.store(profileCredentialKey, await fixture.context.secrets.get(profileCredentialKey));
         await mcp.whenIdle();
         check('duplicate secret notifications do not restart an unchanged server', registrationsBeforeDuplicate,
             state.providerRegistrations);
-        const writesBeforeUnrelated = fixture.context.secrets.writeCalls;
+        const keyBeforeDisabledReset = currentCredentialKey(fixture.context);
         const registrationsBeforeUnrelated = state.providerRegistrations;
         await fixture.context.secrets.store('unrelated', 'test value');
         await mcp.whenIdle();
@@ -523,7 +522,11 @@ async function main() {
         await mcp.whenIdle();
         await vscode.commands.executeCommand('gap.resetMcpToken');
         check('reset while disabled does not enable MCP', 0, state.providers.size);
-        check('disabled reset still persists a new credential', writesBeforeUnrelated + 2, fixture.context.secrets.writeCalls);
+        const disabledKey = currentCredentialKey(fixture.context);
+        check('disabled reset still persists a new credential', true,
+            disabledKey !== keyBeforeDisabledReset && typeof await fixture.context.secrets.get(disabledKey) === 'string');
+        check('disabled reset physically deletes the replaced credential', undefined,
+            await fixture.context.secrets.get(keyBeforeDisabledReset));
         setConfiguration({ 'gap.mcp.enabled': true });
         await mcp.whenIdle();
 
@@ -546,7 +549,7 @@ async function main() {
         check('failed reset retains the existing valid service', true,
             afterFailure.headers.Authorization === current.headers.Authorization);
         check('failed reset does not bypass authentication', 401, (await request(afterFailure.url)).status);
-        const credentialKey = fixture.context.globalState.get('gap.mcp.tokenKey');
+        const credentialKey = currentCredentialKey(fixture.context);
         assert(credentialKey);
         try {
             console.error = (...args) => loggedStorageErrors.push(args);

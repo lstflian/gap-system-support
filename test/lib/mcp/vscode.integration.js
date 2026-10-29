@@ -6,6 +6,7 @@ const net = require('net');
 const path = require('path');
 const { createHash } = require('crypto');
 const vscode = require('vscode');
+const { toolOutput } = require('./helpers');
 
 const root = path.resolve(__dirname, '..', '..', '..');
 const manifest = require(path.join(root, 'package.json'));
@@ -40,6 +41,8 @@ exports.run = async function run() {
     let previousClipboard;
     let copiedClipboard;
     let shutdownUrl;
+    const originalMcpEnabled = config.inspect('mcp.enabled')?.globalValue;
+    const originalMcpPort = config.inspect('mcp.port')?.globalValue;
     try {
         assert.equal(vscode.workspace.workspaceFolders?.length, 1, 'Open one isolated empty test workspace');
         assert(fs.readdirSync(workspacePath).every(name =>
@@ -62,7 +65,7 @@ exports.run = async function run() {
         checks.push('native invocation without initializing the parser');
 
         await config.update('tools.enabled', false, vscode.ConfigurationTarget.Workspace);
-        await config.update('mcp.enabled', true, vscode.ConfigurationTarget.Workspace);
+        await config.update('mcp.enabled', true, vscode.ConfigurationTarget.Global);
         assert.equal(vscode.workspace.getConfiguration('gap').get('tools.enabled'), false);
         await assert.rejects(() => vscode.lm.invokeTool('list_gap_books', {
             input: {}, toolInvocationToken: undefined,
@@ -82,8 +85,8 @@ exports.run = async function run() {
             requestInit: { headers: definition.headers },
         }));
         assert.equal((await client.listTools()).tools.length, 5);
-        assert((await client.callTool({ name: 'list_gap_books', arguments: {} })).structuredContent.books.length > 0);
-        checks.push('workspace MCP enable and independent native disable');
+        assert(toolOutput(await client.callTool({ name: 'list_gap_books', arguments: {} })).books.length > 0);
+        checks.push('Profile MCP enable and independent workspace native disable');
 
         let mcpBooks;
         await waitFor(async () => {
@@ -106,7 +109,7 @@ exports.run = async function run() {
         assert.equal((await client.listTools()).tools.length, 5);
         checks.push('both tool surfaces enabled together');
 
-        await config.update('mcp.enabled', false, vscode.ConfigurationTarget.Workspace);
+        await config.update('mcp.enabled', false, vscode.ConfigurationTarget.Global);
         await waitFor(async () => !await portIsOpen(definition.url), 'MCP port remained open after disabling');
         assert.equal(nativeCount(), 5);
         await client.close();
@@ -124,25 +127,25 @@ exports.run = async function run() {
         checks.push('ordinary GAP diagnostics with both tool surfaces disabled');
 
         await config.update('tools.enabled', undefined, vscode.ConfigurationTarget.Workspace);
-        await config.update('mcp.enabled', undefined, vscode.ConfigurationTarget.Workspace);
+        await config.update('mcp.enabled', undefined, vscode.ConfigurationTarget.Global);
         await waitFor(() => nativeCount() === 5, 'Removing workspace override did not restore the default');
         assert(JSON.parse((await vscode.lm.invokeTool('list_gap_books', {
             input: {}, toolInvocationToken: undefined,
         })).content[0].value).books.length > 0);
-        checks.push('removing workspace overrides restores defaults');
+        checks.push('removing native workspace and MCP Profile overrides restores defaults');
         const reservation = net.createServer();
         await new Promise(resolve => reservation.listen(0, '127.0.0.1', resolve));
         const fixedPort = reservation.address().port;
         await new Promise((resolve, reject) => reservation.close(error => error ? reject(error) : resolve()));
-        await config.update('mcp.port', fixedPort, vscode.ConfigurationTarget.Workspace);
-        await config.update('mcp.enabled', true, vscode.ConfigurationTarget.Workspace);
+        await config.update('mcp.port', fixedPort, vscode.ConfigurationTarget.Global);
+        await config.update('mcp.enabled', true, vscode.ConfigurationTarget.Global);
         await vscode.commands.executeCommand('gap.copyMcpConfiguration');
         copiedClipboard = await vscode.env.clipboard.readText();
         const fixed = JSON.parse(copiedClipboard);
         assert.equal(new URL(fixed.url).port, String(fixedPort));
-        await config.update('mcp.enabled', false, vscode.ConfigurationTarget.Workspace);
+        await config.update('mcp.enabled', false, vscode.ConfigurationTarget.Global);
         await waitFor(async () => !await portIsOpen(fixed.url), 'Fixed MCP port remained open after disabling');
-        await config.update('mcp.enabled', true, vscode.ConfigurationTarget.Workspace);
+        await config.update('mcp.enabled', true, vscode.ConfigurationTarget.Global);
         await vscode.commands.executeCommand('gap.copyMcpConfiguration');
         copiedClipboard = await vscode.env.clipboard.readText();
         const restarted = JSON.parse(copiedClipboard);
@@ -181,6 +184,8 @@ exports.run = async function run() {
         throw error;
     } finally {
         await client?.close();
+        await config.update('mcp.enabled', originalMcpEnabled, vscode.ConfigurationTarget.Global);
+        await config.update('mcp.port', originalMcpPort, vscode.ConfigurationTarget.Global);
         if (copiedClipboard !== undefined && await vscode.env.clipboard.readText() === copiedClipboard) {
             await vscode.env.clipboard.writeText(previousClipboard);
         }
