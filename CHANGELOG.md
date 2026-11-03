@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.4
 
 1. Replace the HTTP MCP service with a stdio MCP server that VS Code starts and stops through the stable MCP server definition provider API; it opens no network port and needs no access token
 2. Remove the `gap.mcp.port` setting and the **GAP: Reset MCP Access Token** command; **GAP: Copy MCP Server Configuration** now copies a stdio launch configuration for other MCP clients
