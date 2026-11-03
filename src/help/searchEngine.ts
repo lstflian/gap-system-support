@@ -12,7 +12,6 @@
 import { HelpEntry } from './indexData';
 import { simpleString } from './simpleString';
 
-
 /**
  * List of pairs of different spelling patterns
  * See https://github.com/gap-system/gap/blob/d2134de71521c62512b8351c42ec16bfbac21744/lib/helpbase.gi#L82-L106

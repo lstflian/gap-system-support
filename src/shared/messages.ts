@@ -17,8 +17,27 @@ function unsafeShellPath(file: string): string {
     return `the path contains a character that the terminal would interpret (" “ ” „ $ \` ! % or a control character), rename it and try again: ${file}`;
 }
 
-/** All message texts, grouped by feature. */
 export const Messages = {
+    runtime: {
+        notFound: 'GAP: No usable GAP installation was found. Run "GAP: Select GAP Installation" to choose its folder.',
+        ambiguous: 'GAP: Multiple GAP installations were found. Run "GAP: Select GAP Installation" to choose one.',
+        selectFolder: 'Select GAP Folder',
+        chooseInstallation: 'Select the GAP installation to use',
+        installationSelected: (executable: string) => `GAP: Using executable: ${executable}`,
+        discoveryFailed: 'GAP installation discovery failed. Check the GAP output log and select the installation folder.',
+        invalidDiscovery: 'GAP installation discovery returned an invalid response.',
+        discoveryIssue: (code: string, file: string) => `GAP discovery: ${code}: ${file}`,
+        failed: (reason: string) => `GAP: ${reason}`,
+        fillHelpPaths: 'GAP: Use the detected doc/pkg folders for settings that are currently empty?',
+        usePaths: 'Use Detected Folders',
+    },
+    common: {
+        canceled: 'Canceled',
+    },
+    diagnostics: {
+        missing: (token: string) => `Missing "${token}"`,
+        unexpected: (snippet: string) => `Unexpected syntax: ${snippet}`,
+    },
     parser: {
         languageNotLoaded: 'GAP language is not loaded. Call initGapParser() first.',
         parserNotInitialized: 'GAP parser is not initialized. Call initGapParser() first.',
@@ -31,6 +50,11 @@ export const Messages = {
         failedToLoad: (name: string, reason: string) => `GAP: Failed to load ${name}: ${reason}`,
     },
     tools: {
+        initializationFailed: (reason: string) => `GAP: Could not initialize tools: ${reason}`,
+        helpConfigurationMissing: 'gap.docPath and gap.pkgPath are not configured. Please set these two settings to the doc/ and pkg/ folders ' +
+            'of your GAP installation. See the README of the gap-system-support extension (in your VS Code extensions ' +
+            'folder: ~/.vscode/extensions/flianlee.gap-system-support-<version>/README.md).',
+        unknownBooks: (names: string) => `Unknown book name(s): ${names}. Call gapListBooks to get the valid book names.`,
         disabled: 'GAP: Native language model tools are disabled.',
         invalidManifest: 'GAP: The tool definitions in the extension manifest are invalid or do not match the implementations.',
         runUntrusted: 'GAP: Running GAP files requires a trusted workspace.',
@@ -45,10 +69,10 @@ export const Messages = {
         runSaveFailed: (file: string) => `GAP: Could not save the modified document: ${file}`,
         runSourceChanged: (file: string) =>
             `GAP: filePath no longer refers to the saved document after saving. Retry with the document's path: ${file}`,
-        runNotFound: 'GAP: Could not find an executable GAP launcher on PATH. ' +
-            'For instructions on adding GAP to PATH, see https://github.com/lstflian/gap-system-support/blob/main/README.md.',
-        runLauncherFailed: 'GAP: GAP did not confirm startup. Check PATH and the output file for launcher errors. ' +
-            'For instructions on adding GAP to PATH, see https://github.com/lstflian/gap-system-support/blob/main/README.md.',
+        runNotFound: 'GAP: Could not find an executable GAP launcher. Run "GAP: Select GAP Installation" to choose its folder.',
+        runLauncherFailed: 'GAP: GAP did not confirm startup. Check the output file for launcher errors, then run "GAP: Select GAP Installation".',
+        runShellLauncherFailed: 'GAP: GAP did not confirm startup. Check the output file for launcher errors and make sure `gap` is on the PATH ' +
+            'of the interactive shell in the WSL distribution used as the VS Code terminal; "GAP: Select GAP Installation" does not apply to WSL.',
         runInvalidProtocol: 'GAP: The shell returned an invalid GAP launcher response.',
         runInvalidShellArgs: 'GAP: The selected WSL terminal profile must use an argument array without an embedded command.',
         runWslCancelFailed: 'GAP: Could not obtain the WSL process group to confirm cancellation.',
@@ -64,26 +88,10 @@ export const Messages = {
             'You can read the output file while it runs. Completion does not mean the GAP program succeeded.',
     },
     mcp: {
-        disabled: 'GAP: Enable "gap.mcp.enabled" to use the MCP server.',
         untrusted: 'GAP: The MCP server is unavailable until this workspace is trusted.',
-        startFailed: (reason: string) => `GAP: Failed to start the MCP server: ${reason}`,
-        stopFailed: (reason: string) => `GAP: Failed to stop the MCP server: ${reason}`,
-        serverFailed: (reason: string) => `GAP: The MCP server failed: ${reason}`,
-        unavailable: 'GAP: The MCP server is unavailable. Check the extension log, then toggle "gap.mcp.enabled" to retry.',
-        configurationCopied: 'GAP: MCP connection configuration copied. It contains a private access token.',
-        copyFailed: (reason: string) => `GAP: Failed to copy MCP connection configuration: ${reason}`,
-        invalidCredentialStorage: 'GAP: The saved MCP credential is invalid. Run "GAP: Reset MCP Access Token" to replace it.',
-        tokenReset: 'GAP: MCP access token reset for this VS Code profile. Previous credentials no longer authorize its servers; copy updated connection configuration for external clients.',
-        resetTokenFailed: (reason: string) => `GAP: Failed to reset the MCP access token: ${reason}`,
-        tokenCleanupFailed: (reason: string) => `The new MCP access token was saved, but obsolete token cleanup failed: ${reason}`,
-        requestFailed: 'GAP: The MCP request could not be completed.',
-        stopped: 'GAP: The MCP server has stopped.',
-        invalidPort: 'GAP: "gap.mcp.port" must be an integer between 0 and 65535; use 0 for automatic port allocation.',
-        portInUse: (port: number) =>
-            `MCP port ${port} is already in use. Choose another "gap.mcp.port" or use 0 for automatic port allocation.`,
-        runNeedsSession: 'GAP: Initialize an MCP session before running GAP files so cancellation can be routed to this invocation.',
-        sessionMissing: 'GAP: This MCP session has expired or stopped. Initialize a new connection.',
-        sessionCapacity: 'GAP: The MCP session limit has been reached. Close an existing connection and retry.',
+        configurationCopied: 'GAP: MCP server configuration copied. It starts the GAP MCP server over stdio with your current settings; ' +
+            'copy it again after updating the extension or changing GAP settings.',
+        copyFailed: (reason: string) => `GAP: Failed to copy the MCP server configuration: ${reason}`,
     },
     completionData: {
         generatedEmpty: 'generated data is empty',
@@ -129,4 +137,26 @@ export const Messages = {
         runFileUnsafePath: (file: string) => `GAP: cannot run the file, ${unsafeShellPath(file)}`,
         unsafeShellPath: (file: string) => unsafeShellPath(file),
     },
+} as const;
+
+export const Failures = {
+    completionDataLoadFailed: '[GAP] completion data load failed: ',
+    helpIndexEnsureFailed: '[GAP] help index ensure failed: ',
+    languageFeatureInitializationFailed: '[GAP] language feature initialization failed:',
+    parserInitializationFailed: '[GAP] parser initialization failed: ',
+    filepathIsRequiredAndMustBeANonEmpty: 'filePath is required and must be a non-empty string.',
+    filepathMustBeAnAbsolutePath: 'filePath must be an absolute path.',
+    theGapHelpIndexIsEmptyTryGapRebuild: 'The GAP help index is empty. Try "GAP: Rebuild Help Index" first.',
+    relativepathIsRequiredAndMustBeANonEmpty: 'relativePath is required and must be a non-empty string.',
+    failedToRead: (file: string, reason: string) => `Failed to read ${file}: ${reason}`,
+    topicIsRequiredAndMustBeANonEmpty: 'topic is required and must be a non-empty string.',
+    invalidModeUsePrefixOrSubstring: 'Invalid mode. Use "prefix" or "substring".',
+    invalidRangeUseA1BasedInclusiveRangeLike: 'Invalid range. Use a 1-based inclusive range like [1, 20] with 1 <= start <= end.',
+    unknownHelpFilePathForEntry: (file: string, entry: string) => `Unknown help file path: ${file} for entry '${entry}'.`,
+    theGapParserIsNotReadyYetTryAgain: 'The GAP parser is not ready yet; try again later.',
+    canceled: 'Canceled',
+    copyConfigurationFailed: '[GAP MCP] copy configuration failed:',
+    legacyCleanupFailed: '[GAP MCP] removing the former HTTP service state failed:',
+    failed: (tool: string) => `[GAP MCP] ${tool} failed:`,
+    protocolError: '[GAP MCP] protocol error:',
 } as const;

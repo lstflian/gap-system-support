@@ -5,16 +5,20 @@
  * Backs up and restores the export files during a rebuild.
  */
 
-import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { loadIndex, HelpEntry } from './indexData';
-import { safeUnlink, safeRename } from '../shared/guarded';
+import { safeRename, safeUnlink } from '../shared/guarded';
+import { HelpEntry, loadIndex } from './indexData';
+
+/** The parts of the extension context that locate the help index; also usable without VS Code. */
+export interface HelpDataContext {
+    readonly globalStorageUri: { readonly fsPath: string };
+    readonly extensionUri: { readonly fsPath: string };
+}
 
 /** The three export files, in load order. */
 const INDEX_FILES = ['export_gapdoc.txt', 'export_default.txt', 'export_text.txt'];
 
-/** Timeouts for the rebuild scripts. */
 export const EXPORT_GAPDOC_TIMEOUT_MS = 300_000;
 export const EXPORT_TEXT_TIMEOUT_MS = 60_000;
 
@@ -23,22 +27,39 @@ export const EXPORT_TEXT_TIMEOUT_MS = 60_000;
 let entries: HelpEntry[] | null = null;
 let bookDescriptions: Map<string, string> = new Map();
 let dataDir = '';
+let loadedSignature = '';
 
-/** The data directory for the help index. */
-export function getHelpDataDir(context: vscode.ExtensionContext): string {
-    return vscode.Uri.joinPath(context.globalStorageUri, 'data', 'helpIndex').fsPath;
+export function getHelpDataDir(context: HelpDataContext): string {
+    return path.join(context.globalStorageUri.fsPath, 'data', 'helpIndex');
 }
 
-/** The extension directory that holds the prebuilt index. */
-function getBuiltinDataDir(context: vscode.ExtensionContext): string {
-    return vscode.Uri.joinPath(context.extensionUri, 'data', 'helpIndex').fsPath;
+function getBuiltinDataDir(context: HelpDataContext): string {
+    return path.join(context.extensionUri.fsPath, 'data', 'helpIndex');
+}
+
+function indexSignature(): string {
+    return INDEX_FILES.map(name => {
+        try {
+            const stat = fs.statSync(path.join(dataDir, name));
+            return `${stat.mtimeMs}:${stat.size}`;
+        } catch {
+            return 'missing';
+        }
+    }).join('|');
+}
+
+function load(): void {
+    loadedSignature = indexSignature();
+    const loaded = loadIndex(dataDir);
+    entries = loaded.entries;
+    bookDescriptions = loaded.bookDescriptions;
 }
 
 /**
  * Copy the prebuilt index into the data directory.
  * All three export files are copied when any one is missing.
  */
-export function ensureHelpIndex(context: vscode.ExtensionContext): void {
+export function ensureHelpIndex(context: HelpDataContext): void {
     dataDir = getHelpDataDir(context);
     const missing = INDEX_FILES.some(name => !fs.existsSync(path.join(dataDir, name)));
     if (!missing) return;
@@ -55,11 +76,7 @@ export function ensureHelpIndex(context: vscode.ExtensionContext): void {
  * Later calls return the cached entries.
  */
 export function getHelpState(): { entries: HelpEntry[]; bookDescriptions: Map<string, string> } {
-    if (entries === null && dataDir) {
-        const loaded = loadIndex(dataDir);
-        entries = loaded.entries;
-        bookDescriptions = loaded.bookDescriptions;
-    }
+    if (entries === null && dataDir) load();
     return { entries: entries ?? [], bookDescriptions };
 }
 
@@ -68,15 +85,18 @@ export function getHelpState(): { entries: HelpEntry[]; bookDescriptions: Map<st
  * Replace the cached help index.
  */
 export function reloadHelpIndex(): { entries: HelpEntry[]; bookDescriptions: Map<string, string> } {
-    if (dataDir) {
-        const loaded = loadIndex(dataDir);
-        entries = loaded.entries;
-        bookDescriptions = loaded.bookDescriptions;
-    }
+    if (dataDir) load();
     return { entries: entries ?? [], bookDescriptions };
 }
 
-/** Backup suffix for the export files. */
+/**
+ * Drop the cached entries when another process rewrote the export files,
+ * so a long-lived MCP server sees a help index rebuilt in a VS Code window.
+ */
+export function invalidateHelpIndexIfChanged(): void {
+    if (entries !== null && dataDir && indexSignature() !== loadedSignature) entries = null;
+}
+
 const BAK_SUFFIX = '.bak';
 
 /**

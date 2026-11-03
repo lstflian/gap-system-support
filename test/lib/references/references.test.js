@@ -46,8 +46,8 @@ class CancellationTokenStub {
 
 installMock();
 
-const { initGapParser } = require('../../../out/parser/gapParser');
-const { GAPReferenceProvider } = require('../../../out/references/referenceProvider');
+const { initGapParser } = require('../../../out/language/parser/gapParser');
+const { GAPReferenceProvider } = require('../../../out/editor/references/referenceProvider');
 
 const ROOT = path.join(__dirname, '..', '..', '..');
 const QUERY_PATH = path.join(ROOT, 'queries', 'completion.scm');

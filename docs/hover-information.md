@@ -88,6 +88,13 @@ runtime-installed package cannot be resolved reliably without running GAP.
 
 ## Performance
 
+Hover, definition and references use one shared definition resolver from
+[the language analysis core](../src/language/analysis). The resolver reuses
+[binding facts](../src/language/analysis/bindings.ts) with completion and consumes
+[shared symbol metadata](../src/language/analysis/symbols.ts). Feature-specific
+lookup and display rules remain unchanged. VS Code document/workspace access is supplied by the
+editor adapter; the analysis core can also be hosted without VS Code.
+
 Hover requests use:
 
 - a lazily built index of help entries by normalized function name;

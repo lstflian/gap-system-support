@@ -4,10 +4,9 @@
  * The remaining style options live in globalState and persist.
  */
 
-import * as vscode from 'vscode';
 import * as path from 'path';
+import * as vscode from 'vscode';
 
-/** Key for globalState. */
 export const GLOBAL_STYLE_KEY = 'gapHelp.docStyle';
 
 let globalContext: vscode.ExtensionContext | null = null;
@@ -24,7 +23,6 @@ export function getWebResourcesDir(): string {
     return webResourcesDir;
 }
 
-/** Resolved appearance taking the VS Code theme into account. */
 export type ResolvedAppearance = 'dark' | 'light';
 
 export function getDocAppearance(): string {
@@ -32,7 +30,6 @@ export function getDocAppearance(): string {
     return (cfg.get<string>('docAppearance') || 'system').trim();
 }
 
-/** True if the theme kind is Dark or HighContrast. */
 export function isVscodeThemeDark(): boolean {
     const kind = vscode.window.activeColorTheme.kind;
     return kind === vscode.ColorThemeKind.Dark || kind === vscode.ColorThemeKind.HighContrast;
@@ -45,7 +42,6 @@ export function resolveAppearance(): ResolvedAppearance {
     return isVscodeThemeDark() ? 'dark' : 'light';
 }
 
-/** Comma-separated extra styles from globalState ('' if none). */
 export function getDocStyles(): string {
     return globalContext?.globalState.get<string>(GLOBAL_STYLE_KEY, '') ?? '';
 }
@@ -56,7 +52,6 @@ export function setDocStyles(styles: string): void {
     }
 }
 
-/** MathJax switch: settings value. */
 export function getMathJax(): boolean {
     const cfg = vscode.workspace.getConfiguration('gap');
     return cfg.get<boolean>('mathJax', true);

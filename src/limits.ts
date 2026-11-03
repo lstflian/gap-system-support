@@ -5,7 +5,6 @@
 
 // Read chain (completion + hover) and scoped completions.
 
-/** Over this length in code units a loaded file is skipped. */
 export const READ_CONTENT_LIMIT = 1 * 1024 * 1024;
 
 /** Read chain file cache entries before the least recently used is evicted. */
@@ -14,7 +13,6 @@ export const READ_FILE_CACHE_MAX_ENTRIES = 64;
 /** Hover document cache entries before the least recently used is evicted. */
 export const HOVER_DOCUMENT_CACHE_MAX_ENTRIES = 64;
 
-/** Parsed help descriptions retained for Hover. */
 export const HOVER_HELP_DESCRIPTION_CACHE_MAX_ENTRIES = 256;
 
 /** Over this length in code units documents skip scoped completions. */
@@ -53,13 +51,3 @@ export const PARSER_MAX_IDLE_MS = 3 * 60 * 1000;
 
 /** Pending edits per document before the batch is cleared. */
 export const PARSER_MAX_PENDING_EDITS = 1000;
-
-/** Maximum MCP HTTP request body size in bytes, matching the SDK default. */
-export const MCP_MAX_REQUEST_BYTES = 4 * 1024 * 1024;
-
-/** Retained legacy HTTP sessions; running calls are never expired as idle. */
-export const MCP_MAX_LEGACY_SESSIONS = 64;
-export const MCP_LEGACY_SESSION_IDLE_MS = 30 * 60 * 1000;
-
-/** Recheck the window-local Profile marker; VS Code Mementos have no public change event. */
-export const MCP_CREDENTIAL_CHECK_INTERVAL_MS = 1000;

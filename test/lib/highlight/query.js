@@ -18,8 +18,8 @@ if (!fs.existsSync(outDir)) {
 // Install the vscode mock.
 installMock();
 
-const { initGapParser } = require('../../../out/parser/gapParser');
-const { GAPSemanticTokensProvider } = require('../../../out/semantic/semanticTokensProvider');
+const { initGapParser } = require('../../../out/language/parser/gapParser');
+const { GAPSemanticTokensProvider } = require('../../../out/editor/highlight/semanticTokensProvider');
 
 const highlightsPath = path.join(__dirname, '..', '..', '..', 'queries', 'highlights.scm');
 const localsPath = path.join(__dirname, '..', '..', '..', 'queries', 'locals.scm');

@@ -3,7 +3,7 @@
  */
 
 import * as vscode from 'vscode';
-import { Messages } from '../shared/messages';
+import { Messages } from './messages';
 
 /**
  * Resolve once the terminal closes, reject on timeout.

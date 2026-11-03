@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+1. Replace the HTTP MCP service with a stdio MCP server that VS Code starts and stops through the stable MCP server definition provider API; it opens no network port and needs no access token
+2. Remove the `gap.mcp.port` setting and the **GAP: Reset MCP Access Token** command; **GAP: Copy MCP Server Configuration** now copies a stdio launch configuration for other MCP clients
+3. Give each tool one name for the tool, chat reference, display name and MCP tool: `gapSearchHelp`, `gapListBooks`, `gapResolveLink`, `gapCheckSyntax` and `gapRunFile` (formerly `search_gap_help`/`#gapSearch`, `list_gap_books`/`#gapBooks`, `gap_resolve_link`/`#gapResolveLink`, `check_gap_syntax`/`#gapCheckSyntax` and `run_gap_file`/`#gapRunFile`)
+4. Remove the access tokens, Profile state and background-service folders left by the former MCP service
+5. Return successful MCP tool results as `structuredContent` without a duplicate JSON text block
+
 ## 0.4.3
 
 1. Share one authenticated MCP service and port per VS Code Profile until the last participating window closes

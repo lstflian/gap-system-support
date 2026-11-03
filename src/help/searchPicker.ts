@@ -10,7 +10,6 @@ import { HelpEntry } from './indexData';
 
 interface PickerItem extends vscode.QuickPickItem { entry: HelpEntry }
 
-/** Show a filter button in the QuickPick. */
 const filterOffBtn: vscode.QuickInputButton = {
     iconPath: new vscode.ThemeIcon('filter'),
     tooltip: 'Filter by book',
@@ -52,11 +51,9 @@ export function showLiveSearchPicker(
         const placeholderText = 'Search GAP help: type to filter';
         picker.value = initialValue;
 
-        /** Filter results down to the currently selected books. */
         const applyBookFilter = (results: HelpEntry[]): HelpEntry[] =>
             results.filter(e => selectedBooks.has(e.book));
 
-        /** Update the placeholder text to show which books are being searched. */
         const updateFilterUI = () => {
             picker.title = fromBegin ? 'Prefix match' : 'Substring match';
             const n = selectedBooks.size;
@@ -73,7 +70,6 @@ export function showLiveSearchPicker(
             picker.buttons = [modeState, filterBtn];
         };
 
-        /** Search for the given topic and refresh the list. */
         const refresh = (topic: string) => {
             const trimmed = topic.trim();
             inputEmpty = !trimmed;
@@ -93,7 +89,6 @@ export function showLiveSearchPicker(
             }));
         };
 
-        // Open the book selection panel
         const showBookPicker = async () => {
             bookPickerActive = true;
             const prevValue = picker.value;

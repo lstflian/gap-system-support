@@ -9,13 +9,13 @@ const { check, section, summary } = require('../help/helpers');
 
 installMock();
 
-const { initGapParser, parseGapCode, getGapLanguage, onDocumentClosed } = require('../../../out/parser/gapParser');
+const { initGapParser, parseGapCode, getGapLanguage, getDocumentTree, onDocumentClosed } = require('../../../out/language/parser/gapParser');
 const {
     collectErrorEntries,
     computeMissingStart,
     GAPDiagnosticsProvider,
-} = require('../../../out/diagnostics/diagnosticsProvider');
-const { checkSyntaxText } = require('../../../out/lmtools/toolCore');
+} = require('../../../out/editor/diagnostics/diagnosticsProvider');
+const { checkSyntaxText, checkSyntaxDocument } = require('../../../out/tools/core/toolCore');
 
 /** Parse code and collect error entries. */
 function errorsOf(code) {
@@ -40,6 +40,16 @@ function hasUnexpected(entries) {
 
 async function main() {
     await initGapParser({ extensionUri: { fsPath: path.join(__dirname, '..', '..', '..') } });
+
+    const document = {
+        uri: vscodeMock.Uri.file(path.join(__dirname, 'shared-buffer.g')),
+        version: 1, getText: () => 'x := ;\n',
+    };
+    const sharedTree = getDocumentTree(document);
+    check('tool syntax reuses the editor snapshot', checkSyntaxText(document.getText()), checkSyntaxDocument(document));
+    check('tool syntax retains parser ownership of the tree', true, getDocumentTree(document) === sharedTree);
+    check('shared tree remains usable after a tool call', true, sharedTree.rootNode.hasError);
+    onDocumentClosed(document.uri);
 
     section('1. Clean code produces no diagnostics');
 

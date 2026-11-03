@@ -1,6 +1,7 @@
 .vscode/**
 src/**
 tsconfig.json
+.github/**
 .git/**
 *.vsix
 package-lock.json

@@ -59,6 +59,16 @@ const vscodeMock = {
     Location,
     SemanticTokensBuilder,
     Uri: {
+        parse(value) {
+            const url = new URL(value);
+            const pathname = decodeURIComponent(url.pathname);
+            return {
+                scheme: url.protocol.slice(0, -1),
+                fsPath: url.protocol === 'file:' && /^\/[a-z]:\//i.test(pathname)
+                    ? pathname.slice(1).replaceAll('/', path.sep) : pathname,
+                toString: () => value,
+            };
+        },
         joinPath(base, ...segments) {
             const basePath = typeof base === 'string' ? base : base.fsPath;
             const fsPath = path.join(basePath, ...segments);

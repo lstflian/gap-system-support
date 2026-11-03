@@ -14,21 +14,15 @@ import { simpleString } from './simpleString';
 export interface HelpEntry {
     /** File path relative to the GAP root (empty for text-only) */
     filePath: string;
-    /** Anchor ID (e.g. "X858ADA3B7A684421") */
     anchor: string;
-    /** Display name */
     display: string;
     /** Normalized search key (via simpleString = GAP's SIMPLE_STRING) */
     key: string;
-    /** Book name */
     book: string;
-    /** Chapter number (entry[4] in GAP, -1 for GapDocGAP) */
     chapter: number;
-    /** Section number (entry[5] in GAP, -1 for GapDocGAP) */
     section: number;
     /** True if this is a text-only entry */
     isTextOnly: boolean;
-    /** Entry type (entry[3] in GAP): "S"=section, "C"=chapter, "F"=function, "I"=index. Empty for GapDocGAP. */
     type: string;
     /** Cleaned text content (only for text-only entries) */
     textContent?: string;

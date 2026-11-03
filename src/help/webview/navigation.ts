@@ -3,21 +3,22 @@
  * Resolve and apply the doc style values.
  */
 
-import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { native } from './native';
-import {
-    getDocAppearance, getDocStyles, getMathJax, setDocStyles, resolveAppearance,
-    isVscodeThemeDark,
-} from '../styleState';
-import { buildNavScript } from './navScript';
-import { buildChooserShim, parseStyleValue, buildRenderStyleValue, buildChooserStyleValue } from './chooser';
-import { HelpPanelSession } from './panelState';
+import * as vscode from 'vscode';
 import { Messages } from '../../shared/messages';
 import { notifyWarning } from '../../shared/notify';
+import {
+    getDocAppearance, getDocStyles, getMathJax,
+    isVscodeThemeDark,
+    resolveAppearance,
+    setDocStyles,
+} from '../styleState';
+import { buildChooserShim, buildChooserStyleValue, buildRenderStyleValue, parseStyleValue } from './chooser';
+import { native } from './native';
+import { buildNavScript } from './navScript';
+import { HelpPanelSession } from './panelState';
 
-/** Turn a file path into a webview URL. */
 function resolveUri(s: HelpPanelSession, abs: string): string {
     return s.panel.webview.asWebviewUri(vscode.Uri.file(abs)).toString();
 }
@@ -44,17 +45,14 @@ function applyStyleFromChooser(styleValue: string): string {
     return [resolved, ...extras].join(',');
 }
 
-/** The style value for rendering. */
 export function renderStyleValue(): string {
     return buildRenderStyleValue(resolveAppearance(), getDocStyles());
 }
 
-/** The style value for the chooser form. */
 function chooserStyleValue(): string {
     return buildChooserStyleValue(getDocAppearance(), getDocStyles());
 }
 
-/** Open another HTML file or scroll to an anchor in the current one. */
 export function navigatePage(s: HelpPanelSession, navFile: string, anchor: string, docStyle?: string, forceRender: boolean = false, scrollY?: number): void {
     if (!s.panel || !s.currentDocDir || !s.docPath) return;
 
@@ -106,7 +104,6 @@ export function navigatePage(s: HelpPanelSession, navFile: string, anchor: strin
     }
 }
 
-/** Re-render the current page when the MathJax setting changes. */
 export function refreshCurrentPage(s: HelpPanelSession): void {
     if (s.panel && s.currentFile) {
         const sy = s.pendingScrollY !== undefined ? s.pendingScrollY : s.lastScrollY;

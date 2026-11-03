@@ -83,9 +83,9 @@ class CancellationTokenStub {
 
 installMock();
 
-const { initGapParser } = require('../../../out/parser/gapParser');
-const { GAPDefinitionResolver } = require('../../../out/hover/definitionResolver');
-const { GAPHoverProvider } = require('../../../out/hover/hoverProvider');
+const { initGapParser } = require('../../../out/language/parser/gapParser');
+const { GAPDefinitionResolver } = require('../../../out/editor/analysis/definitionResolver');
+const { GAPHoverProvider } = require('../../../out/editor/hover/hoverProvider');
 
 const ROOT = path.join(__dirname, '..', '..', '..');
 const QUERY_PATH = path.join(ROOT, 'queries', 'completion.scm');
@@ -606,7 +606,7 @@ async function main() {
     {
         // Load the real functions-all.json into the data manager memory.
         // The manager offers no setter in tests: swap the module export table.
-        const dataManager = require('../../../out/completion/dataManager');
+        const dataManager = require('../../../out/editor/completion/dataManager');
         const names = JSON.parse(
             fs.readFileSync(path.join(ROOT, 'data', 'completionData', 'functions-all.json'), 'utf8'),
         ).names;

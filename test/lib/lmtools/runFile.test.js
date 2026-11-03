@@ -1,37 +1,18 @@
 'use strict';
 
 const assert = require('assert/strict');
+const { spawn } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { randomBytes } = require('crypto');
 const {
     vscodeMock: vscode, state, setConfiguration, createFixture, CancellationTokenSource,
 } = require('./mock-vscode');
-const { RunFileTool } = require('../../../out/lmtools/runFileTool');
-const { nativeGapLaunch, shellGapLaunch } = require('../../../out/shared/gapRun');
+const { RunFileTool } = require('../../../out/tools/runFileTool');
+const { nativeGapLaunch, shellGapLaunch } = require('../../../out/runtime/gapRun');
 const { toRuntimePath, toShellPath } = require('../../../out/path');
-const { createToolRegistry } = require('../../../out/lmtools/registry');
-const { LmToolsController } = require('../../../out/lmtools');
-const { startMcpServer } = require('../../../out/mcp/server');
-const { Client, StreamableHTTPClientTransport } = require('@modelcontextprotocol/client');
-const { MCP_MAX_LEGACY_SESSIONS, MCP_LEGACY_SESSION_IDLE_MS } = require('../../../out/limits');
-
-async function initialize(server) {
-    const response = await fetch(server.url, {
-        method: 'POST',
-        headers: {
-            Authorization: server.authorization, 'Content-Type': 'application/json',
-            Accept: 'application/json, text/event-stream',
-        },
-        body: JSON.stringify({
-            jsonrpc: '2.0', id: 1, method: 'initialize',
-            params: { protocolVersion: '2025-11-25', capabilities: {}, clientInfo: { name: 'session-tests', version: '1' } },
-        }),
-    });
-    await response.text();
-    return { status: response.status, id: response.headers.get('mcp-session-id') };
-}
+const { LmToolsController } = require('../../../out/tools/native');
+const { createWindowToolHost, createWindowToolRegistry } = require('../../../out/tools/native/host');
 
 async function waitFor(predicate, message) {
     const deadline = Date.now() + 10000;
@@ -78,14 +59,13 @@ function source(file, settings = {}) {
 
 async function main() {
     const fixture = createFixture();
-    const tool = new RunFileTool();
-    const registry = createToolRegistry(fixture.context);
+    const host = createWindowToolHost(fixture.context);
+    const tool = new RunFileTool(host);
+    const registry = createWindowToolRegistry(fixture.context);
     const token = new CancellationTokenSource();
-    const inputs = fixture.inputs.run_gap_file;
+    const inputs = fixture.inputs.gapRunFile;
     const originalFolder = vscode.workspace.getWorkspaceFolder;
     const controllers = [];
-    const servers = [];
-    const clients = [];
     try {
         console.log('1. Exact result, overwrite, streaming-sized output, saved buffer and workspace cwd');
         const folderA = { uri: vscode.Uri.file(path.join(fixture.root, 'workspace-a')), name: 'a', index: 0 };
@@ -119,7 +99,7 @@ async function main() {
         assert(log(output).includes('finished\n'));
         assert(!log(output).includes('old log must disappear'));
         assert(fs.statSync(output).size > 3 * 1024 * 1024);
-        const preparation = tool.prepareInvocation({ input: { filePath: file, outputPath: output } });
+        const preparation = tool.prepare({ filePath: file, outputPath: output });
         assert(preparation.confirmationMessages.message.includes(output));
         assert(preparation.confirmationMessages.message.includes(file));
         const overrideCwd = path.join(fixture.root, 'explicit cwd');
@@ -127,7 +107,7 @@ async function main() {
         const overrideInput = { filePath: file, outputPath: output, cwd: overrideCwd };
         await tool.execute(overrideInput, token.token);
         assert.equal((await record(output)).cwd.toLowerCase(), overrideCwd.toLowerCase());
-        assert(tool.prepareInvocation({ input: overrideInput }).confirmationMessages.message.includes(overrideCwd));
+        assert(tool.prepare(overrideInput).confirmationMessages.message.includes(overrideCwd));
         const beforeInvalid = saved;
         const rejectedOutput = path.join(fixture.root, 'invalid-cwd-output.txt');
         for (const cwd of ['', '  ', null, 42, {}, 'relative', path.join(fixture.root, 'missing'), file]) {
@@ -141,34 +121,6 @@ async function main() {
         assert.equal((await record(inputs.outputPath)).cwd.toLowerCase(), os.homedir().toLowerCase());
         await tool.execute({ ...inputs, cwd: overrideCwd }, token.token);
         assert.equal((await record(inputs.outputPath)).cwd.toLowerCase(), overrideCwd.toLowerCase());
-
-        const preserved = log(inputs.outputPath);
-        const identity = fs.statSync(inputs.outputPath, { bigint: true });
-        await assert.rejects(() => tool.execute(inputs, token.token, {
-            async claimOutput(value) {
-                assert.equal(value, `file:${identity.dev}:${identity.ino}`);
-                assert.equal(log(inputs.outputPath), preserved, 'shared identity is claimed before truncation');
-                throw new Error('test shared output conflict');
-            },
-        }), /test shared output conflict/);
-        assert.equal(log(inputs.outputPath), preserved, 'failed shared claim preserves existing output');
-        const claimCancellation = new CancellationTokenSource();
-        let enteredClaim;
-        let releaseClaim;
-        const claimEntered = new Promise(resolve => { enteredClaim = resolve; });
-        const claimGate = new Promise(resolve => { releaseClaim = resolve; });
-        const pendingClaim = tool.execute(inputs, claimCancellation.token, {
-            async claimOutput() { enteredClaim(); await claimGate; },
-        });
-        const cancelledClaim = assert.rejects(pendingClaim, /Canceled/);
-        await claimEntered;
-        claimCancellation.cancel();
-        releaseClaim();
-        await cancelledClaim;
-        claimCancellation.dispose();
-        assert.equal(log(inputs.outputPath), preserved, 'cancellation during the shared claim preserves output');
-        await tool.execute(inputs, token.token);
-        assert(log(inputs.outputPath).includes('finished\n'), 'native execution reuses output after failed/cancelled claims');
 
         console.log('1a. Only GAP confirms startup; chunked markers are removed without losing output');
         const startupFile = path.join(fixture.root, 'startup.g');
@@ -321,7 +273,7 @@ async function main() {
         const previousPath = process.env.PATH;
         try {
             process.env.PATH = path.join(fixture.root, 'missing-bin');
-            await assert.rejects(() => tool.execute(inputs, token.token), /PATH/);
+            await assert.rejects(() => tool.execute(inputs, token.token), /Select GAP Installation/);
         } finally {
             process.env.PATH = previousPath;
         }
@@ -357,7 +309,7 @@ async function main() {
         await rejected;
         await stopped(processes);
         cancelled.dispose();
-        const closingTool = new RunFileTool();
+        const closingTool = new RunFileTool(host);
         const closing = closingTool.execute(inputs, token.token);
         const closedInvocation = assert.rejects(closing, /Canceled/);
         const closingProcesses = await record(inputs.outputPath, true);
@@ -368,11 +320,11 @@ async function main() {
         source(inputs.filePath);
         await tool.execute(inputs, token.token);
 
-        console.log('5. Native disable cancels work, while both interfaces share output locks');
+        console.log('5. Native disable cancels work');
         const native = new LmToolsController(registry);
         controllers.push(native);
         source(inputs.filePath, { hang: true, spawnChild: true });
-        const nativeRun = state.tools.get('run_gap_file').invoke({ input: inputs }, token.token);
+        const nativeRun = state.tools.get('gapRunFile').invoke({ input: inputs }, token.token);
         const nativeRejected = assert.rejects(nativeRun, /Canceled|disabled/);
         const nativeProcesses = await record(inputs.outputPath, true);
         setConfiguration({ 'gap.tools.enabled': false });
@@ -380,126 +332,18 @@ async function main() {
         await stopped(nativeProcesses);
         setConfiguration({ 'gap.tools.enabled': true });
 
-        for (const modern of [false, true]) {
-            console.log(`6. ${modern ? 'Modern' : 'Legacy'} MCP live output, shared locking and request cancellation`);
-            const server = await startMcpServer(registry, () => true, error => { throw error; }, randomBytes(32).toString('hex'));
-            servers.push(server);
-            const client = new Client({ name: 'gap-run-test', version: '1' },
-                modern ? { versionNegotiation: { mode: 'auto' } } : undefined);
-            clients.push(client);
-            await client.connect(new StreamableHTTPClientTransport(new URL(server.url), {
-                requestInit: { headers: { Authorization: server.authorization } },
-            }));
-            const abort = new AbortController();
-            const pending = client.callTool({ name: 'run_gap_file', arguments: inputs }, { signal: abort.signal })
-                .then(value => ({ value }), error => ({ error }));
-            const mcpProcesses = await record(inputs.outputPath, true);
-            const conflict = await state.tools.get('run_gap_file').invoke({ input: inputs }, token.token);
-            assert.match(conflict.content[0].value, /already writing/);
-            const otherSource = path.join(fixture.root, 'other.g');
-            source(otherSource);
-            const independent = await state.tools.get('run_gap_file').invoke({
-                input: { filePath: otherSource, outputPath: secondOutput },
-            }, token.token);
-            assert.deepEqual(JSON.parse(independent.content[0].value), { completed: true });
-            abort.abort();
-            assert((await pending).error);
-            await stopped(mcpProcesses);
-            await client.close();
-            clients.pop();
-            await server.close();
-            servers.pop();
-        }
+        source(inputs.filePath);
+        const busyOutput = path.join(fixture.root, 'busy.txt');
+        source(inputs.filePath, { waitFile: path.join(fixture.root, 'release-native') });
+        const holding = state.tools.get('gapRunFile').invoke({ input: { ...inputs, outputPath: busyOutput } }, token.token);
+        await record(busyOutput, true);
+        const conflict = await state.tools.get('gapRunFile').invoke({ input: { ...inputs, outputPath: busyOutput } }, token.token);
+        assert.match(conflict.content[0].value, /already writing/, 'tool errors become the native result text');
+        fs.writeFileSync(path.join(fixture.root, 'release-native'), '');
+        assert.deepEqual(JSON.parse((await holding).content[0].value), { completed: true });
+        source(inputs.filePath);
 
-        console.log('7. Stopping MCP cancels a real running GAP invocation');
-        const server = await startMcpServer(registry, () => true, error => { throw error; }, randomBytes(32).toString('hex'));
-        servers.push(server);
-        const client = new Client({ name: 'gap-run-shutdown', version: '1' });
-        clients.push(client);
-        await client.connect(new StreamableHTTPClientTransport(new URL(server.url), {
-            requestInit: { headers: { Authorization: server.authorization } },
-        }));
-        const pending = client.callTool({ name: 'run_gap_file', arguments: inputs })
-            .then(value => ({ value }), error => ({ error }));
-        const shutdownProcesses = await record(inputs.outputPath, true);
-        await server.close();
-        const outcome = await pending;
-        assert(outcome.error || outcome.value.isError);
-        await stopped(shutdownProcesses);
-
-        console.log('8. Legacy clients with identical request IDs cannot cancel each other');
-        const isolated = await startMcpServer(registry, () => true, error => { throw error; }, randomBytes(32).toString('hex'));
-        servers.push(isolated);
-        const peers = [];
-        for (const suffix of ['a', 'b']) {
-            const peer = new Client({ name: 'same-client-info', version: '1' });
-            const transport = new StreamableHTTPClientTransport(new URL(isolated.url), {
-                requestInit: { headers: { Authorization: isolated.authorization } },
-            });
-            clients.push(peer);
-            await peer.connect(transport);
-            const abort = new AbortController();
-            const peerInput = { ...inputs, outputPath: path.join(fixture.root, `peer-${suffix}.txt`) };
-            const pending = peer.callTool({ name: 'run_gap_file', arguments: peerInput }, { signal: abort.signal })
-                .then(value => ({ value }), error => ({ error }));
-            peers.push({ peer, transport, abort, pending, processes: await record(peerInput.outputPath, true) });
-        }
-        assert(peers[0].transport.sessionId);
-        assert.notEqual(peers[0].transport.sessionId, peers[1].transport.sessionId);
-        peers[0].abort.abort();
-        assert((await peers[0].pending).error);
-        await stopped(peers[0].processes);
-        assert(alive(peers[1].processes.pid));
-        const clock = Date.now;
-        try {
-            Date.now = () => clock() + MCP_LEGACY_SESSION_IDLE_MS + 1;
-            assert.equal((await initialize(isolated)).status, 200);
-            assert.equal((await peers[1].peer.listTools()).tools.length, 5);
-            assert(alive(peers[1].processes.pid), 'Idle expiry killed a running call');
-        } finally {
-            Date.now = clock;
-        }
-        await peers[1].peer.close();
-        await peers[1].pending;
-        await stopped(peers[1].processes);
-
-        console.log('9. Legacy session capacity, explicit deletion and idle expiry');
-        const bounded = await startMcpServer(registry, () => true, error => { throw error; }, randomBytes(32).toString('hex'));
-        servers.push(bounded);
-        const initialized = await Promise.all(Array.from({ length: MCP_MAX_LEGACY_SESSIONS + 1 }, () => initialize(bounded)));
-        assert.equal(initialized.filter(value => value.status === 200).length, MCP_MAX_LEGACY_SESSIONS);
-        assert.equal(initialized.filter(value => value.status === 503).length, 1);
-        const victim = initialized.find(value => value.id).id;
-        const expiredId = initialized.filter(value => value.id)[1].id;
-        const deleted = await fetch(bounded.url, {
-            method: 'DELETE', headers: { Authorization: bounded.authorization, 'mcp-session-id': victim },
-        });
-        await deleted.text();
-        assert.equal(deleted.status, 200);
-        assert.equal((await initialize(bounded)).status, 200);
-        try {
-            Date.now = () => clock() + MCP_LEGACY_SESSION_IDLE_MS + 1;
-            assert.equal((await initialize(bounded)).status, 200);
-        } finally {
-            Date.now = clock;
-        }
-        const stale = await fetch(bounded.url, {
-            method: 'GET', headers: { Authorization: bounded.authorization, 'mcp-session-id': expiredId },
-        });
-        await stale.text();
-        assert.equal(stale.status, 404);
-        const stateless = await fetch(bounded.url, {
-            method: 'POST',
-            headers: {
-                Authorization: bounded.authorization, 'Content-Type': 'application/json',
-                Accept: 'application/json, text/event-stream',
-            },
-            body: JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'run_gap_file', arguments: inputs } }),
-            signal: AbortSignal.timeout(10000),
-        });
-        assert.match(await stateless.text(), /Initialize an MCP session/);
-
-        console.log('10. Native launch and Windows/POSIX/WSL path and quoting matrix');
+        console.log('6. Native launch and Windows/POSIX/WSL path and quoting matrix');
         for (const platform of ['linux', 'darwin']) {
             assert.deepEqual(nativeGapLaunch('/usr/bin/gap', '/a space/test.g', platform),
                 { executable: '/usr/bin/gap', args: ['-q', '--nointeract', '*stdin*', '/a space/test.g'] });
@@ -511,18 +355,40 @@ async function main() {
         assert.deepEqual(batch.args, ['/d', '/v:off', '/s', '/c', '""C:\\GAP install\\gap.cmd" -q --nointeract "*stdin*" "D:\\a space\\test.g""']);
         assert.throws(() => nativeGapLaunch('C:\\GAP\\gap.bat', nativeFile, 'win32'), /terminal would interpret/);
         const wsl = shellGapLaunch('wsl.exe', "/mnt/d/a'b $path.g", 'marker', { executable: 'wsl.exe', args: ['-d', 'Ubuntu'] }, '/mnt/d/root');
-        assert.deepEqual(wsl.args.slice(0, 7), ['-d', 'Ubuntu', '--exec', 'setsid', 'sh', '-c', wsl.args[6]]);
-        assert(wsl.args[6].includes('exec 3>&1'));
-        assert(wsl.args[6].includes('marker:pid:'));
-        assert(!wsl.args[6].includes('marker:ready'));
-        assert(!wsl.args[6].includes('command -v gap'));
-        assert(wsl.args[6].includes('exec gap -q --nointeract'));
-        assert(wsl.args[6].includes('*stdin*'));
+        assert.deepEqual(wsl.args.slice(0, 8), ['-d', 'Ubuntu', '--exec', 'setsid', '--wait', 'sh', '-c', wsl.args[7]],
+            'setsid must wait: under wsl.exe it forks because it starts as a process group leader');
+        assert(wsl.args[7].includes('exec 3>&1 4>&2'));
+        assert(wsl.args[7].includes('marker:pid:'));
+        assert(!wsl.args[7].includes('marker:ready'));
+        assert(!wsl.args[7].includes('command -v gap'));
+        assert(wsl.args[7].includes('exec gap -q --nointeract'));
+        assert(wsl.args[7].includes('*stdin*'));
+        assert(wsl.args[7].endsWith('1>&2 2>/dev/null'), 'interactive shell startup warnings are discarded');
         const changedCwd = shellGapLaunch('wsl.exe', '/mnt/d/test.g', 'marker',
             { executable: 'wsl.exe', args: ['-d', 'Ubuntu', '--cd', '/some/old/folder'] });
         assert.deepEqual(changedCwd.protocol.wsl.args, ['-d', 'Ubuntu']);
         const bash = shellGapLaunch('/bin/bash', "/tmp/a'b.g", 'marker');
         assert.equal(bash.args[0], '-c');
+        if (process.platform !== 'win32' && fs.existsSync('/bin/bash')) {
+            // Run the launch script like WSL does: an interactive bash without a controlling terminal.
+            const shellFile = path.join(fixture.root, "shell 'launch'.g");
+            source(shellFile);
+            const launch = shellGapLaunch('/bin/sh', shellFile, 'shellmarker', undefined, fixture.root);
+            const ready = `GAP_RUN_READY_${'a'.repeat(32)}`;
+            const child = spawn(launch.executable, launch.args, {
+                detached: true, env: { ...process.env, SHELL: '/bin/bash', HOME: fixture.root },
+            });
+            let stdout = '';
+            let stderr = '';
+            child.stdout.on('data', chunk => { stdout += chunk; });
+            child.stderr.on('data', chunk => { stderr += chunk; });
+            child.stdin.end(`Print("${ready}");\n`);
+            const code = await new Promise(resolve => child.once('close', resolve));
+            assert.equal(code, 0, stderr);
+            assert.match(stdout, /^shellmarker:pid:\d+\n/);
+            assert(stdout.includes(ready) && stdout.includes('finished\n'), stdout);
+            assert.equal(stderr, 'stderr\n', 'GAP keeps its stderr and the shell adds no job-control warnings');
+        }
         const originalPlatform = os.platform;
         const originalShell = vscode.env.shell;
         try {
@@ -552,10 +418,8 @@ async function main() {
         vscode.workspace.getWorkspaceFolder = originalFolder;
         vscode.workspace.workspaceFolders = [];
         for (const controller of controllers) controller.dispose();
-        for (const server of servers) await server.close();
         await registry.close();
         await tool.close();
-        for (const client of clients) await client.close();
         token.dispose();
         fixture.cleanup();
     }

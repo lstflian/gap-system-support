@@ -55,6 +55,21 @@ Reference collection uses the same symbol classifier as definition navigation:
 
 ## Performance
 
+The definition resolver and Read-chain analysis live in the host-independent
+[language analysis core](../src/language/analysis). Hover, definition and
+reference providers share one resolver in the editor activation layer.
+
+[Binding facts](../src/language/analysis/bindings.ts) distinguish parameters,
+local declarations, assignments, and loop targets. Completion and the resolver
+reuse these facts for an open document URI/version/tree, but retain their
+individual lookup and shadowing policies. The recorded scope is syntactic
+containment, not complete GAP variable-binding inference.
+
+[Symbol facts](../src/language/analysis/symbols.ts) provide record members,
+declaration/installation metadata, and source occurrence ranges. References
+cache plain ranges rather than parser-owned nodes; workspace discovery and
+target filtering remain in the editor provider.
+
 Workspace file discovery and parsed symbol indexes are cached and invalidated
 when relevant workspace files change. Repeated definition, reference, and Hover
 requests reuse document trees, file events, and short-lived workspace lookup

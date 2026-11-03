@@ -9,7 +9,7 @@ const { check, section, summary } = require('../help/helpers');
 
 installMock();
 
-const parser = require('../../../out/parser/gapParser');
+const parser = require('../../../out/language/parser/gapParser');
 const { Messages } = require('../../../out/shared/messages');
 
 /** Simulate a cancelled parse and count resets, restoring the runtime afterward. */

@@ -5,19 +5,16 @@
  */
 
 import * as path from 'path';
-import { escapeInlineJs } from './navScript';
 import { tryReadFileWarn } from '../../shared/guarded';
+import { escapeInlineJs } from './navScript';
 
 export interface ParsedStyleValue {
-    /** The dark or light value if chosen, empty otherwise. */
     appearance: string;
     /** The extra GAPDoc style options in order. */
     extras: string[];
-    /** True when the value contains default. */
     hasDefault: boolean;
 }
 
-/** Split a chooser style value into appearance and extras. */
 export function parseStyleValue(styleValue: string): ParsedStyleValue {
     const parts = styleValue.split(',').map(s => s.trim()).filter(Boolean);
     let appearance = '';
@@ -57,7 +54,6 @@ const CHOOSER_SHIM_JS = tryReadFileWarn(
     'chooser-shim.js',
 );
 
-/** Build the extra script for the page head of chooser.html. */
 export function buildChooserShim(backTarget: string, styleValue: string): string {
     const safeBack = escapeInlineJs(backTarget);
     const safeStyle = escapeInlineJs(styleValue);

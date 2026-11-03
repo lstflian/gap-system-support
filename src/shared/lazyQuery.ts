@@ -3,7 +3,7 @@
  */
 
 import { Query } from 'web-tree-sitter';
-import { getGapLanguage } from '../parser/gapParser';
+import { getGapLanguage } from '../language/parser/gapParser';
 
 export class LazyQuery {
 
@@ -14,7 +14,6 @@ export class LazyQuery {
         this.queryText = queryText;
     }
 
-    /** Get the compiled query, compiling it on first use. */
     get(): Query {
         if (!this.query) {
             this.query = new Query(getGapLanguage(), this.queryText);

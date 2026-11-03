@@ -6,8 +6,8 @@
 
 import * as vscode from 'vscode';
 import { HelpEntry } from './indexData';
+import { getMathJax, getWebResourcesDir, setMathJax } from './styleState';
 import { native } from './webview/native';
-import { getMathJax, setMathJax, getWebResourcesDir } from './styleState';
 import { buildNavScript } from './webview/navScript';
 import { navigatePage as navigateImpl, refreshCurrentPage as refreshImpl, renderStyleValue } from './webview/navigation';
 import { HelpPanelSession } from './webview/panelState';
@@ -50,7 +50,6 @@ export function showHelpPanel(entry: HelpEntry, docPath: string, pkgPath: string
     // Reset only this instance.
     panel.onDidDispose(() => { thisSession.reset(); });
 
-    // Handle nav messages from the webview.
     panel.webview.onDidReceiveMessage(msg => {
         // Read the current session each time.
         const s = session;

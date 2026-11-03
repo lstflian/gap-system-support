@@ -78,9 +78,9 @@ class Uri {
     static joinPath(base, ...segments) { return Uri.file(path.join(base.fsPath, ...segments)); }
 }
 
-class McpHttpServerDefinition {
-    constructor(label, uri, headers = {}, version) {
-        Object.assign(this, { label, uri, headers, version });
+class McpStdioServerDefinition {
+    constructor(label, command, args = [], env = {}, version) {
+        Object.assign(this, { label, command, args, env, version });
     }
 }
 
@@ -116,36 +116,6 @@ class SecretStorage {
     }
 }
 
-function createProfileState() {
-    let stored = new Map();
-    const windows = [];
-    const notifications = [];
-    return {
-        createWindow() {
-            const cache = new Map(stored);
-            windows.push(cache);
-            return {
-                get: (key, fallback) => cache.has(key) ? cache.get(key) : fallback,
-                async update(key, value) {
-                    if (value === undefined) cache.delete(key);
-                    else cache.set(key, value);
-                    stored = new Map(cache);
-                    const snapshot = new Map(stored);
-                    notifications.push(() => {
-                        for (const window of windows) {
-                            window.clear();
-                            for (const [key, value] of snapshot) window.set(key, value);
-                        }
-                    });
-                },
-            };
-        },
-        flush() {
-            for (const notification of notifications.splice(0)) notification();
-        },
-    };
-}
-
 const user = new Map();
 const workspace = new Map();
 const configuration = new EventEmitter();
@@ -154,6 +124,8 @@ const opened = new EventEmitter();
 const closed = new EventEmitter();
 const changed = new EventEmitter();
 const saved = new EventEmitter();
+const shellChanged = new EventEmitter();
+const foldersChanged = new EventEmitter();
 const noEvent = new EventEmitter();
 const state = {
     tools: new Map(),
@@ -198,7 +170,7 @@ Object.assign(vscodeMock, {
     CancellationTokenSource,
     CancellationError,
     Uri,
-    McpHttpServerDefinition,
+    McpStdioServerDefinition,
     LanguageModelTextPart,
     LanguageModelToolResult,
     ConfigurationTarget: { Global: 1, Workspace: 2, WorkspaceFolder: 3 },
@@ -225,7 +197,7 @@ Object.assign(vscodeMock, {
         onDidCreateFiles: noEvent.event,
         onDidDeleteFiles: noEvent.event,
         onDidRenameFiles: noEvent.event,
-        onDidChangeWorkspaceFolders: noEvent.event,
+        onDidChangeWorkspaceFolders: foldersChanged.event,
         findFiles: async () => [],
         getWorkspaceFolder: () => undefined,
         asRelativePath: uri => uri.fsPath,
@@ -257,9 +229,11 @@ Object.assign(vscodeMock, {
     env: {
         shell: process.platform === 'win32' ? (process.env.ComSpec || 'C:\\Windows\\System32\\cmd.exe') : '/bin/sh',
         clipboard: { async writeText(value) { state.clipboard = value; } },
+        onDidChangeShell: shellChanged.event,
         async openExternal() { return true; },
     },
     window: {
+        createOutputChannel: () => ({ error() {}, warn() {}, info() {}, dispose() {} }),
         activeTextEditor: undefined,
         activeColorTheme: { kind: 1 },
         onDidCloseTerminal: noEvent.event,
@@ -339,13 +313,13 @@ function createFixture() {
     fs.writeFileSync(sourceFile, 'x := 1;\n');
     setConfiguration({ 'gap.docPath': docPath, 'gap.pkgPath': pkgPath });
     return {
-        root, context, docPath, pkgPath, helpFile, sourceFile,
+        root, bin, context, docPath, pkgPath, helpFile, sourceFile,
         inputs: {
-            search_gap_help: { topic: 'Group', mode: 'prefix', range: [1, 1] },
-            list_gap_books: {},
-            gap_resolve_link: { filePath: helpFile, relativePath: '../tut/chap1.html', anchor: 'Tutorial' },
-            check_gap_syntax: { filePath: sourceFile },
-            run_gap_file: { filePath: sourceFile, outputPath: path.join(root, 'logs', 'run.txt') },
+            gapSearchHelp: { topic: 'Group', mode: 'prefix', range: [1, 1] },
+            gapListBooks: {},
+            gapResolveLink: { filePath: helpFile, relativePath: '../tut/chap1.html', anchor: 'Tutorial' },
+            gapCheckSyntax: { filePath: sourceFile },
+            gapRunFile: { filePath: sourceFile, outputPath: path.join(root, 'logs', 'run.txt') },
         },
         cleanup() {
             if (previousPath === undefined) delete process.env.PATH;
@@ -359,5 +333,5 @@ installMock();
 
 module.exports = {
     vscodeMock, state, setConfiguration, createContext, grantTrust,
-    opened, closed, changed, saved, CancellationTokenSource, Disposable, SecretStorage, createProfileState, createFixture,
+    opened, closed, changed, saved, shellChanged, foldersChanged, CancellationTokenSource, Disposable, SecretStorage, createFixture,
 };

@@ -3,19 +3,16 @@
  * Matches GAP's original browser look and renders text-only pages, pages without files, and HTML pages.
  */
 
-import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { HelpEntry } from '../indexData';
-import { buildCSP } from './csp';
+import * as vscode from 'vscode';
 import { resolveHelpPath } from '../../path';
 import { tryReadFileWarn, tryValue } from '../../shared/guarded';
 import { getErrorMessage, Messages } from '../../shared/messages';
 import { notifyError } from '../../shared/notify';
+import { HelpEntry } from '../indexData';
+import { buildCSP } from './csp';
 
-
-
-/** Supports $...$, $$...$$, \\(...\\), \\[...\\] */
 const MATHJAX_SNIPPET = [
     '<script>',
     'MathJax={tex:{inlineMath:[["$","$"],["\\\\(","\\\\)"]],displayMath:[["$$","$$"],["\\\\[","\\\\]"]]}};',
@@ -151,7 +148,6 @@ export const native = {
         return processHtmlFile(file, docDir, cspSource, navScript, toWebviewUri, docStyle, mathJax, docPath, pkgPath);
     },
 
-    /** Render an HTML file for navigation */
     renderFile(
         filePath: string,
         docDir: string,

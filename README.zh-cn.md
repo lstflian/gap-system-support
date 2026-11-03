@@ -12,7 +12,7 @@
 
 - **语义高亮与语法诊断**：基于 `tree-sitter-gap`。
 - **代码补全**：提供 GAP 常量、关键字、语句结构和 GAP 函数的补全（包括通过 `Read` 加载的其他 GAP 文件中的函数）。
-- **悬停信息**：将鼠标悬停在符号上时，会显示其静态类别，例如 `function`、`variable`、`parameter` 或 `record field`。内置函数会显示函数签名；配置 GAP 文档路径后，还会显示简短的文档摘要和 GAP 帮助链接。关键字、运算符和语句终止符 `;` 会在 Hover 中以语法高亮代码片段显示，并附带简短说明。
+- **悬停信息**：将鼠标悬停在符号上时，会显示其静态类别，例如 `function`、`variable`、`parameter` 或 `record field`。内置函数会显示函数签名；配置 GAP 文档路径后，还会显示简短的文档摘要和 GAP 帮助链接。
 - **定义导航**：为可静态识别的 GAP 自定义符号提供 VS Code 原生的转到定义与 Peek Definition。
 - **引用导航**：在 macOS 上使用 `Command+点击`，在 Windows/Linux 上使用 `Ctrl+点击`；有引用的定义会打开原生 Peek，也可使用原生的查找所有引用（`Shift+F12`）。结果不包含当前点击的这一条，没有引用时直接跳转到定义自身。
 - **运行 GAP 代码**：在 VS Code 集成终端中运行当前 GAP 文件，并支持配置 GAP 命令行选项。
@@ -20,37 +20,19 @@
   - **prefix**：对应 GAP 中的 `?topic`
   - **substring**：对应 GAP 中的 `??topic`
 - **帮助文档浏览**：搜索结果会在 Webview 面板中展示。
-- **语言模型工具与 MCP**：为对话中的 agents 提供 GAP 帮助查询与语法检查工具。
+- **语言模型工具与 MCP**：为对话中的 agents 提供 GAP 相关的工具。
 
 ## 快速开始
 
-### 1. 安装 GAP 并配置 PATH
+### 1. 安装 GAP
 
-先确认 GAP 已经安装成功并且已经添加到系统 `PATH`。如果未添加到 `PATH`，则可以参考下面的步骤进行配置。
+扩展需要 GAP 已安装到本机，参考 [GAP 安装](https://www.gap-system.org/install/)。
 
-**Windows**：如果 GAP 是通过 `.exe` 安装器安装的，则可以在 PowerShell 中执行：
+### 2. 检测 GAP 并配置文档路径
 
-```powershell
-$userPath = [Environment]::GetEnvironmentVariable('PATH', 'User')
-[Environment]::SetEnvironmentVariable('PATH', $userPath + ';C:\Program Files\GAP-4.16.1\runtime\opt\gap-4.16.1;C:\Program Files\GAP-4.16.1\runtime\bin', 'User')
-```
+在欢迎页点击 **Detect GAP Installation**，或在命令面板运行 **GAP: Detect GAP Installation**。如果未找到 GAP，可在通知中点击 **Select GAP Folder**，手动选择安装文件夹。如果检测到 `doc/` 或 `pkg/` 目录，点击通知中的 **Use Detected Folders** 可填入对应的空白设置，已有路径不会被覆盖。若文档或包安装在其他位置、未被检测到，请在扩展设置中手动填写实际路径。
 
-执行完上述命令后，重新打开一个 PowerShell 终端，运行 `gap --version`，如果能正常输出 GAP 版本号，说明环境已配置成功。
-
-**Linux / macOS**：在终端运行以下命令（macOS 请将 `~/.bashrc` 换成 `~/.zshrc`）：
-
-```bash
-echo 'export PATH="/opt/gap-4.16.1:$PATH"' >> ~/.bashrc
-source ~/.bashrc
-```
-
-最后运行 `gap --version` 验证。
-
-**注意**：如果安装路径与示例不同，请替换为实际安装路径。
-
-### 2. 在扩展设置中配置 GAP 文档路径
-
-在欢迎页面的入门引导（walkthrough）或 VS Code 的扩展设置中填写以下设置项：
+路径应指向文件夹本身，以下仅为示例：
 
 - `gap.docPath`：`doc/` 文件夹的绝对路径，例如：
   - Windows: `C:\Program Files\GAP-4.16.1\runtime\opt\gap-4.16.1\doc`
@@ -63,23 +45,21 @@ source ~/.bashrc
 
 | 工具 | 用途 |
 | --- | --- |
-| `search_gap_help` | 搜索 GAP 帮助索引并返回匹配条目的文件位置 |
-| `list_gap_books` | 列出所有 GAP 帮助书籍（books）的简称 |
-| `gap_resolve_link` | 将 GAP 帮助文件中的相对链接解析为绝对路径和目标行 |
-| `check_gap_syntax` | 使用 tree-sitter-gap 静态检查 GAP 源文件的语法错误 |
-| `run_gap_file` | 使用 `-q --nointeract` 运行一个 GAP 文件并将输出重定向到指定文件；可选 `cwd` 覆盖本次运行目录 |
-
-两种入口提供相同的五个工具，开关互不影响。
+| `gapSearchHelp` | 搜索 GAP 帮助索引并返回匹配条目的文件位置 |
+| `gapListBooks` | 列出所有 GAP 帮助书籍（books）的简称 |
+| `gapResolveLink` | 将 GAP 帮助文件中的相对链接解析为绝对路径和目标行 |
+| `gapCheckSyntax` | 使用 tree-sitter-gap 静态检查 GAP 源文件的语法错误 |
+| `gapRunFile` | 使用 `-q --nointeract` 运行一个 GAP 文件并将输出重定向到指定文件；可选 `cwd` 覆盖本次运行目录 |
 
 - **语言模型工具**：供 VS Code 内的 agent 调用，由 `gap.tools.enabled` 控制，默认开启。
-- **MCP 服务**：供 VS Code 和外部 MCP 客户端调用，由 `gap.mcp.enabled` 控制，默认关闭。
+- **MCP 服务**：由用户设置 `gap.mcp.enabled` 控制，默认关闭。VS Code 按需以本机 stdio 进程启动服务，并使用当前窗口的 GAP 设置。其他 MCP 客户端也可以运行同一服务：**GAP: Copy MCP Server Configuration** 会复制其 stdio 启动配置。更新扩展或修改 GAP 设置后请重新复制。
 
 ## 设置项
 
 | 设置项 | 默认值 | 说明 |
 | --- | --- | --- |
-| `gap.docPath` | `""` | 手动填写 `doc/` 目录绝对路径 |
-| `gap.pkgPath` | `""` | 手动填写 `pkg/` 目录绝对路径 |
+| `gap.docPath` | `""` | `doc/` 目录的绝对路径 |
+| `gap.pkgPath` | `""` | `pkg/` 目录的绝对路径 |
 | `gap.docAppearance` | `system` | 文档外观，`system` 跟随 VS Code 主题，`dark` / `light` 使用深色或浅色主题 |
 | `gap.mathJax` | `true` | 是否在 GAP 文档页面中渲染 MathJax 数学公式 |
 | `gap.runMode` | `reuse` | 运行 GAP 时，`reuse` 复用同一个终端，`new` 每次新建终端 |
@@ -87,8 +67,7 @@ source ~/.bashrc
 | `gap.searchMode` | `prefix` | 搜索模式，`prefix` 对应 `?topic`，`substring` 对应 `??topic` |
 | `gap.diagnostics` | `true` | 在问题面板显示 GAP 解析器产生的语法错误诊断 |
 | `gap.tools.enabled` | `true` | 提供原生 VS Code 语言模型工具，与 MCP 开关独立 |
-| `gap.mcp.enabled` | `false` | 当前 Profile 用户设置：为受信任窗口启用共享的本机 MCP 服务，与原生工具独立 |
-| `gap.mcp.port` | `0` | 当前 Profile 用户设置：所有参与窗口共用一个端口；`0` 在服务存活期间自动分配，固定端口被其他服务占用时明确报错 |
+| `gap.mcp.enabled` | `false` | 用户设置：在受信任的工作区中向 VS Code 提供 GAP stdio MCP 服务，与原生工具独立 |
 
 ## 命令
 
@@ -96,6 +75,8 @@ source ~/.bashrc
 
 | 命令 | 说明 |
 | --- | --- |
+| `GAP: Detect GAP Installation` | 重新扫描常见位置并选择安装 |
+| `GAP: Select GAP Installation` | 选择文件夹，校验后在本机记住安装 |
 | `GAP: Run GAP File` | 当打开 GAP 文件时可用，在终端中运行当前 GAP 文件 |
 | `GAP: Configure GAP Command Line Options` | 通过 Quick Pick 配置 GAP 命令行选项 |
 | `GAP: Search GAP Help` | 搜索 GAP 帮助文档 |
@@ -103,10 +84,9 @@ source ~/.bashrc
 | `GAP: Open GAP Reference Manual` | 打开 GAP 参考手册 |
 | `GAP: Generate Completion Data` | 重新生成补全数据 |
 | `GAP: Reset Completion Data` | 恢复默认补全数据 |
-| `GAP: Copy MCP Connection Configuration` | 复制正在运行的 MCP 服务地址和私有认证 header |
-| `GAP: Reset MCP Access Token` | 更换当前 VS Code Profile 下所有工作区共享的持久化令牌 |
+| `GAP: Copy MCP Server Configuration` | 复制 GAP MCP 服务的 stdio 启动配置，供其他 MCP 客户端使用 |
 
-运行、帮助和补全数据命令也会出现在 GAP 文件的编辑器上下文菜单（右键菜单）中，其中 `GAP: Search GAP Help` 和 `GAP: Run GAP File` 位于菜单顶层，其余命令聚合在 **More GAP Commands** 子菜单中。MCP 连接配置和令牌重置命令仅在命令面板中提供。
+运行、帮助和补全数据命令也会出现在 GAP 文件的编辑器上下文菜单（右键菜单）中，其中 `GAP: Search GAP Help` 和 `GAP: Run GAP File` 位于菜单顶层，其余命令聚合在 **More GAP Commands** 子菜单中。MCP 配置命令仅在命令面板中提供。
 
 ## 开发
 

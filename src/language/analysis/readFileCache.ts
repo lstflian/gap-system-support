@@ -1,0 +1,89 @@
+/**
+ * Shared file loading for nested Read chains.
+ * Reuses open documents, limits read size, and caches parses with LRU.
+ */
+
+import * as fs from 'fs';
+import * as path from 'path';
+import { READ_CONTENT_LIMIT, READ_FILE_CACHE_MAX_ENTRIES } from '../../limits';
+import { tryValue } from '../../shared/guarded';
+import { LruCache } from '../../shared/lruCache';
+import type { LanguageHost, SourceDocument, SourceUri } from '../documents';
+
+/** Cached parse of one file, invalidated by a content signature. */
+interface ReadChainFileEntry<T> {
+    signature: string;
+    file: T | null;
+}
+
+type ParseReadChainFile<T> = (content: string) => T | null;
+
+export class ReadChainFileCache<T> {
+
+    // File cache, keyed by absolute path.
+    private readonly cache = new LruCache<string, ReadChainFileEntry<T>>({
+        maxEntries: READ_FILE_CACHE_MAX_ENTRIES,
+    });
+    private readonly parseFile: ParseReadChainFile<T>;
+
+    constructor(parseFile: ParseReadChainFile<T>, private readonly host: LanguageHost) {
+        this.parseFile = parseFile;
+    }
+
+    onDocumentClosed(uri: SourceUri): void {
+        this.cache.delete(uri.fsPath);
+    }
+
+    dispose(): void {
+        this.cache.clear();
+    }
+
+    /** Read and parse one file through the shared cache. */
+    loadFile(filePath: string): T | null {
+        const open = this.host.openDocuments().find(d => d.uri.fsPath === filePath);
+        let content: string;
+        let signature: string;
+        if (open) {
+            content = open.getText();
+            signature = `doc:${open.version}`;
+        } else {
+            const loaded = tryValue((): { signature: string; content: string } | null => {
+                const stat = fs.statSync(filePath);
+                if (stat.size > READ_CONTENT_LIMIT) return null;
+                return {
+                    signature: `file:${stat.mtimeMs}:${stat.size}`,
+                    content: fs.readFileSync(filePath, 'utf-8'),
+                };
+            }, null);
+            if (loaded === null) {
+                return null;
+            }
+            signature = loaded.signature;
+            content = loaded.content;
+        }
+        if (content.length > READ_CONTENT_LIMIT) return null;
+
+        const cached = this.cache.peek(filePath);
+        if (cached && cached.signature === signature) {
+            this.cache.touch(filePath, cached);
+            return cached.file;
+        }
+
+        const file = this.parseFile(content);
+        this.cache.set(filePath, { signature, file });
+        return file;
+    }
+}
+
+export function resolveReadBaseDir(document: SourceDocument, host: LanguageHost): string | null {
+    return host.workspaceRoot(document.uri);
+}
+
+export function resolveReadTarget(pathText: string, baseDir: string): string | null {
+    const trimmed = pathText.trim();
+    if (!trimmed) return null;
+    if (trimmed.includes('\\')) return null;
+    if (path.isAbsolute(trimmed)) return trimmed;
+    const candidate = path.join(baseDir, trimmed);
+    return fs.existsSync(candidate) ? candidate : null;
+}

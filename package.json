@@ -112,6 +112,16 @@
     ],
     "commands": [
       {
+        "command": "gap.detectInstallation",
+        "title": "Detect GAP Installation",
+        "category": "GAP"
+      },
+      {
+        "command": "gap.selectInstallation",
+        "title": "Select GAP Installation",
+        "category": "GAP"
+      },
+      {
         "command": "gap.generateCompletionData",
         "title": "Generate Completion Data",
         "category": "GAP"
@@ -175,12 +185,7 @@
       },
       {
         "command": "gap.copyMcpConfiguration",
-        "title": "Copy MCP Connection Configuration",
-        "category": "GAP"
-      },
-      {
-        "command": "gap.resetMcpToken",
-        "title": "Reset MCP Access Token",
+        "title": "Copy MCP Server Configuration",
         "category": "GAP"
       }
     ],
@@ -268,13 +273,13 @@
         "steps": [
           {
             "id": "addGapToPath",
-            "title": "Add GAP to the PATH",
-            "description": "Make sure GAP is installed and added to the system PATH.\n[Open README](command:gap.openReadme)",
+            "title": "Find Your GAP Installation",
+            "description": "Detect your GAP installation automatically.\n[Detect GAP Installation](command:gap.detectInstallation)",
             "media": {
-              "markdown": "media/install-gap.md"
+              "markdown": "media/gap-log.md"
             },
             "completionEvents": [
-              "onCommand:gap.openReadme"
+              "onCommand:gap.detectInstallation"
             ]
           },
           {
@@ -395,16 +400,7 @@
           "default": false,
           "scope": "machine",
           "order": 10,
-          "markdownDescription": "Enable the authenticated, loopback-only MCP service shared by trusted windows in this VS Code Profile. Configure in user settings; workspace overrides are ignored. Changes take effect across this Profile. Independent of `#gap.tools.enabled#`. The background service stops after the last participating window leaves."
-        },
-        "gap.mcp.port": {
-          "type": "integer",
-          "default": 0,
-          "minimum": 0,
-          "maximum": 65535,
-          "scope": "machine",
-          "order": 11,
-          "markdownDescription": "One MCP port shared by windows in this VS Code Profile. Configure once in user settings; workspace overrides are ignored. Use `0` for one automatically allocated port while the service runs, or a fixed port for a stable external URL. Other Profiles, VS Code installations and unrelated programs cannot share this port. Changing it restarts the shared listener without changing the access token. A conflicting fixed port produces an error; no alternative port is chosen."
+          "markdownDescription": "Provide the GAP MCP server to VS Code. VS Code starts it on demand as a local stdio process that uses this window's GAP settings. Requires a trusted workspace. Independent of `#gap.tools.enabled#`. Run **GAP: Copy MCP Server Configuration** to use the same server from other MCP clients."
         }
       }
     },
@@ -417,17 +413,17 @@
     ],
     "languageModelTools": [
       {
-        "name": "search_gap_help",
+        "name": "gapSearchHelp",
         "when": "config.gap.tools.enabled",
-        "displayName": "Search GAP Help",
+        "displayName": "gapSearchHelp",
         "icon": "$(search)",
         "userDescription": "Search the GAP help index and get line locations",
-        "toolReferenceName": "gapSearch",
+        "toolReferenceName": "gapSearchHelp",
         "canBeReferencedInPrompt": true,
         "tags": [
           "documentation"
         ],
-        "modelDescription": "Searches GAP help and returns matched entries with their exact file location, so you can read the content with your built-in file-reading tool.\n\nResponse: { \"results\": [ { \"index\": int, \"display\": string, \"type\": \"function\"|\"section\"|\"chapter\"|\"index\"|omitted, \"book\": string, \"absPath\": string, \"targetLine\": int, \"totalLines\": int } ], \"total\": int, \"returned\": int, \"note\": string, \"distribution\": { book: int } }\n\n- Each entry has 7 fields: index, display, type (omitted when there is no type code), book, absPath, targetLine, totalLines.\n- index: 1-based position in the result list, stable within one index version.\n- book: book short name; same as the books filter parameter and list_gap_books.\n- absPath: absolute path of the entry's file; pass it directly to your file-reading tool.\n- targetLine: 1-based start line; 0 means the entry has no anchor and covers the whole file.\n- note: hints when there are special entries or invalid input.\n- distribution: hit counts per book over ALL matches (global; independent of range), sorted descending; empty when there are no matches.",
+        "modelDescription": "Searches GAP help and returns matched entries with their exact file location, so you can read the content with your built-in file-reading tool.\n\nResponse: { \"results\": [ { \"index\": int, \"display\": string, \"type\": \"function\"|\"section\"|\"chapter\"|\"index\"|omitted, \"book\": string, \"absPath\": string, \"targetLine\": int, \"totalLines\": int } ], \"total\": int, \"returned\": int, \"note\": string, \"distribution\": { book: int } }\n\n- Each entry has 7 fields: index, display, type (omitted when there is no type code), book, absPath, targetLine, totalLines.\n- index: 1-based position in the result list, stable within one index version.\n- book: book short name; same as the books filter parameter and gapListBooks.\n- absPath: absolute path of the entry's file; pass it directly to your file-reading tool.\n- targetLine: 1-based start line; 0 means the entry has no anchor and covers the whole file.\n- note: hints when there are special entries or invalid input.\n- distribution: hit counts per book over ALL matches (global; independent of range), sorted descending; empty when there are no matches.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -448,7 +444,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Book short names to search (get valid names from list_gap_books). Every name must be valid or the call is rejected."
+              "description": "Book short names to search (get valid names from gapListBooks). Every name must be valid or the call is rejected."
             },
             "range": {
               "type": "array",
@@ -466,26 +462,26 @@
         }
       },
       {
-        "name": "list_gap_books",
+        "name": "gapListBooks",
         "when": "config.gap.tools.enabled",
-        "displayName": "List GAP Help Books",
+        "displayName": "gapListBooks",
         "icon": "$(book)",
         "userDescription": "List all GAP books",
-        "toolReferenceName": "gapBooks",
+        "toolReferenceName": "gapListBooks",
         "canBeReferencedInPrompt": true,
         "tags": [
           "documentation"
         ],
-        "modelDescription": "Lists all GAP help book short names; use these names in search_gap_help's books parameter.\n\nResponse: { \"books\": string[] }",
+        "modelDescription": "Lists all GAP help book short names; use these names in gapSearchHelp's books parameter.\n\nResponse: { \"books\": string[] }",
         "inputSchema": {
           "type": "object",
           "properties": {}
         }
       },
       {
-        "name": "gap_resolve_link",
+        "name": "gapResolveLink",
         "when": "config.gap.tools.enabled",
-        "displayName": "Resolve GAP Help Link",
+        "displayName": "gapResolveLink",
         "icon": "$(link)",
         "userDescription": "Resolve a relative GAP help link to its absolute path and target line",
         "toolReferenceName": "gapResolveLink",
@@ -517,9 +513,9 @@
         }
       },
       {
-        "name": "check_gap_syntax",
+        "name": "gapCheckSyntax",
         "when": "config.gap.tools.enabled",
-        "displayName": "Check GAP Syntax",
+        "displayName": "gapCheckSyntax",
         "icon": "$(check)",
         "userDescription": "Statically check a GAP source file for syntax errors",
         "toolReferenceName": "gapCheckSyntax",
@@ -527,7 +523,7 @@
         "tags": [
           "code-analysis"
         ],
-        "modelDescription": "Statically checks GAP source files for syntax errors using tree-sitter-gap.\n\nUse this tool after creating or modifying a GAP source file, before running it.\n\nThe parser reports locations after error recovery, so they may not point to the root cause. A `Missing \"X\"` entry means the parser required `X` here but it is absent (e.g. a forgotten `;`); an `Unexpected syntax` entry often follows an unclosed construct near the reported location. If a reported location does not appear to explain the error, inspect the surrounding code context.\n\nThis tool provides preliminary static syntax checking only. It does not execute GAP code or perform semantic or logic checks, and is not a complete GAP interpreter validation or runtime diagnostic. `syntaxValid: true` means only that tree-sitter-gap reported no syntax errors; it does not guarantee that GAP itself will parse or execute the file without errors. Undefined variables, type errors, missing packages, and environment-dependent failures may still occur.\n\nInput: { \"filePath\": string } — filePath must be the absolute path of the GAP source file to check.\n\nResponse: { \"syntaxValid\": boolean, \"diagnostics\": [ { \"severity\": \"error\", \"line\": int, \"column\": int, \"message\": string } ] }\n\n- line and column are 1-based positions of the diagnostic range start.\n- diagnostics is empty when syntaxValid is true.",
+        "modelDescription": "Statically checks GAP source files for syntax errors using tree-sitter-gap. In VS Code, the unsaved text of an open editor for filePath is checked; the MCP server checks the file on disk.\n\nUse this tool after creating or modifying a GAP source file, before running it.\n\nThe parser reports locations after error recovery, so they may not point to the root cause. A `Missing \"X\"` entry means the parser required `X` here but it is absent (e.g. a forgotten `;`); an `Unexpected syntax` entry often follows an unclosed construct near the reported location. If a reported location does not appear to explain the error, inspect the surrounding code context.\n\nThis tool provides preliminary static syntax checking only. It does not execute GAP code or perform semantic or logic checks, and is not a complete GAP interpreter validation or runtime diagnostic. `syntaxValid: true` means only that tree-sitter-gap reported no syntax errors; it does not guarantee that GAP itself will parse or execute the file without errors. Undefined variables, type errors, missing packages, and environment-dependent failures may still occur.\n\nInput: { \"filePath\": string } — filePath must be the absolute path of the GAP source file to check.\n\nResponse: { \"syntaxValid\": boolean, \"diagnostics\": [ { \"severity\": \"error\", \"line\": int, \"column\": int, \"message\": string } ] }\n\n- line and column are 1-based positions of the diagnostic range start.\n- diagnostics is empty when syntaxValid is true.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -542,9 +538,9 @@
         }
       },
       {
-        "name": "run_gap_file",
+        "name": "gapRunFile",
         "when": "config.gap.tools.enabled && isWorkspaceTrusted",
-        "displayName": "Run GAP File",
+        "displayName": "gapRunFile",
         "icon": "$(play)",
         "userDescription": "Run one GAP file in quiet, non-interactive mode with an optional working directory and redirect its output to a file",
         "toolReferenceName": "gapRunFile",
@@ -552,13 +548,13 @@
         "tags": [
           "code-execution"
         ],
-        "modelDescription": "Runs exactly one GAP source file with GAP -q --nointeract in an independent process, in a trusted workspace. Saves unsaved changes if the file is open in the executing window.\n\nCreates missing output parent directories and OVERWRITES an existing output file. Standard output and standard error are continuously redirected to outputPath while GAP runs; this tool does not return the log.\n\nThere is NO fixed runtime timeout: the invocation waits until the process exits or it is cancelled. Cancellation stops this invocation's process tree. Different output files may run concurrently, but concurrent writes to the same output file are rejected.\n\nResponse on normal process completion: { \"completed\": true }. Completion does NOT mean the GAP program succeeded. GAP-internal errors and nonzero exit codes are not interpreted as program success or failure; inspect outputPath yourself. Invalid paths, save/write/startup failures, or interruption are reported as tool errors rather than normal completion.",
+        "modelDescription": "Runs exactly one GAP source file with GAP -q --nointeract in an independent process, in a trusted workspace. In VS Code, unsaved changes to the file in an open editor are saved first; the MCP server runs the file as saved on disk.\n\nCreates missing output parent directories and OVERWRITES an existing output file. Standard output and standard error are continuously redirected to outputPath while GAP runs; this tool does not return the log.\n\nThere is NO fixed runtime timeout: the invocation waits until the process exits or it is cancelled. Cancellation stops this invocation's process tree. Different output files may run concurrently, but concurrent writes to the same output file from the same VS Code window or MCP server are rejected.\n\nResponse on normal process completion: { \"completed\": true }. Completion does NOT mean the GAP program succeeded. GAP-internal errors and nonzero exit codes are not interpreted as program success or failure; inspect outputPath yourself. Invalid paths, save/write/startup failures, or interruption are reported as tool errors rather than normal completion.",
         "inputSchema": {
           "type": "object",
           "properties": {
             "filePath": {
               "type": "string",
-              "description": "Absolute path of the single GAP source file to execute. Saves unsaved changes if this file is open."
+              "description": "Absolute path of the single GAP source file to execute. In VS Code, unsaved changes to this file in an open editor are saved first."
             },
             "outputPath": {
               "type": "string",
@@ -566,7 +562,7 @@
             },
             "cwd": {
               "type": "string",
-              "description": "Optional absolute path to an existing directory in the extension host's filesystem. Sets the working directory for this invocation only. If omitted, uses the file's workspace root in the executing window, or the user's home directory on the extension host if the file does not belong to a workspace. Does not affect window selection. filePath and outputPath must still be absolute paths."
+              "description": "Optional absolute path to an existing directory. Sets the working directory for this invocation only. If omitted, uses the workspace folder that contains the file, or the user's home directory if no workspace folder contains it. filePath and outputPath must still be absolute paths."
             }
           },
           "required": [
@@ -588,7 +584,6 @@
     "test": "node test/run-all.js"
   },
   "dependencies": {
-    "@modelcontextprotocol/node": "^2.1.2",
     "@modelcontextprotocol/server": "^2.4.0",
     "web-tree-sitter": "0.25.10"
   },

@@ -12,12 +12,10 @@ const HELP_NAV_JS = tryReadFileWarn(
     'help-nav.js',
 );
 
-/** Escape a string for inline use in a script tag. */
 export function escapeInlineJs(s: string): string {
     return JSON.stringify(s).replace(/<\//gi, '<\\/');
 }
 
-/** Build the navigation script with an escaped anchor string. */
 export function buildNavScript(anchor: string, extraHeadScript: string = '', mathJaxOn: boolean = true, scrollY?: number): string {
     // Escape the anchor string.
     const safe = escapeInlineJs(anchor);

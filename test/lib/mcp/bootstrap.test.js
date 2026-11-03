@@ -6,7 +6,7 @@ const {
 } = require('../lmtools/mock-vscode');
 const { check, section, summary } = require('../help/helpers');
 const extension = require('../../../out/extension');
-const parser = require('../../../out/parser/gapParser');
+const parser = require('../../../out/language/parser/gapParser');
 const help = require('../../../out/help/helpData');
 
 async function waitFor(predicate) {
@@ -23,24 +23,28 @@ async function main() {
         section('1. Startup without GAP files stays lightweight by default');
         await extension.activate(fixture.context);
         check('native tool implementations are available', 5, state.tools.size);
-        check('no MCP provider by default', 0, state.providers.size);
+        const provider = state.providers.get('gap.mcp');
+        check('the MCP provider is registered but provides no server by default', [1, []],
+            [state.providers.size, await provider.provideMcpServerDefinitions()]);
         check('startup did not initialize WASM', false, parser.isParserReady());
         check('startup did not load a help index', 0, help.getHelpState().entries.length);
         check('startup did not register language features', 0, state.languageRegistrations);
         check('startup did not open the welcome walkthrough', false, state.executed.includes('workbench.action.openWalkthrough'));
-        check('startup did not import the MCP server SDK', false,
-            !!require.cache[require.resolve('../../../out/mcp/server')]);
+        const sdkLoaded = () => Object.keys(require.cache).some(key => key.includes('@modelcontextprotocol'));
+        check('the extension host never imports the MCP server SDK', false, sdkLoaded());
 
-        section('2. Workspace enable auto-starts MCP without GAP files or chat');
+        section('2. Enabling MCP publishes a stdio server without GAP files or chat');
         setConfiguration({ 'gap.tools.enabled': false, 'gap.mcp.enabled': true });
-        await waitFor(() => state.providers.size === 1);
-        check('native tools can stay disabled while MCP starts', 0, state.tools.size);
-        check('MCP startup still does not initialize WASM', false, parser.isParserReady());
-        check('MCP startup still does not load a help index', 0, help.getHelpState().entries.length);
+        const [definition] = await provider.provideMcpServerDefinitions();
+        check('enabled MCP provides one stdio server', ['GAP', process.execPath], [definition?.label, definition?.command]);
+        check('native tools can stay disabled while MCP is enabled', 0, state.tools.size);
+        check('providing MCP does not initialize WASM', false, parser.isParserReady());
+        check('providing MCP does not load a help index', 0, help.getHelpState().entries.length);
+        check('providing MCP does not import the MCP server SDK', false, sdkLoaded());
         await vscode.commands.executeCommand('gap.copyMcpConfiguration');
-        const definition = JSON.parse(state.clipboard);
-        check('copy command publishes a real authenticated HTTP endpoint', ['http', '127.0.0.1', true],
-            [definition.type, new URL(definition.url).hostname, definition.headers.Authorization.startsWith('Bearer ')]);
+        const copied = JSON.parse(state.clipboard);
+        check('copy command publishes the stdio launch configuration', ['stdio', definition.command, definition.args],
+            [copied.type, copied.command, copied.args]);
 
         section('3. GAP language features still initialize with both tool switches off');
         setConfiguration({ 'gap.mcp.enabled': false });
@@ -61,6 +65,24 @@ async function main() {
         check('parser is ready for ordinary editing', true, parser.isParserReady());
         check('language activation does not re-enable native tools', 0, state.tools.size);
         check('welcome walkthrough opens on actual GAP feature use', true, state.executed.includes('workbench.action.openWalkthrough'));
+
+        section('4. Native registration failure is isolated and does not leak listeners');
+        await extension.deactivate();
+        for (const subscription of fixture.context.subscriptions.splice(0)) subscription.dispose();
+        const registerTool = vscode.lm.registerTool;
+        let attempts = 0;
+        try {
+            vscode.lm.registerTool = () => { attempts++; throw new Error('test native registration failure'); };
+            setConfiguration({ 'gap.tools.enabled': true });
+            await extension.activate(fixture.context);
+            check('registration failure is reported', true,
+                state.messages.some(message => message.type === 'error' && message.message.includes('test native registration failure')));
+            check('editor providers survive native registration failure', 6, state.languageRegistrations);
+            check('parser survives native registration failure', true, parser.isParserReady());
+            setConfiguration({ 'gap.tools.enabled': false });
+            setConfiguration({ 'gap.tools.enabled': true });
+            check('failed construction removes its configuration listener', 1, attempts);
+        } finally { vscode.lm.registerTool = registerTool; }
         summary();
     } finally {
         await extension.deactivate();

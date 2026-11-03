@@ -49,6 +49,13 @@ for (let i = 0; i < gapFiles.length; i++) {
 
 // 4. Run the help tests.
 const unitTests = [
+    path.join('..', 'language', 'boundaries.test.js'),
+    path.join('..', 'language', 'facts.test.js'),
+    path.join('..', 'runtime', 'installation.test.js'),
+    path.join('..', 'runtime', 'terminal.test.js'),
+    path.join('..', 'runtime', 'real-gap.integration.js'),
+    path.join('..', 'shared', 'guarded.test.js'),
+    path.join('..', 'highlight', 'viewport.test.js'),
     'search.test.js',
     'chooser.test.js',
     path.join('..', 'parser', 'parser.test.js'),
@@ -58,16 +65,8 @@ const unitTests = [
     path.join('..', 'references', 'references.test.js'),
     path.join('..', 'lmtools', 'tools.test.js'),
     path.join('..', 'lmtools', 'runFile.test.js'),
-    path.join('..', 'mcp', 'credentials.test.js'),
-    path.join('..', 'mcp', 'credential-snapshot.test.js'),
-    path.join('..', 'mcp', 'cross-window.test.js'),
-    path.join('..', 'mcp', 'fixed-first-start.test.js'),
-    path.join('..', 'mcp', 'shared-process.test.js'),
-    path.join('..', 'mcp', 'output.test.js'),
-    path.join('..', 'mcp', 'broker-output.test.js'),
-    path.join('..', 'mcp', 'startup.test.js'),
-    path.join('..', 'mcp', 'startup.integration.js'),
     path.join('..', 'mcp', 'mcp.test.js'),
+    path.join('..', 'mcp', 'stdio.test.js'),
     path.join('..', 'mcp', 'bootstrap.test.js'),
 ];
 for (const file of unitTests) {

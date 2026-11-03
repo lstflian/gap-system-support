@@ -4,7 +4,14 @@
  */
 
 import * as fs from 'fs';
+import { errorCode, reportError } from './errors';
 import { getErrorMessage, Messages } from './messages';
+
+/** Missing files are an expected outcome of these probes, not an error worth logging. */
+function reportUnexpected(err: unknown): void {
+    const code = errorCode(err);
+    if (code !== 'ENOENT' && code !== 'ENOTDIR') reportError(err);
+}
 
 /**
  * Run fn; on error return the fallback.
@@ -14,13 +21,13 @@ export function tryValue<T>(fn: () => T, fallback: T | ((err: unknown) => T)): T
     try {
         return fn();
     } catch (err) {
+        reportUnexpected(err);
         return typeof fallback === 'function'
             ? (fallback as (err: unknown) => T)(err)
             : fallback;
     }
 }
 
-/** Async variant of tryValue. */
 export async function tryValueAsync<T>(
     fn: () => Promise<T>,
     fallback: T | ((err: unknown) => T | Promise<T>),
@@ -28,6 +35,7 @@ export async function tryValueAsync<T>(
     try {
         return await fn();
     } catch (err) {
+        reportUnexpected(err);
         return typeof fallback === 'function'
             ? await (fallback as (err: unknown) => T | Promise<T>)(err)
             : fallback;
@@ -57,12 +65,11 @@ export async function onErrorAsync<T>(
     }
 }
 
-/** Run fn; on error log with console.error(label, err), nothing is thrown. */
 export function tryLog<T>(fn: () => T, label: string): void {
     try {
         fn();
     } catch (err) {
-        console.error(label, err);
+        reportError(err, label);
     }
 }
 
@@ -70,8 +77,8 @@ export function tryLog<T>(fn: () => T, label: string): void {
 export function safeUnlink(filePath: string): void {
     try {
         fs.unlinkSync(filePath);
-    } catch {
-        // Best effort cleanup, ignore.
+    } catch (error) {
+        reportUnexpected(error);
     }
 }
 
@@ -79,8 +86,8 @@ export function safeUnlink(filePath: string): void {
 export function safeRename(from: string, to: string): void {
     try {
         fs.renameSync(from, to);
-    } catch {
-        // Best effort restore, ignore.
+    } catch (error) {
+        reportUnexpected(error);
     }
 }
 
@@ -89,7 +96,7 @@ export function tryReadFileWarn(filePath: string, name: string, fallback: string
     try {
         return fs.readFileSync(filePath, 'utf-8');
     } catch (e: any) {
-        console.warn(Messages.loader.failedToLoad(name, getErrorMessage(e)));
+        reportError(Messages.loader.failedToLoad(name, getErrorMessage(e)));
         return fallback;
     }
 }
