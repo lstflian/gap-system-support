@@ -1,0 +1,116 @@
+name: CI and Release
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+        node: [22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  release:
+    name: Publish versioned release
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Check for a new package version
+        id: version
+        shell: bash
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          if [[ "$BEFORE_SHA" =~ ^0+$ ]]; then
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          current_version="$(node -p "require('./package.json').version")"
+          previous_version="$(git show "${BEFORE_SHA}:package.json" | node -e 'let input = ""; process.stdin.on("data", chunk => input += chunk).on("end", () => console.log(JSON.parse(input).version));')"
+          if [[ "$current_version" == "$previous_version" ]]; then
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [[ ! "$current_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "package.json version is not a supported semantic version: $current_version" >&2
+            exit 1
+          fi
+
+          tag="v${current_version}"
+          if git ls-remote --exit-code --refs origin "refs/tags/${tag}" >/dev/null 2>&1; then
+            echo "Tag already exists: ${tag}" >&2
+            exit 1
+          fi
+
+          printf '## %s\n\n' "$current_version" > "$RUNNER_TEMP/release-notes.md"
+          awk -v heading="## ${current_version}" '
+            { sub(/\r$/, "") }
+            $0 == heading { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md >> "$RUNNER_TEMP/release-notes.md"
+          if ! grep -q '[^[:space:]]' "$RUNNER_TEMP/release-notes.md"; then
+            echo "CHANGELOG.md must contain a non-empty '## ${current_version}' section." >&2
+            exit 1
+          fi
+
+          echo "release=true" >> "$GITHUB_OUTPUT"
+          echo "version=${current_version}" >> "$GITHUB_OUTPUT"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+      - name: Install dependencies and compile
+        if: steps.version.outputs.release == 'true'
+        run: |
+          npm ci
+          npm run compile
+      - name: Package VSIX
+        if: steps.version.outputs.release == 'true'
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: npx --yes @vscode/vsce package --out "gap-system-support-${VERSION}.vsix"
+      - name: Publish to VS Code Marketplace
+        if: steps.version.outputs.release == 'true'
+        env:
+          VSIX_PATH: gap-system-support-${{ steps.version.outputs.version }}.vsix
+        run: npx --yes @vscode/vsce publish --oidc --packagePath "$VSIX_PATH"
+      - name: Create GitHub Release and tag
+        if: steps.version.outputs.release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VSIX_PATH: gap-system-support-${{ steps.version.outputs.version }}.vsix
+        run: gh release create "$TAG" "$VSIX_PATH" --target "$GITHUB_SHA" --title "$TAG" --notes-file "$RUNNER_TEMP/release-notes.md"
