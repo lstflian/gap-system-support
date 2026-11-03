@@ -75,9 +75,16 @@ when relevant workspace files change. Repeated definition, reference, and Hover
 requests reuse document trees, file events, and short-lived workspace lookup
 caches instead of rescanning the workspace on every request.
 
-Limits in `src/limits.ts` bound document size, cache sizes, and scanned content.
-When a limit is reached, the provider returns no static result rather than
-blocking the editor.
+Workspace definition lookups are cached by workspace root, symbol name, and
+requesting file, so one file's exclusion does not affect another file's results.
+The cache retains at most 64 entries with least-recently-used eviction and a fixed
+five-second lifetime per entry. Lookups remove expired entries; cache hits update
+recency without extending that lifetime. Closing a document clears these results,
+including cached misses that may depend on a discarded unsaved buffer.
+
+Limits in `src/limits.ts` bound document size, cache entry counts, and scanned
+content. Oversized documents are skipped; evicted or expired workspace results
+are rescanned on demand.
 
 ## Verification
 
@@ -90,6 +97,7 @@ The automated suite covers:
 - nested `rec(...)` fields and dotted/component paths;
 - Peek behavior with and without references;
 - reference exclusion rules and workspace cache reuse;
+- caller-specific workspace results, discarded buffers, LRU eviction, and fixed expiry;
 - Hover resolution that shares the definition model.
 
 Run the complete suite with:

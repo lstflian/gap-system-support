@@ -28,9 +28,11 @@ export class CheckSyntaxTool implements GapTool<CheckSyntaxInput, CheckSyntaxOut
         }
         await initGapParser(this.host.location);
         throwIfToolCancelled(token);
-        // Prefer the open document buffer so unsaved changes are checked.
-        const open = this.host.openDocument(filePath);
-        if (open) {
+        // Consume exact matches synchronously so the buffer cannot close before parsing.
+        const lookup = this.host.openDocument(filePath);
+        const open = lookup instanceof Promise ? await lookup : lookup;
+        throwIfToolCancelled(token);
+        if (open && !open.isClosed) {
             return checkSyntaxDocument(open);
         }
         const code = toolTry(

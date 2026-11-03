@@ -70,6 +70,47 @@ async function saveModifiedSource(filePath: string, token: vscode.CancellationTo
     }
 }
 
+async function statIfPresent(filePath: string): Promise<BigIntStats | undefined> {
+    try {
+        return await fs.stat(filePath, { bigint: true });
+    } catch (error) {
+        if (errorCode(error) === 'ENOENT' || errorCode(error) === 'ENOTDIR') return undefined;
+        throw error;
+    }
+}
+
+function exactOpenDocument(filePath: string): vscode.TextDocument | undefined {
+    return vscode.workspace.textDocuments.find(document => !document.isClosed && document.uri.fsPath === filePath);
+}
+
+async function openDocumentByIdentity(
+    filePath: string, candidates: readonly vscode.TextDocument[],
+): Promise<vscode.TextDocument | undefined> {
+    const input = await statIfPresent(filePath);
+    if (!input?.isFile() || input.ino === 0n) return undefined;
+    const matches: vscode.TextDocument[] = [];
+    for (const document of candidates) {
+        if (document.isClosed || !vscode.workspace.textDocuments.includes(document)) continue;
+        const candidate = await statIfPresent(document.uri.fsPath);
+        if (candidate?.isFile() && candidate.dev === input.dev && candidate.ino === input.ino) matches.push(document);
+    }
+    const exact = exactOpenDocument(filePath);
+    if (exact) return exact;
+    const live = matches.filter(document => !document.isClosed && vscode.workspace.textDocuments.includes(document));
+    if (live.length > 1) throw new ToolError(Messages.tools.syntaxDocumentAmbiguous(filePath));
+    return live[0];
+}
+
+function openDocument(filePath: string): vscode.TextDocument | undefined | Promise<vscode.TextDocument | undefined> {
+    const exact = exactOpenDocument(filePath);
+    if (exact || os.platform() !== 'win32') return exact;
+    const key = comparablePath(filePath);
+    const candidates = vscode.workspace.textDocuments.filter(document => !document.isClosed
+        && document.uri.scheme === 'file' && comparablePath(document.uri.fsPath) === key);
+    // Case folding only selects candidates: Windows directories can be case-sensitive.
+    return candidates.length ? openDocumentByIdentity(filePath, candidates) : undefined;
+}
+
 export function windowRunEnvironment(): RunEnvironment {
     return {
         shell: vscode.env.shell,
@@ -91,7 +132,7 @@ export function createWindowToolHost(context: HelpDataContext): ToolHost {
                 searchMode: config.get<string>('searchMode', 'prefix'),
             };
         },
-        openDocument: filePath => vscode.workspace.textDocuments.find(document => document.uri.fsPath === filePath),
+        openDocument,
         isTrusted: () => vscode.workspace.isTrusted,
         saveSource: saveModifiedSource,
         defaultCwd: filePath => getRunCwd(vscode.Uri.file(filePath))?.fsPath ?? os.homedir(),

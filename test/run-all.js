@@ -51,6 +51,7 @@ for (let i = 0; i < gapFiles.length; i++) {
 const unitTests = [
     path.join('..', 'language', 'boundaries.test.js'),
     path.join('..', 'language', 'facts.test.js'),
+    path.join('..', 'language', 'definitionCache.test.js'),
     path.join('..', 'runtime', 'installation.test.js'),
     path.join('..', 'runtime', 'terminal.test.js'),
     path.join('..', 'runtime', 'real-gap.integration.js'),
@@ -64,6 +65,7 @@ const unitTests = [
     path.join('..', 'definition', 'definition.test.js'),
     path.join('..', 'references', 'references.test.js'),
     path.join('..', 'lmtools', 'tools.test.js'),
+    path.join('..', 'lmtools', 'documents.test.js'),
     path.join('..', 'lmtools', 'runFile.test.js'),
     path.join('..', 'mcp', 'mcp.test.js'),
     path.join('..', 'mcp', 'stdio.test.js'),

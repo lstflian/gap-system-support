@@ -39,6 +39,10 @@ export interface HelpSettings {
     searchMode: string;
 }
 
+export interface OpenToolDocument extends TextSnapshot {
+    readonly isClosed?: boolean;
+}
+
 /** Everything a tool needs from the process that hosts it. */
 export interface ToolHost {
     /** Locates wasm/, the bundled data and the writable copy of the help index. */
@@ -46,8 +50,8 @@ export interface ToolHost {
     /** True when a VS Code window may rebuild the help index while this host keeps it loaded. */
     readonly sharedHelpIndex: boolean;
     helpSettings(): HelpSettings;
-    /** The open editor buffer for filePath, so unsaved text is checked. */
-    openDocument(filePath: string): TextSnapshot | undefined;
+    /** Exact buffers are immediate; file-identity checks may be asynchronous. */
+    openDocument(filePath: string): OpenToolDocument | undefined | Promise<OpenToolDocument | undefined>;
     isTrusted(): boolean;
     /** Save unsaved editor changes to filePath so GAP runs what the user sees. */
     saveSource(filePath: string, token: CancellationToken): Promise<void>;

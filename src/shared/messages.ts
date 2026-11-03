@@ -57,6 +57,8 @@ export const Messages = {
         unknownBooks: (names: string) => `Unknown book name(s): ${names}. Call gapListBooks to get the valid book names.`,
         disabled: 'GAP: Native language model tools are disabled.',
         invalidManifest: 'GAP: The tool definitions in the extension manifest are invalid or do not match the implementations.',
+        syntaxDocumentAmbiguous: (file: string) =>
+            `GAP: Multiple open documents match '${file}'. Retry with the exact path of the document to check.`,
         runUntrusted: 'GAP: Running GAP files requires a trusted workspace.',
         runClosed: 'GAP: The GAP file runner has stopped.',
         runPathRequired: (name: string) => `${name} must be a non-empty absolute file path without null characters.`,

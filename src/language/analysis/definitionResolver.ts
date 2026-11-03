@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import type { Node as SyntaxNode, Tree } from 'web-tree-sitter';
-import { HOVER_DOCUMENT_CACHE_MAX_ENTRIES, READ_CONTENT_LIMIT } from '../../limits';
+import { HOVER_DOCUMENT_CACHE_MAX_ENTRIES, READ_CONTENT_LIMIT, WORKSPACE_SYMBOL_CACHE_MAX_ENTRIES } from '../../limits';
 import { LruCache } from '../../shared/lruCache';
 import type { LanguageHost, SourceDocument, SourcePosition, SourceUri } from '../documents';
 import { getDocumentTree, isParserReady, parseGapCode } from '../parser/gapParser';
@@ -79,12 +79,16 @@ export class GAPDefinitionResolver {
         string,
         { version: number; tree: Tree; events: FileEvent[]; scopeByStart: Set<number>; lines: string[] }
     >({ maxEntries: HOVER_DOCUMENT_CACHE_MAX_ENTRIES });
-    private readonly workspaceSymbolCache = new Map<string, WorkspaceSymbolCacheEntry>();
+    private readonly workspaceSymbolCache = new LruCache<string, WorkspaceSymbolCacheEntry>({
+        maxEntries: WORKSPACE_SYMBOL_CACHE_MAX_ENTRIES,
+    });
 
     onDocumentClosed(uri: SourceUri): void {
         this.analysis.onDocumentClosed(uri);
         this.fileCache.onDocumentClosed(uri);
         this.documentCache.delete(uri.toString());
+        // Other callers' positive and negative results may depend on this buffer.
+        this.workspaceSymbolCache.clear();
     }
 
     dispose(): void {
@@ -354,10 +358,17 @@ export class GAPDefinitionResolver {
         lines: string[];
         filePath: string;
     }[] {
-        const key = `${baseDir}\0${name}`;
+        const key = `${baseDir}\0${name}\0${currentFilePath}`;
         const now = Date.now();
-        const cached = this.workspaceSymbolCache.get(key);
-        if (cached && cached.expiresAt > now) return cached.results;
+        for (const expiredKey of [...this.workspaceSymbolCache.keys()]) {
+            const entry = this.workspaceSymbolCache.peek(expiredKey);
+            if (entry && entry.expiresAt <= now) this.workspaceSymbolCache.delete(expiredKey);
+        }
+        const cached = this.workspaceSymbolCache.peek(key);
+        if (cached) {
+            this.workspaceSymbolCache.touch(key, cached);
+            return cached.results;
+        }
         const results = this.scanWorkspaceSymbolDefinitions(baseDir, name, currentFilePath);
         this.workspaceSymbolCache.set(key, {
             expiresAt: now + WORKSPACE_SYMBOL_CACHE_MS,
