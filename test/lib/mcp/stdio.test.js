@@ -114,8 +114,9 @@ async function main() {
             name: 'gapRunFile', arguments: { filePath: file, outputPath: output },
         })));
         const info = await record(output);
-        check('the file runs quietly from its workspace folder', [['-q', '--nointeract', '*stdin*', file], workspace.toLowerCase()],
-            [info.args, info.cwd.toLowerCase()]);
+        check('the file runs quietly from its workspace folder',
+            [['-q', '--nointeract', '*stdin*', file], fs.realpathSync(workspace).toLowerCase()],
+            [info.args, fs.realpathSync(info.cwd).toLowerCase()]);
         check('the output contains the program output', true, log(output).includes('finished\n'));
         source(file, { hang: true, spawnChild: true });
         const abort = new AbortController();

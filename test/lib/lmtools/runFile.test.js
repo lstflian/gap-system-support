@@ -94,7 +94,7 @@ async function main() {
         assert.equal(saved, 1);
         const info = await record(output);
         assert.deepEqual(info.args, ['-q', '--nointeract', '*stdin*', file]);
-        assert.equal(info.cwd.toLowerCase(), folderB.uri.fsPath.toLowerCase());
+        assert.equal(fs.realpathSync(info.cwd).toLowerCase(), fs.realpathSync(folderB.uri.fsPath).toLowerCase());
         assert(log(output).includes('GAP internal error'));
         assert(log(output).includes('finished\n'));
         assert(!log(output).includes('old log must disappear'));
@@ -103,11 +103,15 @@ async function main() {
         assert(preparation.confirmationMessages.message.includes(output));
         assert(preparation.confirmationMessages.message.includes(file));
         const overrideCwd = path.join(fixture.root, 'explicit cwd');
+        const linkedCwd = path.join(fixture.root, 'linked cwd');
         fs.mkdirSync(overrideCwd);
-        const overrideInput = { filePath: file, outputPath: output, cwd: overrideCwd };
-        await tool.execute(overrideInput, token.token);
-        assert.equal((await record(output)).cwd.toLowerCase(), overrideCwd.toLowerCase());
-        assert(tool.prepare(overrideInput).confirmationMessages.message.includes(overrideCwd));
+        fs.symlinkSync(overrideCwd, linkedCwd, process.platform === 'win32' ? 'junction' : 'dir');
+        for (const cwd of [overrideCwd, linkedCwd]) {
+            const overrideInput = { filePath: file, outputPath: output, cwd };
+            await tool.execute(overrideInput, token.token);
+            assert.equal(fs.realpathSync((await record(output)).cwd).toLowerCase(), fs.realpathSync(overrideCwd).toLowerCase());
+            assert(tool.prepare(overrideInput).confirmationMessages.message.includes(cwd));
+        }
         const beforeInvalid = saved;
         const rejectedOutput = path.join(fixture.root, 'invalid-cwd-output.txt');
         for (const cwd of ['', '  ', null, 42, {}, 'relative', path.join(fixture.root, 'missing'), file]) {
@@ -118,9 +122,9 @@ async function main() {
         vscode.workspace.textDocuments = [];
         vscode.workspace.getWorkspaceFolder = originalFolder;
         await tool.execute(inputs, token.token);
-        assert.equal((await record(inputs.outputPath)).cwd.toLowerCase(), os.homedir().toLowerCase());
+        assert.equal(fs.realpathSync((await record(inputs.outputPath)).cwd).toLowerCase(), fs.realpathSync(os.homedir()).toLowerCase());
         await tool.execute({ ...inputs, cwd: overrideCwd }, token.token);
-        assert.equal((await record(inputs.outputPath)).cwd.toLowerCase(), overrideCwd.toLowerCase());
+        assert.equal(fs.realpathSync((await record(inputs.outputPath)).cwd).toLowerCase(), fs.realpathSync(overrideCwd).toLowerCase());
 
         console.log('1a. Only GAP confirms startup; chunked markers are removed without losing output');
         const startupFile = path.join(fixture.root, 'startup.g');
