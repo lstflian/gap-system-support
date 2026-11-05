@@ -1,6 +1,6 @@
 import { ensureHelpIndex, getHelpState, invalidateHelpIndexIfChanged } from '../help/helpData';
 import type { HelpEntry } from '../help/indexData';
-import { Failures } from '../shared/messages';
+import { Failures, Messages } from '../shared/messages';
 import type { ToolHost } from './contracts';
 import { ToolError, toolTry } from './core/toolCore';
 
@@ -8,7 +8,7 @@ import { ToolError, toolTry } from './core/toolCore';
 export function loadHelpIndex(host: ToolHost): { entries: HelpEntry[]; bookDescriptions: Map<string, string> } {
     toolTry(
         () => ensureHelpIndex(host.location),
-        err => `The GAP help index could not be loaded: ${(err as Error).message}`,
+        err => Messages.tools.helpIndexLoadFailed((err as Error).message),
     );
     if (host.sharedHelpIndex) invalidateHelpIndexIfChanged();
     const state = getHelpState();

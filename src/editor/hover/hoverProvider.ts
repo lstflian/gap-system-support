@@ -10,6 +10,7 @@ import { HOVER_HELP_DESCRIPTION_CACHE_MAX_ENTRIES } from '../../limits';
 import { resolveHelpPath } from '../../path';
 import { functionNameNodeAt, symbolLookupName, symbolNameNodeAt } from '../../language/analysis/symbols';
 import { LruCache } from '../../shared/lruCache';
+import { Messages } from '../../shared/messages';
 import { GAPDefinitionResolver, ResolvedDefinition } from '../analysis/definitionResolver';
 import { getFunctionNames } from '../completion/dataManager';
 import { definitionPathLink } from './format';
@@ -186,7 +187,7 @@ function punctuationMarkdown(punctuation: string): vscode.MarkdownString {
 
 function fallbackMarkdown(): vscode.MarkdownString {
     const md = new vscode.MarkdownString();
-    md.appendMarkdown('No function information found. Please check the function name.\n\n');
+    md.appendMarkdown(`${Messages.hover.functionInformationMissing}\n\n`);
     md.appendMarkdown('---\n\nUser defined functions support the following forms:\n\n');
     for (const form of FALLBACK_FORMS) {
         md.appendCodeblock(form, 'gap');

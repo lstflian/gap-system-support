@@ -382,26 +382,26 @@ export function validateGlobalTopologyIndex(
     sourceLength: number,
     rootNode?: SyntaxNode,
 ): string | null {
-    if (index.sourceLength !== sourceLength) return 'source length does not match the index';
+    if (index.sourceLength !== sourceLength) return Messages.semantic.sourceLengthMismatch;
 
     const keys = new Set<string>();
     for (let position = 0; position < index.topLevels.length; position++) {
         const topLevel = index.topLevels[position];
-        if (!rangeIsValid(topLevel, sourceLength)) return 'top-level range is outside the document';
+        if (!rangeIsValid(topLevel, sourceLength)) return Messages.semantic.topLevelRangeOutsideDocument;
         if (position > 0 && index.topLevels[position - 1].endIndex > topLevel.startIndex) {
-            return 'top-level ranges overlap';
+            return Messages.semantic.topLevelRangesOverlap;
         }
         const key = topLevelKey(topLevel);
-        if (keys.has(key)) return 'top-level range is duplicated';
+        if (keys.has(key)) return Messages.semantic.duplicateTopLevelRange;
         keys.add(key);
     }
 
     if (rootNode) {
         const actualTopLevels = getTopLevels(rootNode);
-        if (actualTopLevels.length !== index.topLevels.length) return 'top-level count does not match the tree';
+        if (actualTopLevels.length !== index.topLevels.length) return Messages.semantic.topLevelCountMismatch;
         for (let position = 0; position < actualTopLevels.length; position++) {
             if (topLevelKey(actualTopLevels[position]) !== topLevelKey(index.topLevels[position])) {
-                return 'top-level range does not match the tree';
+                return Messages.semantic.topLevelRangeMismatch;
             }
         }
     }
@@ -442,7 +442,7 @@ export function validateGlobalCaptureIndex(
     const mappingKeys = new Set<number>();
     for (const mapping of index.mappings) {
         const key = byteKey(mapping.startIndex, mapping.endIndex);
-        if (mappingKeys.has(key)) return 'mapping range is duplicated';
+        if (mappingKeys.has(key)) return Messages.semantic.duplicateMappingRange;
         mappingKeys.add(key);
     }
 
@@ -451,7 +451,7 @@ export function validateGlobalCaptureIndex(
     const scopeKeys = new Set<string>();
     for (const scope of scopes) {
         const key = scopeKey(scope.startIndex, scope.endIndex);
-        if (scopeKeys.has(key)) return 'scope range is duplicated';
+        if (scopeKeys.has(key)) return Messages.semantic.duplicateScopeRange;
         scopeKeys.add(key);
     }
     // Check scope nesting with a stack, crossing scopes are invalid.
@@ -459,25 +459,25 @@ export function validateGlobalCaptureIndex(
     for (const scope of scopes) {
         while (stack.length > 0 && scope.startIndex >= stack[stack.length - 1].endIndex) stack.pop();
         if (stack.length > 0 && scope.endIndex > stack[stack.length - 1].endIndex) {
-            return 'scope ranges cross';
+            return Messages.semantic.crossingScopeRanges;
         }
         stack.push(scope);
     }
 
     for (const definition of index.definitions) {
         if (code.slice(definition.startIndex, definition.endIndex) !== definition.name) {
-            return 'definition name does not match the document';
+            return Messages.semantic.definitionNameMismatch;
         }
         if (definition.errorAncestor) continue;
         if ((definition.scopeStart === undefined) !== (definition.scopeEnd === undefined)) {
-            return 'definition scope is incomplete';
+            return Messages.semantic.incompleteDefinitionScope;
         }
         if (definition.scopeStart !== undefined && definition.scopeEnd !== undefined) {
             if (!scopeKeys.has(scopeKey(definition.scopeStart, definition.scopeEnd))) {
-                return 'definition scope does not exist';
+                return Messages.semantic.definitionScopeNotFound;
             }
             if (definition.startIndex < definition.scopeStart || definition.endIndex > definition.scopeEnd) {
-                return 'definition lies outside its scope';
+                return Messages.semantic.definitionOutsideScope;
             }
         }
     }
@@ -499,9 +499,9 @@ function validateGlobalCaptureRanges(
         let topLevelIndex = 0;
         for (let position = 0; position < ranges.length; position++) {
             const range = ranges[position];
-            if (!rangeIsValid(range, sourceLength)) return 'capture range is outside the document';
+            if (!rangeIsValid(range, sourceLength)) return Messages.semantic.captureRangeOutsideDocument;
             if (position > 0 && compareRange(ranges[position - 1], range) > 0) {
-                return 'capture ranges are not sorted';
+                return Messages.semantic.unsortedCaptureRanges;
             }
             while (topLevelIndex < index.topLevels.length &&
                 index.topLevels[topLevelIndex].endIndex <= range.startIndex) {
@@ -509,7 +509,7 @@ function validateGlobalCaptureRanges(
             }
             const owner = index.topLevels[topLevelIndex];
             if (!owner || range.startIndex < owner.startIndex || range.endIndex > owner.endIndex) {
-                return 'capture crosses a top-level boundary';
+                return Messages.semantic.captureCrossesTopLevel;
             }
         }
     }

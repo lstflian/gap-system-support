@@ -51,10 +51,23 @@ export const Messages = {
     },
     tools: {
         initializationFailed: (reason: string) => `GAP: Could not initialize tools: ${reason}`,
+        helpIndexLoadFailed: (reason: string) => `The GAP help index could not be loaded: ${reason}`,
         helpConfigurationMissing: 'gap.docPath and gap.pkgPath are not configured. Please set these two settings to the doc/ and pkg/ folders ' +
             'of your GAP installation. See the README of the gap-system-support extension (in your VS Code extensions ' +
             'folder: ~/.vscode/extensions/flianlee.gap-system-support-<version>/README.md).',
         unknownBooks: (names: string) => `Unknown book name(s): ${names}. Call gapListBooks to get the valid book names.`,
+        externalHelpLink: 'External link; not resolved to a local file. Use a web tool or other tool to fetch it.',
+        helpTargetMissing: (file: string) => `The target file does not exist: ${file}`,
+        helpAnchorMissing: 'The anchor was not found in the file; read line 1 to totalLines.',
+        helpWithoutAnchor: 'No anchor; this is the target file path; read line 1 to totalLines.',
+        helpNoMatches: 'No matches. Try mode: substring or a different topic.',
+        helpRangeOutOfBounds: (start: number, total: number) =>
+            `Range start (${start}) exceeds the total (${total}). No entries in this range.`,
+        helpEntriesWithoutAnchor: (indexes: string) => `Entries [${indexes}] have no anchor; read the whole file.`,
+        helpEntriesWithCodeFallback: (indexes: string) =>
+            `Entries [${indexes}] have an anchor not found in the file; targetLine points to the first code element.`,
+        helpMoreMatches: (remaining: number, nextStart: number, nextEnd: number) =>
+            `There are ${remaining} more matches not shown; page with range, e.g. [${nextStart}, ${nextEnd}].`,
         disabled: 'GAP: Native language model tools are disabled.',
         invalidManifest: 'GAP: The tool definitions in the extension manifest are invalid or do not match the implementations.',
         syntaxDocumentAmbiguous: (file: string) =>
@@ -109,8 +122,28 @@ export const Messages = {
     },
     semantic: {
         definitionScopeMissing: 'definition scope is missing from the global index',
+        sourceLengthMismatch: 'source length does not match the index',
+        topLevelRangeOutsideDocument: 'top-level range is outside the document',
+        topLevelRangesOverlap: 'top-level ranges overlap',
+        duplicateTopLevelRange: 'top-level range is duplicated',
+        topLevelCountMismatch: 'top-level count does not match the tree',
+        topLevelRangeMismatch: 'top-level range does not match the tree',
+        duplicateMappingRange: 'mapping range is duplicated',
+        duplicateScopeRange: 'scope range is duplicated',
+        crossingScopeRanges: 'scope ranges cross',
+        definitionNameMismatch: 'definition name does not match the document',
+        incompleteDefinitionScope: 'definition scope is incomplete',
+        definitionScopeNotFound: 'definition scope does not exist',
+        definitionOutsideScope: 'definition lies outside its scope',
+        captureRangeOutsideDocument: 'capture range is outside the document',
+        unsortedCaptureRanges: 'capture ranges are not sorted',
+        captureCrossesTopLevel: 'capture crosses a top-level boundary',
+    },
+    hover: {
+        functionInformationMissing: 'No function information found. Please check the function name.',
     },
     helpWebview: {
+        documentationUnavailable: 'No documentation available.',
         fileNotFound: (file: string) => `GAP: File not found: ${file}`,
         renderFailed: (reason: string) => `GAP: ${reason}`,
     },

@@ -151,7 +151,7 @@ export function resolveLinkOutput(input: ResolveLinkInput): ResolveLinkOutput {
             targetLine: 0,
             totalLines: 0,
             anchor,
-            note: 'External link; not resolved to a local file. Use a web tool or other tool to fetch it.',
+            note: Messages.tools.externalHelpLink,
         };
     }
 
@@ -165,7 +165,7 @@ export function resolveLinkOutput(input: ResolveLinkInput): ResolveLinkOutput {
             targetLine: 0,
             totalLines: 0,
             anchor,
-            note: `The target file does not exist: ${targetPath}`,
+            note: Messages.tools.helpTargetMissing(targetPath),
         };
     }
 
@@ -186,10 +186,10 @@ export function resolveLinkOutput(input: ResolveLinkInput): ResolveLinkOutput {
             output.targetLine = line;
         } else {
             // Treat as no anchor (no display/code fallback for links).
-            output.note = 'The anchor was not found in the file; read line 1 to totalLines.';
+            output.note = Messages.tools.helpAnchorMissing;
         }
     } else {
-        output.note = 'No anchor; this is the target file path; read line 1 to totalLines.';
+        output.note = Messages.tools.helpWithoutAnchor;
     }
 
     return output;
@@ -321,7 +321,7 @@ export function searchHelpTool(
             results: [],
             total: 0,
             returned: 0,
-            note: 'No matches. Try mode: substring or a different topic.',
+            note: Messages.tools.helpNoMatches,
             distribution: {},
         };
     }
@@ -338,7 +338,7 @@ export function searchHelpTool(
             results: [],
             total,
             returned: 0,
-            note: `Range start (${start}) exceeds the total (${total}). No entries in this range.`,
+            note: Messages.tools.helpRangeOutOfBounds(start, total),
             distribution: bookDistribution(matched),
         };
     }
@@ -396,21 +396,16 @@ export function searchHelpTool(
 
     const noteLines: string[] = [];
     if (noAnchorIndexes.length > 0) {
-        noteLines.push(`Entries [${noAnchorIndexes.join(', ')}] have no anchor; read the whole file.`);
+        noteLines.push(Messages.tools.helpEntriesWithoutAnchor(noAnchorIndexes.join(', ')));
     }
     if (codeFallbackIndexes.length > 0) {
-        noteLines.push(
-            `Entries [${codeFallbackIndexes.join(', ')}] have an anchor not found in the file; ` +
-            'targetLine points to the first code element.'
-        );
+        noteLines.push(Messages.tools.helpEntriesWithCodeFallback(codeFallbackIndexes.join(', ')));
     }
     const remaining = total - results.length;
     if (remaining > 0) {
         const nextStart = end + 1;
         const nextEnd = Math.min(end + DEFAULT_RESULT_LIMIT, total);
-        noteLines.push(
-            `There are ${remaining} more matches not shown; page with range, e.g. [${nextStart}, ${nextEnd}].`
-        );
+        noteLines.push(Messages.tools.helpMoreMatches(remaining, nextStart, nextEnd));
     }
 
     const distribution = bookDistribution(matched);

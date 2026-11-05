@@ -133,7 +133,7 @@ export const native = {
                 + `<meta http-equiv="Content-Security-Policy" content="${buildCSP('')}">`
                 + `<style>${FALLBACK_BODY_STYLE}</style>`
                 + (mathJax ? MATHJAX_SNIPPET : '')
-                + `</head><body><p>No documentation available.</p></body></html>`;
+                + `</head><body><p>${Messages.helpWebview.documentationUnavailable}</p></body></html>`;
         }
 
         // HTML doc
