@@ -8,20 +8,6 @@ This extension provides intelligent code editing powered by [tree-sitter-gap](ht
 
 > GAP is a system for computational discrete algebra, with particular emphasis on Computational Group Theory. GAP provides a programming language, a library of thousands of functions implementing algebraic algorithms written in the GAP language as well as large data libraries of algebraic objects. For more information, see the [GAP official website](https://www.gap-system.org/).
 
-## Main Features
-
-- **Semantic highlighting and syntax diagnostics**: based on `tree-sitter-gap`.
-- **Code completion**: provides completion for GAP constants, keywords, statement structures, and GAP functions (including functions from other GAP files loaded via `Read`).
-- **Hover information**: hovering over a symbol shows its static category, such as `function`, `variable`, `parameter`, or `record field`. Built-in functions show their signatures; once the GAP documentation paths are configured, a short documentation summary and a GAP help link are also shown.
-- **Definition navigation**: native Go to Definition and Peek Definition support for statically recognizable user-defined GAP symbols.
-- **Reference navigation**: use `Command+click` on macOS or `Ctrl+click` on Windows/Linux; definitions with references open the native Peek view, and native Find All References (`Shift+F12`) is also available. Results exclude the clicked occurrence; if there are no references, navigation goes directly to the definition itself.
-- **Running GAP code**: runs the current GAP file in the VS Code integrated terminal, with configurable GAP command line options.
-- **Help system**: built-in GAP help search with two search modes (switchable at any time in the settings or the Quick Pick search box), with results filterable by book.
-  - **prefix**: same behavior as `?topic` in GAP
-  - **substring**: same behavior as `??topic` in GAP
-- **Documentation viewer**: search results are displayed in a webview panel.
-- **Language model tools and MCP**: GAP-related tools for agents in chat.
-
 ## Getting Started
 
 ### 1. Install GAP
@@ -41,6 +27,20 @@ Each path must point to the folder itself; the paths below are only examples:
   - Windows: `C:\Program Files\GAP-4.16.1\runtime\opt\gap-4.16.1\pkg`
   - Linux/macOS: `/opt/gap-4.16.1/pkg`
 
+## Main Features
+
+- **Semantic highlighting and syntax diagnostics**: based on `tree-sitter-gap`.
+- **Code completion**: provides completion for GAP constants, keywords, statement structures, and GAP functions (including functions from other GAP files loaded via `Read`).
+- **Hover information**: hovering over a symbol shows its static category, such as `function`, `variable`, `parameter`, or `record field`. Built-in functions show their signatures; once the GAP documentation paths are configured, a short documentation summary and a GAP help link are also shown.
+- **Definition navigation**: native Go to Definition and Peek Definition support for statically recognizable user-defined GAP symbols.
+- **Reference navigation**: use `Command+click` on macOS or `Ctrl+click` on Windows/Linux; definitions with references open the native Peek view, and native Find All References (`Shift+F12`) is also available. Results exclude the clicked occurrence; if there are no references, navigation goes directly to the definition itself.
+- **Running GAP code**: runs the current GAP file in the VS Code integrated terminal, with configurable GAP command line options.
+- **Help system**: built-in GAP help search with two search modes (switchable at any time in the settings or the Quick Pick search box), with results filterable by book.
+  - **prefix**: same behavior as `?topic` in GAP
+  - **substring**: same behavior as `??topic` in GAP
+- **Documentation viewer**: search results are displayed in a webview panel.
+- **Language model tools and MCP**: GAP-related tools for agents in chat.
+
 ## Language Model Tools and MCP
 
 | Tool | Purpose |
@@ -52,41 +52,7 @@ Each path must point to the folder itself; the paths below are only examples:
 | `gapRunFile` | Runs one GAP file with `-q --nointeract` and redirects output to the specified file; optional `cwd` overrides the working directory for this invocation |
 
 - **Language model tools**: available to agents in VS Code, controlled by `gap.tools.enabled` and enabled by default.
-- **MCP server**: controlled by the user setting `gap.mcp.enabled` and disabled by default. VS Code starts the server on demand as a local stdio process using the current window's GAP settings. Other MCP clients can also run the same server: **GAP: Copy MCP Server Configuration** copies its stdio launch configuration. Copy it again after updating the extension or changing GAP settings.
-
-## Settings
-
-| Setting | Default | Description |
-| --- | --- | --- |
-| `gap.docPath` | `""` | Absolute path of the `doc/` directory |
-| `gap.pkgPath` | `""` | Absolute path of the `pkg/` directory |
-| `gap.docAppearance` | `system` | Documentation appearance: `system` follows the VS Code theme, `dark` / `light` use a dark or light theme |
-| `gap.mathJax` | `true` | Whether to render MathJax math in GAP documentation pages |
-| `gap.runMode` | `reuse` | When running GAP: `reuse` keeps the same terminal, `new` opens a new terminal for each run |
-| `gap.terminalRoot` | `""` | Unix root for Windows drive letters. Example: `/` turns `C:\project\file.g` into `/c/project/file.g`; leave empty to use the WSL default `/mnt/` |
-| `gap.searchMode` | `prefix` | Search mode: `prefix` corresponds to `?topic`, `substring` corresponds to `??topic` |
-| `gap.diagnostics` | `true` | Show syntax error diagnostics from the GAP parser in the Problems panel |
-| `gap.tools.enabled` | `true` | Provide native VS Code language model tools; independent of MCP |
-| `gap.mcp.enabled` | `false` | User setting: provide the GAP stdio MCP server to VS Code in trusted workspaces; independent of native tools |
-
-## Commands
-
-Press `Ctrl+Shift+P` or `F1` to open the Command Palette and use the following commands:
-
-| Command | Description |
-| --- | --- |
-| `GAP: Detect GAP Installation` | Rescan common locations and select an installation |
-| `GAP: Select GAP Installation` | Select a folder and remember its validated installation locally |
-| `GAP: Run GAP File` | Available when a GAP file is open; run the current GAP file in a terminal |
-| `GAP: Configure GAP Command Line Options` | Configure GAP command line options through Quick Pick |
-| `GAP: Search GAP Help` | Search GAP help documentation |
-| `GAP: Rebuild Help Index` | Rebuild the help index |
-| `GAP: Open GAP Reference Manual` | Open the GAP Reference Manual |
-| `GAP: Generate Completion Data` | Regenerate the completion data |
-| `GAP: Reset Completion Data` | Restore the default completion data |
-| `GAP: Copy MCP Server Configuration` | Copy the stdio launch configuration of the GAP MCP server for other MCP clients |
-
-The run, help, and completion data commands are also available in the editor context menu (right-click menu) of GAP files, where `GAP: Search GAP Help` and `GAP: Run GAP File` are at the top level, while the remaining commands are grouped in the **More GAP Commands** submenu. The MCP configuration command is available from the Command Palette only.
+- **MCP server**: controlled by the user setting `gap.mcp.enabled` and disabled by default. VS Code starts the server on demand as a local stdio process using the current window's GAP settings. Other MCP clients can also run the same server: **GAP: Copy MCP Server Configuration** copies its stdio launch configuration. Copy it again after updating the extension or changing GAP settings. The MCP configuration command is available from the Command Palette only.
 
 ## Development
 

@@ -8,20 +8,6 @@
 
 > GAP 是一个面向计算离散代数的系统，尤其侧重于计算群论。它提供了一门编程语言和数千个用该语言编写的代数算法函数，并附带大型代数对象数据库。更多信息可见 [GAP 官方网站](https://www.gap-system.org/)。
 
-## 主要功能说明
-
-- **语义高亮与语法诊断**：基于 `tree-sitter-gap`。
-- **代码补全**：提供 GAP 常量、关键字、语句结构和 GAP 函数的补全（包括通过 `Read` 加载的其他 GAP 文件中的函数）。
-- **悬停信息**：将鼠标悬停在符号上时，会显示其静态类别，例如 `function`、`variable`、`parameter` 或 `record field`。内置函数会显示函数签名；配置 GAP 文档路径后，还会显示简短的文档摘要和 GAP 帮助链接。
-- **定义导航**：为可静态识别的 GAP 自定义符号提供 VS Code 原生的转到定义与 Peek Definition。
-- **引用导航**：在 macOS 上使用 `Command+点击`，在 Windows/Linux 上使用 `Ctrl+点击`；有引用的定义会打开原生 Peek，也可使用原生的查找所有引用（`Shift+F12`）。结果不包含当前点击的这一条，没有引用时直接跳转到定义自身。
-- **运行 GAP 代码**：在 VS Code 集成终端中运行当前 GAP 文件，并支持配置 GAP 命令行选项。
-- **帮助系统**：内置 GAP 帮助搜索，支持两种搜索模式（可在设置或 Quick Pick 搜索框中随时切换），并可按书籍（books）过滤结果。
-  - **prefix**：对应 GAP 中的 `?topic`
-  - **substring**：对应 GAP 中的 `??topic`
-- **帮助文档浏览**：搜索结果会在 Webview 面板中展示。
-- **语言模型工具与 MCP**：为对话中的 agents 提供 GAP 相关的工具。
-
 ## 快速开始
 
 ### 1. 安装 GAP
@@ -40,6 +26,20 @@
 - `gap.pkgPath`：`pkg/` 文件夹的绝对路径，例如：
   - Windows: `C:\Program Files\GAP-4.16.1\runtime\opt\gap-4.16.1\pkg`
   - Linux/macOS: `/opt/gap-4.16.1/pkg`
+
+## 主要功能说明
+
+- **语义高亮与语法诊断**：基于 `tree-sitter-gap`。
+- **代码补全**：提供 GAP 常量、关键字、语句结构和 GAP 函数的补全（包括通过 `Read` 加载的其他 GAP 文件中的函数）。
+- **悬停信息**：将鼠标悬停在符号上时，会显示其静态类别，例如 `function`、`variable`、`parameter` 或 `record field`。内置函数会显示函数签名；配置 GAP 文档路径后，还会显示简短的文档摘要和 GAP 帮助链接。
+- **定义导航**：为可静态识别的 GAP 自定义符号提供 VS Code 原生的转到定义与 Peek Definition。
+- **引用导航**：在 macOS 上使用 `Command+点击`，在 Windows/Linux 上使用 `Ctrl+点击`；有引用的定义会打开原生 Peek，也可使用原生的查找所有引用（`Shift+F12`）。结果不包含当前点击的这一条，没有引用时直接跳转到定义自身。
+- **运行 GAP 代码**：在 VS Code 集成终端中运行当前 GAP 文件，并支持配置 GAP 命令行选项。
+- **帮助系统**：内置 GAP 帮助搜索，支持两种搜索模式（可在设置或 Quick Pick 搜索框中随时切换），并可按书籍（books）过滤结果。
+  - **prefix**：对应 GAP 中的 `?topic`
+  - **substring**：对应 GAP 中的 `??topic`
+- **帮助文档浏览**：搜索结果会在 Webview 面板中展示。
+- **语言模型工具与 MCP**：为对话中的 agents 提供 GAP 相关的工具。
 
 ## 语言模型工具与 MCP
 
