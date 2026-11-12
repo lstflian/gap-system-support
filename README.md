@@ -31,9 +31,9 @@ Each path must point to the folder itself; the paths below are only examples:
 
 - **Semantic highlighting and syntax diagnostics**: based on `tree-sitter-gap`.
 - **Code completion**: provides completion for GAP constants, keywords, statement structures, and GAP functions (including functions from other GAP files loaded via `Read`).
-- **Hover information**: hovering over a symbol shows its static category, such as `function`, `variable`, `parameter`, or `record field`. Built-in functions show their signatures; once the GAP documentation paths are configured, a short documentation summary and a GAP help link are also shown.
+- **Hover information**: hovering over a symbol shows its static category, such as `function`, `variable`, `parameter`, or `record field`
 - **Definition navigation**: native Go to Definition and Peek Definition support for statically recognizable user-defined GAP symbols.
-- **Reference navigation**: use `Command+click` on macOS or `Ctrl+click` on Windows/Linux; definitions with references open the native Peek view, and native Find All References (`Shift+F12`) is also available. Results exclude the clicked occurrence; if there are no references, navigation goes directly to the definition itself.
+- **Reference navigation**: use `Command+click` on macOS or `Ctrl+click` on Windows/Linux; definitions with references open the native Peek view, and native Find All References (`Shift+F12`) is also available.
 - **Running GAP code**: runs the current GAP file in the VS Code integrated terminal, with configurable GAP command line options.
 - **Help system**: built-in GAP help search with two search modes (switchable at any time in the settings or the Quick Pick search box), with results filterable by book.
   - **prefix**: same behavior as `?topic` in GAP

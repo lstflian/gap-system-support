@@ -31,9 +31,9 @@
 
 - **语义高亮与语法诊断**：基于 `tree-sitter-gap`。
 - **代码补全**：提供 GAP 常量、关键字、语句结构和 GAP 函数的补全（包括通过 `Read` 加载的其他 GAP 文件中的函数）。
-- **悬停信息**：将鼠标悬停在符号上时，会显示其静态类别，例如 `function`、`variable`、`parameter` 或 `record field`。内置函数会显示函数签名；配置 GAP 文档路径后，还会显示简短的文档摘要和 GAP 帮助链接。
+- **悬停信息**：将鼠标悬停在符号上时，会显示其静态类别，例如 `function`、`variable`、`parameter` 或 `record field`。
 - **定义导航**：为可静态识别的 GAP 自定义符号提供 VS Code 原生的转到定义与 Peek Definition。
-- **引用导航**：在 macOS 上使用 `Command+点击`，在 Windows/Linux 上使用 `Ctrl+点击`；有引用的定义会打开原生 Peek，也可使用原生的查找所有引用（`Shift+F12`）。结果不包含当前点击的这一条，没有引用时直接跳转到定义自身。
+- **引用导航**：在 macOS 上使用 `Command+点击`，在 Windows/Linux 上使用 `Ctrl+点击`；有引用的定义会打开原生 Peek，也可使用原生的查找所有引用（`Shift+F12`）。
 - **运行 GAP 代码**：在 VS Code 集成终端中运行当前 GAP 文件，并支持配置 GAP 命令行选项。
 - **帮助系统**：内置 GAP 帮助搜索，支持两种搜索模式（可在设置或 Quick Pick 搜索框中随时切换），并可按书籍（books）过滤结果。
   - **prefix**：对应 GAP 中的 `?topic`
@@ -53,40 +53,6 @@
 
 - **语言模型工具**：供 VS Code 内的 agent 调用，由 `gap.tools.enabled` 控制，默认开启。
 - **MCP 服务**：由用户设置 `gap.mcp.enabled` 控制，默认关闭。VS Code 按需以本机 stdio 进程启动服务，并使用当前窗口的 GAP 设置。其他 MCP 客户端也可以运行同一服务：**GAP: Copy MCP Server Configuration** 会复制其 stdio 启动配置。更新扩展或修改 GAP 设置后请重新复制。
-
-## 设置项
-
-| 设置项 | 默认值 | 说明 |
-| --- | --- | --- |
-| `gap.docPath` | `""` | `doc/` 目录的绝对路径 |
-| `gap.pkgPath` | `""` | `pkg/` 目录的绝对路径 |
-| `gap.docAppearance` | `system` | 文档外观，`system` 跟随 VS Code 主题，`dark` / `light` 使用深色或浅色主题 |
-| `gap.mathJax` | `true` | 是否在 GAP 文档页面中渲染 MathJax 数学公式 |
-| `gap.runMode` | `reuse` | 运行 GAP 时，`reuse` 复用同一个终端，`new` 每次新建终端 |
-| `gap.terminalRoot` | `""` | Windows 盘符对应的 Unix 根目录。示例：`/` 会把 `C:\project\file.g` 转成 `/c/project/file.g`；留空时 WSL 默认使用 `/mnt/` |
-| `gap.searchMode` | `prefix` | 搜索模式，`prefix` 对应 `?topic`，`substring` 对应 `??topic` |
-| `gap.diagnostics` | `true` | 在问题面板显示 GAP 解析器产生的语法错误诊断 |
-| `gap.tools.enabled` | `true` | 提供原生 VS Code 语言模型工具，与 MCP 开关独立 |
-| `gap.mcp.enabled` | `false` | 用户设置：在受信任的工作区中向 VS Code 提供 GAP stdio MCP 服务，与原生工具独立 |
-
-## 命令
-
-按 `Ctrl+Shift+P` 或 `F1` 打开命令面板，即可使用以下命令：
-
-| 命令 | 说明 |
-| --- | --- |
-| `GAP: Detect GAP Installation` | 重新扫描常见位置并选择安装 |
-| `GAP: Select GAP Installation` | 选择文件夹，校验后在本机记住安装 |
-| `GAP: Run GAP File` | 当打开 GAP 文件时可用，在终端中运行当前 GAP 文件 |
-| `GAP: Configure GAP Command Line Options` | 通过 Quick Pick 配置 GAP 命令行选项 |
-| `GAP: Search GAP Help` | 搜索 GAP 帮助文档 |
-| `GAP: Rebuild Help Index` | 重新生成帮助索引 |
-| `GAP: Open GAP Reference Manual` | 打开 GAP 参考手册 |
-| `GAP: Generate Completion Data` | 重新生成补全数据 |
-| `GAP: Reset Completion Data` | 恢复默认补全数据 |
-| `GAP: Copy MCP Server Configuration` | 复制 GAP MCP 服务的 stdio 启动配置，供其他 MCP 客户端使用 |
-
-运行、帮助和补全数据命令也会出现在 GAP 文件的编辑器上下文菜单（右键菜单）中，其中 `GAP: Search GAP Help` 和 `GAP: Run GAP File` 位于菜单顶层，其余命令聚合在 **More GAP Commands** 子菜单中。MCP 配置命令仅在命令面板中提供。
 
 ## 开发
 
