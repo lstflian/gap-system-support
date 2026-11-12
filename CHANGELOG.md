@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.5
+
+1. Allow `gap.mcp.enabled` to be set in workspace settings as well as user settings; a workspace value overrides the user value, and the MCP server still requires a trusted workspace
+
 ## 0.4.4
 
 1. Replace the HTTP MCP service with a stdio MCP server that VS Code starts and stops through the stable MCP server definition provider API; it opens no network port and needs no access token
