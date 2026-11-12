@@ -22,7 +22,7 @@ async function main() {
         section('1. Manifest and shared tool metadata');
         check('native tools enabled by default', true, manifest.contributes.configuration.properties['gap.tools.enabled'].default);
         check('MCP disabled by default', false, manifest.contributes.configuration.properties['gap.mcp.enabled'].default);
-        check('native remains window-scoped; MCP is Profile user-only', ['window', 'machine'], [
+        check('native and MCP switches are window-scoped', ['window', 'window'], [
             manifest.contributes.configuration.properties['gap.tools.enabled'].scope,
             manifest.contributes.configuration.properties['gap.mcp.enabled'].scope,
         ]);

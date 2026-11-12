@@ -28,6 +28,7 @@ exports.run = async function run() {
     let previousClipboard;
     let copiedClipboard;
     const originalMcpEnabled = config.inspect('mcp.enabled')?.globalValue;
+    const originalWorkspaceMcpEnabled = config.inspect('mcp.enabled')?.workspaceValue;
     const mcpBooks = () => vscode.lm.tools.find(tool => !names.has(tool.name) && tool.name.includes('gapListBooks'));
     try {
         assert.equal(vscode.workspace.workspaceFolders?.length, 1, 'Open one isolated empty test workspace');
@@ -52,8 +53,10 @@ exports.run = async function run() {
         checks.push('native invocation without initializing the parser');
 
         await config.update('tools.enabled', false, vscode.ConfigurationTarget.Workspace);
-        await config.update('mcp.enabled', true, vscode.ConfigurationTarget.Global);
+        await config.update('mcp.enabled', false, vscode.ConfigurationTarget.Global);
+        await config.update('mcp.enabled', true, vscode.ConfigurationTarget.Workspace);
         assert.equal(vscode.workspace.getConfiguration('gap').get('tools.enabled'), false);
+        assert.equal(vscode.workspace.getConfiguration('gap').get('mcp.enabled'), true);
         await assert.rejects(() => vscode.lm.invokeTool('gapListBooks', {
             input: {}, toolInvocationToken: undefined,
         }));
@@ -83,7 +86,7 @@ exports.run = async function run() {
             input: {}, toolInvocationToken: undefined,
         });
         assert(JSON.parse(result.content[0].value).books.length > 0);
-        checks.push('workbench-owned stdio startup, discovery and invocation with native tools disabled');
+        checks.push('workspace MCP enablement overrides user disabling: workbench startup, discovery and invocation with native tools disabled');
 
         await config.update('tools.enabled', true, vscode.ConfigurationTarget.Workspace);
         await waitFor(() => nativeCount() === 5, 'Native tools did not reappear');
@@ -93,10 +96,24 @@ exports.run = async function run() {
         assert(mcpBooks());
         checks.push('both tool surfaces enabled together');
 
-        await config.update('mcp.enabled', false, vscode.ConfigurationTarget.Global);
+        await config.update('mcp.enabled', true, vscode.ConfigurationTarget.Global);
+        await config.update('mcp.enabled', false, vscode.ConfigurationTarget.Workspace);
+        assert.equal(vscode.workspace.getConfiguration('gap').get('mcp.enabled'), false);
         await waitFor(() => !mcpBooks(), 'Disabling MCP did not withdraw the workbench server');
         assert.equal(nativeCount(), 5);
-        checks.push('disabling MCP withdraws the stdio server without disabling native tools');
+        checks.push('workspace MCP disabling overrides user enabling without disabling native tools');
+
+        await config.update('mcp.enabled', undefined, vscode.ConfigurationTarget.Workspace);
+        assert.equal(vscode.workspace.getConfiguration('gap').get('mcp.enabled'), true);
+        await waitFor(async () => {
+            await vscode.commands.executeCommand('workbench.mcp.startServer',
+                'flianlee.gap-system-support/GAP', { waitForLiveTools: true });
+            return !!mcpBooks();
+        }, 'Removing the workspace override did not restore user-enabled MCP');
+        assert.equal(nativeCount(), 5);
+        checks.push('removing the workspace override restores user-enabled MCP without changing native tools');
+        await config.update('mcp.enabled', false, vscode.ConfigurationTarget.Global);
+        await waitFor(() => !mcpBooks(), 'User-level disabling did not withdraw the workbench server');
 
         await config.update('tools.enabled', false, vscode.ConfigurationTarget.Workspace);
         await assert.rejects(() => vscode.lm.invokeTool('gapListBooks', {
@@ -110,6 +127,7 @@ exports.run = async function run() {
 
         await config.update('tools.enabled', undefined, vscode.ConfigurationTarget.Workspace);
         await config.update('mcp.enabled', undefined, vscode.ConfigurationTarget.Global);
+        assert.equal(vscode.workspace.getConfiguration('gap').get('mcp.enabled'), false);
         await waitFor(() => nativeCount() === 5, 'Removing workspace override did not restore the default');
         checks.push('removing native workspace and MCP user overrides restores defaults');
         if (resultPath) {
@@ -125,6 +143,7 @@ exports.run = async function run() {
         throw error;
     } finally {
         await session?.client.close();
+        await config.update('mcp.enabled', originalWorkspaceMcpEnabled, vscode.ConfigurationTarget.Workspace);
         await config.update('mcp.enabled', originalMcpEnabled, vscode.ConfigurationTarget.Global);
         if (copiedClipboard !== undefined && await vscode.env.clipboard.readText() === copiedClipboard) {
             await vscode.env.clipboard.writeText(previousClipboard);

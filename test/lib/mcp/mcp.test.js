@@ -46,7 +46,7 @@ async function main() {
         section('2. Enabling publishes one complete stdio definition');
         let changes = 0;
         provider.onDidChangeMcpServerDefinitions(() => changes++);
-        setConfiguration({ 'gap.mcp.enabled': true });
+        setConfiguration({ 'gap.mcp.enabled': true }, 'user');
         check('enabling notifies VS Code', 1, changes);
         let [definition] = await provider.provideMcpServerDefinitions();
         check('stdio definition', [true, 'GAP', process.execPath], [
@@ -68,12 +68,29 @@ async function main() {
             /port|url|token|authorization/i.test(JSON.stringify(Object.keys(definition.env))));
         check('resolve keeps the provided definition', definition, await provider.resolveMcpServerDefinition(definition));
 
-        section('3. Profile-only switch and workspace trust');
-        setConfiguration({ 'gap.mcp.enabled': false });
+        section('3. Workspace overrides, user fallback and workspace trust');
+        setConfiguration({ 'gap.mcp.enabled': false }, 'user');
+        changes = 0;
         setConfiguration({ 'gap.mcp.enabled': true }, 'workspace');
-        check('a workspace value cannot enable the machine-scoped switch', [], await provider.provideMcpServerDefinitions());
+        check('workspace enabling overrides user disabling and notifies', [1, 1],
+            [changes, (await provider.provideMcpServerDefinitions()).length]);
+        setConfiguration({ 'gap.mcp.enabled': true }, 'user');
+        setConfiguration({ 'gap.mcp.enabled': false }, 'workspace');
+        check('workspace disabling overrides user enabling and withdraws stale definitions', [3, [], undefined],
+            [changes, await provider.provideMcpServerDefinitions(), await provider.resolveMcpServerDefinition(definition)]);
         setConfiguration({ 'gap.mcp.enabled': undefined }, 'workspace');
-        setConfiguration({ 'gap.mcp.enabled': true });
+        check('removing a workspace override restores the user value and notifies', [4, 1],
+            [changes, (await provider.provideMcpServerDefinitions()).length]);
+        setConfiguration({ 'gap.mcp.enabled': undefined }, 'user');
+        check('removing both overrides restores the disabled default', [5, []],
+            [changes, await provider.provideMcpServerDefinitions()]);
+        setConfiguration({ 'gap.mcp.enabled': true }, 'workspace');
+        check('workspace enabling overrides the disabled default', [6, 1],
+            [changes, (await provider.provideMcpServerDefinitions()).length]);
+        setConfiguration({ 'gap.mcp.enabled': undefined }, 'workspace');
+        check('removing the workspace override restores the disabled default', [7, []],
+            [changes, await provider.provideMcpServerDefinitions()]);
+        setConfiguration({ 'gap.mcp.enabled': true }, 'workspace');
         vscode.workspace.isTrusted = false;
         check('untrusted workspaces provide nothing', [], await provider.provideMcpServerDefinitions());
         check('untrusted workspaces never start the server', undefined, await provider.resolveMcpServerDefinition(definition));
@@ -137,6 +154,7 @@ async function main() {
         setConfiguration({ 'gap.mcp.enabled': true });
         check('listeners are removed', 0, changes);
         setConfiguration({ 'gap.mcp.enabled': undefined });
+        setConfiguration({ 'gap.mcp.enabled': undefined }, 'user');
         section('7. Former HTTP service state is removed');
         const storage = path.join(fixture.root, 'legacy-storage');
         fs.mkdirSync(storage, { recursive: true });

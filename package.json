@@ -398,9 +398,9 @@
         "gap.mcp.enabled": {
           "type": "boolean",
           "default": false,
-          "scope": "machine",
+          "scope": "window",
           "order": 10,
-          "markdownDescription": "Provide the GAP MCP server to VS Code. VS Code starts it on demand as a local stdio process that uses this window's GAP settings. Requires a trusted workspace. Independent of `#gap.tools.enabled#`. Run **GAP: Copy MCP Server Configuration** to use the same server from other MCP clients."
+          "markdownDescription": "Provide the GAP MCP server to VS Code. Changes take effect immediately; workspace settings can override user settings. VS Code starts it on demand as a local stdio process that uses this window's GAP settings. Requires a trusted workspace. Independent of `#gap.tools.enabled#`. Run **GAP: Copy MCP Server Configuration** to use the same server from other MCP clients."
         }
       }
     },

@@ -52,7 +52,7 @@
 | `gapRunFile` | 使用 `-q --nointeract` 运行一个 GAP 文件并将输出重定向到指定文件；可选 `cwd` 覆盖本次运行目录 |
 
 - **语言模型工具**：供 VS Code 内的 agent 调用，由 `gap.tools.enabled` 控制，默认开启。
-- **MCP 服务**：由用户设置 `gap.mcp.enabled` 控制，默认关闭。VS Code 按需以本机 stdio 进程启动服务，并使用当前窗口的 GAP 设置。其他 MCP 客户端也可以运行同一服务：**GAP: Copy MCP Server Configuration** 会复制其 stdio 启动配置。更新扩展或修改 GAP 设置后请重新复制。
+- **MCP 服务**：可在用户或工作区设置中通过 `gap.mcp.enabled` 控制，默认关闭。VS Code 按需以本机 stdio 进程启动服务，并使用当前窗口的 GAP 设置。其他 MCP 客户端也可以运行同一服务：**GAP: Copy MCP Server Configuration** 会复制其 stdio 启动配置。更新扩展或修改 GAP 设置后请重新复制。
 
 ## 开发
 

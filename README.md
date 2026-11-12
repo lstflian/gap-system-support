@@ -52,7 +52,7 @@ Each path must point to the folder itself; the paths below are only examples:
 | `gapRunFile` | Runs one GAP file with `-q --nointeract` and redirects output to the specified file; optional `cwd` overrides the working directory for this invocation |
 
 - **Language model tools**: available to agents in VS Code, controlled by `gap.tools.enabled` and enabled by default.
-- **MCP server**: controlled by the user setting `gap.mcp.enabled` and disabled by default. VS Code starts the server on demand as a local stdio process using the current window's GAP settings. Other MCP clients can also run the same server: **GAP: Copy MCP Server Configuration** copies its stdio launch configuration. Copy it again after updating the extension or changing GAP settings. The MCP configuration command is available from the Command Palette only.
+- **MCP server**: controlled by `gap.mcp.enabled` in user or workspace settings and disabled by default. VS Code starts the server on demand as a local stdio process using the current window's GAP settings. Other MCP clients can also run the same server: **GAP: Copy MCP Server Configuration** copies its stdio launch configuration. Copy it again after updating the extension or changing GAP settings. The MCP configuration command is available from the Command Palette only.
 
 ## Development
 

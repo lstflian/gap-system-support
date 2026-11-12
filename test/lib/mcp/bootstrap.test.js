@@ -34,7 +34,7 @@ async function main() {
         check('the extension host never imports the MCP server SDK', false, sdkLoaded());
 
         section('2. Enabling MCP publishes a stdio server without GAP files or chat');
-        setConfiguration({ 'gap.tools.enabled': false, 'gap.mcp.enabled': true });
+        setConfiguration({ 'gap.tools.enabled': false, 'gap.mcp.enabled': true }, 'workspace');
         const [definition] = await provider.provideMcpServerDefinitions();
         check('enabled MCP provides one stdio server', ['GAP', process.execPath], [definition?.label, definition?.command]);
         check('native tools can stay disabled while MCP is enabled', 0, state.tools.size);
@@ -47,7 +47,7 @@ async function main() {
             [copied.type, copied.command, copied.args]);
 
         section('3. GAP language features still initialize with both tool switches off');
-        setConfiguration({ 'gap.mcp.enabled': false });
+        setConfiguration({ 'gap.mcp.enabled': false }, 'workspace');
         const text = 'x := 1;\n';
         const document = {
             uri: vscode.Uri.file(fixture.sourceFile), fileName: fixture.sourceFile,
